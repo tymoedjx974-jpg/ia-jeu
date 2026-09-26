@@ -21,6 +21,14 @@
 #include "Materials/MaterialExpressionVectorParameter.h"
 #include "Materials/MaterialExpressionVertexColor.h"
 #include "Materials/MaterialExpressionPerInstanceRandom.h"
+#include "Materials/MaterialExpressionCollectionParameter.h"
+#include "Materials/MaterialExpressionCustom.h"
+#include "Materials/MaterialExpressionPreSkinnedPosition.h"
+#include "Materials/MaterialExpressionSubtract.h"
+#include "Materials/MaterialExpressionTransform.h"
+#include "Materials/MaterialExpressionWorldPosition.h"
+#include "Materials/MaterialParameterCollection.h"
+#include "VPVegetationShared.h"
 #include "Misc/ScopedSlowTask.h"
 #include "Runtime/Launch/Resources/Version.h"
 #include "UObject/UnrealType.h"
@@ -129,6 +137,128 @@ namespace
 		}
 	}
 
+	void SetFloat(UMaterial* M, const TCHAR* Name, float Value)
+	{
+		if (FFloatProperty* Prop = FindFProperty<FFloatProperty>(UMaterial::StaticClass(), Name))
+		{
+			Prop->SetPropertyValue_InContainer(M, Value);
+		}
+	}
+
+	UMaterialExpressionCollectionParameter* CollectionParam(UMaterial* M, UMaterialParameterCollection* Collection, FName Name, int32 X, int32 Y)
+	{
+		UMaterialExpressionCollectionParameter* P = Node<UMaterialExpressionCollectionParameter>(M, X, Y);
+		P->Collection = Collection;
+		P->ParameterName = Name;
+		P->ParameterId = Collection->GetParameterId(Name);
+		return P;
+	}
+
+	// Mouvement de la végétation (HLSL) : flexion du tronc et vagues selon le vent, frémissement des feuilles,
+	// plantes écartées par les personnages. Entrées en cm ; P = position du sommet, B = pied de l'instance,
+	// H = hauteur du sommet au-dessus du pied, A = alpha du sommet (0 à la base, 1 aux extrémités).
+	FString WindCode()
+	{
+		FString Code = TEXT(R"HLSL(
+float2 wd = float2(DX, DY);
+wd = wd / max(length(wd), 0.001);
+float2 wp = float2(-wd.y, wd.x);
+float h = max(H, 0.0);
+float hm = h * 0.01;
+float3 o = float3(0.0, 0.0, 0.0);
+// gusts sweeping the landscape downwind
+float gb = sin(dot(B.xy, wd) * 0.0008 - T * 1.1) * sin(dot(B.xy, wp) * 0.0005 + T * 0.23);
+float f = F * (0.8 + 0.35 * gb);
+// trunk bend: identical for bark and leaves of the same tree
+float s = Fl * f * 1.2 * pow(hm, 1.5) * (0.75 + 0.25 * sin(T * 4.0 / sqrt(max(hm, 1.0)) + R * 6.2832));
+o.xy += wd * s;
+o.z -= s * s / max(2.0 * h, 1.0);
+// grass and lavender: waves running across the fields
+float gp = dot(P.xy, wd) * 0.01;
+float wave = 0.55 + 0.45 * sin(gp * 0.45 - T * 2.4 + 0.8 * sin(dot(P.xy, wp) * 0.004));
+o.xy += wd * (On * A * f * wave);
+// leaf flutter
+float ph = dot(P, float3(0.031, 0.027, 0.043)) + R * 6.2832;
+float fr = Fr * A * (0.3 + f);
+o += fr * float3(sin(T * 6.3 + ph) * 0.6, cos(T * 5.1 + ph * 1.3) * 0.6, sin(T * 7.7 + ph * 0.7) * 0.8);
+// characters: xyz = feet, w = radius (integer part) + strength (fraction)
+float3 push = float3(0.0, 0.0, 0.0);
+)HLSL");
+		for (int32 I = 0; I < VPVegetation::NumInteracteurs; ++I)
+		{
+			Code += FString::Printf(TEXT("{ float4 I = I%d; float r = max(floor(I.w), 1.0); float st = frac(I.w); float2 d = P.xy - I.xy; float dl = length(d); ")
+				TEXT("float fo = saturate(1.0 - dl / r); fo = fo * fo * (3.0 - 2.0 * fo); float dz = P.z - I.z; ")
+				TEXT("fo *= st * saturate((dz + 80.0) / 40.0) * saturate((260.0 - dz) / 60.0); push.xy += d / max(dl, 1.0) * fo; push.z = max(push.z, fo); }\n"), I);
+		}
+		Code += TEXT(R"HLSL(
+float pl = length(push.xy);
+float k = saturate(push.z) * So * saturate(h / 60.0) * (1.0 - saturate((h - 170.0) / 90.0));
+o.xy += push.xy / max(pl, 0.001) * k * min(h, 100.0) * 0.85 * saturate(pl * 4.0);
+o.z -= k * h * 0.4;
+return o;
+)HLSL");
+		return Code;
+	}
+
+	// Décalage de position (World Position Offset) de la végétation. bFoliage = feuillage (tous les effets), sinon écorce (flexion seule).
+	UMaterialExpression* WindOffset(UMaterial* M, UMaterialParameterCollection* Collection, UMaterialExpression* Alpha, int32 AlphaOut, bool bFoliage)
+	{
+		if (!Collection)
+		{
+			return nullptr;
+		}
+		const int32 X = -1400, Y = 900;
+		UMaterialExpressionWorldPosition* WorldPos = Node<UMaterialExpressionWorldPosition>(M, X - 600, Y);
+		UMaterialExpressionPreSkinnedPosition* Local = Node<UMaterialExpressionPreSkinnedPosition>(M, X - 800, Y + 150);
+		UMaterialExpressionTransform* LocalToWorld = Node<UMaterialExpressionTransform>(M, X - 600, Y + 150);
+		LocalToWorld->Input.Connect(0, Local);
+		LocalToWorld->TransformSourceType = TRANSFORMSOURCE_Local;
+		LocalToWorld->TransformType = TRANSFORM_World;
+		UMaterialExpressionSubtract* Base = Node<UMaterialExpressionSubtract>(M, X - 400, Y + 100);
+		Base->A.Connect(0, WorldPos);
+		Base->B.Connect(0, LocalToWorld);
+
+		UMaterialExpressionCustom* Custom = Node<UMaterialExpressionCustom>(M, X, Y);
+		Custom->Description = TEXT("Vent et passage des personnages");
+		Custom->OutputType = CMOT_Float3;
+		Custom->Code = WindCode();
+		Custom->Inputs.Reset();
+		auto In = [Custom](const TCHAR* Name, UMaterialExpression* Expr, int32 Out)
+		{
+			FCustomInput& Input = Custom->Inputs.AddDefaulted_GetRef();
+			Input.InputName = FName(Name);
+			Input.Input.Connect(Out, Expr);
+		};
+		In(TEXT("P"), WorldPos, 0);
+		In(TEXT("B"), Base, 0);
+		In(TEXT("H"), Mask(M, Local, 0, false, false, true, false, X - 600, Y + 300), 0);
+		if (Alpha)
+		{
+			In(TEXT("A"), Alpha, AlphaOut);
+		}
+		else
+		{
+			In(TEXT("A"), Const(M, 0.f, X - 300, Y + 350), 0);
+		}
+		In(TEXT("R"), Node<UMaterialExpressionPerInstanceRandom>(M, X - 300, Y + 400), 0);
+		In(TEXT("T"), Node<UMaterialExpressionTime>(M, X - 300, Y + 450), 0);
+		In(TEXT("F"), CollectionParam(M, Collection, VPVegetation::ForceVent(), X - 300, Y + 500), 0);
+		In(TEXT("DX"), CollectionParam(M, Collection, VPVegetation::DirectionVentX(), X - 300, Y + 550), 0);
+		In(TEXT("DY"), CollectionParam(M, Collection, VPVegetation::DirectionVentY(), X - 300, Y + 600), 0);
+		// réglages par matériau (instances) : Souplesse = passage, Ondulation = vagues (cm), Frisson = feuilles (cm), Flexibilite = tronc
+		In(TEXT("So"), bFoliage ? static_cast<UMaterialExpression*>(Scalar(M, TEXT("Souplesse"), 0.f, X - 300, Y + 650)) : Const(M, 0.f, X - 300, Y + 650), 0);
+		In(TEXT("On"), bFoliage ? static_cast<UMaterialExpression*>(Scalar(M, TEXT("Ondulation"), 0.f, X - 300, Y + 700)) : Const(M, 0.f, X - 300, Y + 700), 0);
+		In(TEXT("Fr"), bFoliage ? static_cast<UMaterialExpression*>(Scalar(M, TEXT("Frisson"), 4.f, X - 300, Y + 750)) : Const(M, 0.f, X - 300, Y + 750), 0);
+		In(TEXT("Fl"), Scalar(M, TEXT("Flexibilite"), 1.f, X - 300, Y + 800), 0);
+		for (int32 I = 0; I < VPVegetation::NumInteracteurs; ++I)
+		{
+			In(*FString::Printf(TEXT("I%d"), I), CollectionParam(M, Collection, VPVegetation::Interacteur(I), X - 600, Y + 500 + I * 60), 0);
+		}
+		// déplacement borné : évite que les plantes sortent de leurs limites de visibilité
+		SetFloat(M, TEXT("MaxWorldPositionOffsetDisplacement"), 150.f);
+		return Custom;
+	}
+
 	void Finish(UMaterial* M)
 	{
 		SetFlag(M, TEXT("bUsedWithInstancedStaticMeshes"), true);
@@ -152,7 +282,7 @@ UMaterial* FVPBuilder::BuildMaster(const FString& Type)
 	SetFlag(M, TEXT("TwoSided"), false);
 	M->SetShadingModel(MSM_DefaultLit);
 
-	if (Type == TEXT("Base"))
+	if (Type == TEXT("Base") || Type == TEXT("Ecorce"))
 	{
 		// couleur = texture x mélange(1, couleur de sommet² x teinte, masque de teinte) ; ORM = occlusion, rugosité, masque
 		UMaterialExpressionTextureCoordinate* UV0 = Node<UMaterialExpressionTextureCoordinate>(M, -1600, 0);
@@ -177,6 +307,14 @@ UMaterial* FVPBuilder::BuildMaster(const FString& Type)
 		VP_INPUT(M, AmbientOcclusion).Connect(OutR, ORM);
 		VP_INPUT(M, Metallic).Connect(0, Scalar(M, TEXT("Metal"), 0.f, -450, 200));
 		VP_INPUT(M, Specular).Connect(0, Scalar(M, TEXT("Speculaire"), 0.5f, -450, 300));
+		if (Type == TEXT("Ecorce"))
+		{
+			// écorce des arbres : même flexion au vent que le feuillage, pour que les feuilles restent sur les branches
+			if (UMaterialExpression* Wind = WindOffset(M, WindCollection, nullptr, 0, false))
+			{
+				VP_INPUT(M, WorldPositionOffset).Connect(0, Wind);
+			}
+		}
 	}
 	else if (Type == TEXT("Feuillage"))
 	{
@@ -197,22 +335,11 @@ UMaterial* FVPBuilder::BuildMaster(const FString& Type)
 		VP_INPUT(M, Normal).Connect(OutRGB, NM);
 		VP_INPUT(M, Roughness).Connect(0, Scalar(M, TEXT("Rugosite"), 0.6f, -550, 0));
 		VP_INPUT(M, SubsurfaceColor).Connect(0, Mul(M, Color, 0, nullptr, 0, -350, -300, 0.7f));
-		// vent : décalage sinusoïdal proportionnel à l'alpha du sommet, phase selon la position dans le monde
-		// phase propre à chaque instance (PerInstanceRandom) : pas de position monde, donc pas de souci de précision
-		UMaterialExpressionTime* Time = Node<UMaterialExpressionTime>(M, -1500, 600);
-		UMaterialExpressionPerInstanceRandom* Random = Node<UMaterialExpressionPerInstanceRandom>(M, -1500, 750);
-		UMaterialExpressionMultiply* Speed = Mul(M, Time, 0, nullptr, 0, -1300, 600, 0.28f);
-		UMaterialExpressionSine* Sine = Node<UMaterialExpressionSine>(M, -850, 650);
-		Sine->Input.Connect(0, Add(M, Speed, 0, Random, 0, -1000, 650));
-		UMaterialExpressionMultiply* Amp = Mul(M, VC, OutA, Scalar(M, TEXT("Vent"), 1.f, -850, 850), 0, -700, 800);
-		UMaterialExpressionMultiply* Off = Mul(M, Sine, 0, Amp, 0, -550, 700);
-		UMaterialExpressionAppendVector* XY = Node<UMaterialExpressionAppendVector>(M, -350, 700);
-		XY->A.Connect(0, Mul(M, Off, 0, nullptr, 0, -450, 650, 7.f));
-		XY->B.Connect(0, Mul(M, Off, 0, nullptr, 0, -450, 750, 4.5f));
-		UMaterialExpressionAppendVector* XYZ = Node<UMaterialExpressionAppendVector>(M, -200, 700);
-		XYZ->A.Connect(0, XY);
-		XYZ->B.Connect(0, Const(M, 0.f, -350, 800));
-		VP_INPUT(M, WorldPositionOffset).Connect(0, XYZ);
+		// vent (flexion, vagues, frémissement) et passage des personnages, réglés par MPC_VP_Vent
+		if (UMaterialExpression* Wind = WindOffset(M, WindCollection, VC, OutA, true))
+		{
+			VP_INPUT(M, WorldPositionOffset).Connect(0, Wind);
+		}
 	}
 	else if (Type == TEXT("Enseigne"))
 	{
@@ -317,10 +444,56 @@ UMaterial* FVPBuilder::BuildMaster(const FString& Type)
 	return M;
 }
 
+void FVPBuilder::BuildWindCollection()
+{
+	// collection de paramètres mise à jour chaque image par UVPVegetationSubsystem (module VillageProvence)
+	WindCollection = FindOrCreate<UMaterialParameterCollection>(TEXT("Materials"), TEXT("MPC_VP_Vent"));
+	WindCollection->PreEditChange(nullptr);
+	auto AddScalar = [this](FName Name, float Default)
+	{
+		for (const FCollectionScalarParameter& P : WindCollection->ScalarParameters)
+		{
+			if (P.ParameterName == Name)
+			{
+				return;
+			}
+		}
+		FCollectionScalarParameter P;
+		P.ParameterName = Name;
+		P.DefaultValue = Default;
+		WindCollection->ScalarParameters.Add(P);
+	};
+	auto AddVector = [this](FName Name, FLinearColor Default)
+	{
+		for (const FCollectionVectorParameter& P : WindCollection->VectorParameters)
+		{
+			if (P.ParameterName == Name)
+			{
+				return;
+			}
+		}
+		FCollectionVectorParameter P;
+		P.ParameterName = Name;
+		P.DefaultValue = Default;
+		WindCollection->VectorParameters.Add(P);
+	};
+	// mistral léger de nord-nord-ouest par défaut (il pousse vers le sud-sud-est)
+	AddScalar(VPVegetation::ForceVent(), 0.45f);
+	AddScalar(VPVegetation::DirectionVentX(), 0.5f);
+	AddScalar(VPVegetation::DirectionVentY(), 0.866f);
+	for (int32 I = 0; I < VPVegetation::NumInteracteurs; ++I)
+	{
+		AddVector(VPVegetation::Interacteur(I), VPVegetation::InteracteurVide());
+	}
+	WindCollection->PostEditChange();
+	WindCollection->MarkPackageDirty();
+}
+
 void FVPBuilder::BuildMaterials(FScopedSlowTask& Task)
 {
 	Task.EnterProgressFrame(2.f, LOCTEXT("Masters", "Matériaux maîtres..."));
-	for (const TCHAR* Type : { TEXT("Base"), TEXT("Feuillage"), TEXT("Enseigne"), TEXT("Couleur"), TEXT("Eau"), TEXT("Lanterne"), TEXT("Terrain") })
+	BuildWindCollection();
+	for (const TCHAR* Type : { TEXT("Base"), TEXT("Ecorce"), TEXT("Feuillage"), TEXT("Enseigne"), TEXT("Couleur"), TEXT("Eau"), TEXT("Lanterne"), TEXT("Terrain") })
 	{
 		BuildMaster(Type);
 	}

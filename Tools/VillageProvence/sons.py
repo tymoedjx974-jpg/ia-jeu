@@ -1,4 +1,5 @@
-"""Sons d'ambiance synthétisés (boucles parfaites) : chœur de cigales, filet d'eau de fontaine."""
+"""Sons d'ambiance synthétisés (boucles parfaites) : chœur de cigales, filet d'eau de fontaine, souffle du vent,
+froissements d'herbes et de feuilles au passage du joueur."""
 import numpy as np, wave, sys, os
 SR = 32000
 OUT = sys.argv[1] if len(sys.argv) > 1 else "sons"
@@ -49,4 +50,40 @@ for i in range(int(T * 28)):
     idx = (t0 + np.arange(L)) % n
     water[idx] += drop
 save("Fontaine.wav", water)
+# vent : souffle grave qui enfle et retombe, sifflement léger dans les rafales (boucle parfaite : tout est périodique sur T)
+T = 24.0
+n = int(T * SR)
+t = np.arange(n) / SR
+low = band_noise(n, 60, 700)
+mid = band_noise(n, 400, 2500)
+env = np.zeros(n)
+for k, a in ((1, 0.5), (2, 0.35), (3, 0.25), (5, 0.15)):
+    env += a * np.cos(2 * np.pi * (k * t / T + rng.random()))
+env = np.clip(0.55 + 0.5 * env / 1.25, 0.12, 1.0)
+whistle = np.zeros(n)
+for f0 in (520, 690, 880):
+    whistle += band_noise(n, f0 * 0.97, f0 * 1.03)
+wind = low * env + 0.35 * mid * env ** 2 + 0.08 * whistle * np.clip(env - 0.6, 0, 1) * 2.5
+save("Vent.wav", wind)
+
+# froissements : craquements secs (tiges, feuilles) sur un souffle de frottement, 4 variantes courtes
+for v in range(4):
+    L = rng.uniform(0.38, 0.55)
+    n = int(L * SR)
+    t = np.arange(n) / SR
+    body = band_noise(n, 900, 6000) * np.sin(np.pi * t / L) ** 1.5 * 0.5
+    crack = np.zeros(n)
+    dens = np.sin(np.pi * t / L) ** 0.8
+    for i in range(int(rng.uniform(60, 110))):
+        c = int(rng.choice(n, p=dens / dens.sum()))
+        m = int(SR * rng.uniform(0.002, 0.008))
+        b = rng.standard_normal(m) * np.exp(-np.arange(m) / (m * 0.3)) * rng.uniform(0.2, 1.0)
+        crack[c:c + m] += b[:max(0, min(m, n - c))]
+    X = np.fft.rfft(crack)
+    f = np.fft.rfftfreq(n, 1 / SR)
+    X *= np.clip((f - 1500) / 1500, 0, 1)
+    crack = np.fft.irfft(X, n)
+    x = body + crack / (np.abs(crack).max() + 1e-9) * 0.8
+    fade = np.minimum(1, np.minimum(t / 0.015, (L - t) / 0.06))
+    save(f"Froissement_{v}.wav", x * fade)
 print("ok")

@@ -21,7 +21,8 @@ public class VillageProvenceEditor : ModuleRules
 			"StaticMeshDescription",
 			"ImageWrapper",
 			"Json",
-			"Projects"
+			"Projects",
+			"VillageProvence"
 		});
 	}
 }

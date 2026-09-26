@@ -8,7 +8,7 @@ sys.path.insert(0, ".")
 import numpy as np
 from PIL import Image
 from common import ZONE, RES, NX, NY
-from materials import MATS, TILE, TERRAIN_LAYERS
+from materials import WIND, MATS, TILE, TERRAIN_LAYERS
 
 T0 = time.time()
 OUT = sys.argv[1] if len(sys.argv) > 1 else "/home/user/ia-jeu/Plugins/VillageProvence/Data"
@@ -252,7 +252,7 @@ MASTER = {"opaque": "Base", "masked": "Enseigne", "foliage": "Feuillage", "glass
 texnames = {t["name"] for t in manifest["textures"]}
 for m, spec in MATS.items():
     kind = spec["kind"]
-    e = dict(name=m, master=MASTER[kind], params={})
+    e = dict(name=m, master=spec.get("master", MASTER[kind]), params=dict(WIND.get(m, {})))
     if spec.get("tex"):
         t = spec["tex"]
         for suf in ("BC", "N", "ORM"):
@@ -294,7 +294,9 @@ manifest["sounds"] = [
     dict(name="S_Cigales", file="Sons/Cigales.wav", volume=0.35, spatial=False, locations=[to_ue_points([(-10.0, 0.0, 40.0)])[0].round(1).tolist()]),
     dict(name="S_Cigales", file="Sons/Cigales.wav", volume=0.9, spatial=True, radius_cm=6000.0, locations=cicadas),
     dict(name="S_Fontaine", file="Sons/Fontaine.wav", volume=0.7, spatial=True, radius_cm=1800.0, locations=fountains),
-]
+    # joués par le jeu (UVPVegetationSubsystem) : souffle du vent, froissements au passage dans la végétation
+    dict(name="S_Vent", file="Sons/Vent.wav", volume=1.0, spatial=False, loop=True, locations=[]),
+] + [dict(name=f"S_Froissement_{k}", file=f"Sons/Froissement_{k}.wav", volume=1.0, spatial=False, loop=False, locations=[]) for k in range(4)]
 manifest["credits"] = ["Données cartographiques : © contributeurs OpenStreetMap (ODbL), via Overture Maps Foundation",
                        "Relief : Copernicus DEM GLO-30 © DLR e.V. 2010-2014 et © Airbus Defence and Space GmbH 2014-2018, fourni dans le cadre du programme Copernicus",
                        "Lieux : Overture Maps Foundation (CDLA Permissive 2.0)",

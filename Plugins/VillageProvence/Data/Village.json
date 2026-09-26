@@ -10950,32 +10950,40 @@
   },
   {
    "name": "EcorcePlatane",
-   "master": "Base",
-   "params": {},
+   "master": "Ecorce",
+   "params": {
+    "Flexibilite": 1.0
+   },
    "BC": "T_EcorcePlatane_BC",
    "N": "T_EcorcePlatane_N",
    "ORM": "T_EcorcePlatane_ORM"
   },
   {
    "name": "EcorceOlivier",
-   "master": "Base",
-   "params": {},
+   "master": "Ecorce",
+   "params": {
+    "Flexibilite": 1.0
+   },
    "BC": "T_EcorceOlivier_BC",
    "N": "T_EcorceOlivier_N",
    "ORM": "T_EcorceOlivier_ORM"
   },
   {
    "name": "EcorcePin",
-   "master": "Base",
-   "params": {},
+   "master": "Ecorce",
+   "params": {
+    "Flexibilite": 1.0
+   },
    "BC": "T_EcorcePin_BC",
    "N": "T_EcorcePin_N",
    "ORM": "T_EcorcePin_ORM"
   },
   {
    "name": "EcorceChene",
-   "master": "Base",
-   "params": {},
+   "master": "Ecorce",
+   "params": {
+    "Flexibilite": 1.0
+   },
    "BC": "T_EcorceChene_BC",
    "N": "T_EcorceChene_N",
    "ORM": "T_EcorceChene_ORM"
@@ -10983,91 +10991,156 @@
   {
    "name": "FeuillesOlivier",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.25,
+    "Ondulation": 0.0,
+    "Frisson": 5.0,
+    "Flexibilite": 1.0
+   },
    "BC": "T_FeuillesOlivier_BC",
    "N": "T_FeuillesOlivier_N"
   },
   {
    "name": "FeuillesPlatane",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.25,
+    "Ondulation": 0.0,
+    "Frisson": 5.0,
+    "Flexibilite": 1.0
+   },
    "BC": "T_FeuillesPlatane_BC",
    "N": "T_FeuillesPlatane_N"
   },
   {
    "name": "FeuillesChene",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.25,
+    "Ondulation": 0.0,
+    "Frisson": 5.0,
+    "Flexibilite": 1.0
+   },
    "BC": "T_FeuillesChene_BC",
    "N": "T_FeuillesChene_N"
   },
   {
    "name": "FeuillesFruitier",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.25,
+    "Ondulation": 0.0,
+    "Frisson": 5.0,
+    "Flexibilite": 1.0
+   },
    "BC": "T_FeuillesFruitier_BC",
    "N": "T_FeuillesFruitier_N"
   },
   {
    "name": "FeuillesVigne",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.45,
+    "Ondulation": 3.0,
+    "Frisson": 4.0,
+    "Flexibilite": 0.0
+   },
    "BC": "T_FeuillesVigne_BC",
    "N": "T_FeuillesVigne_N"
   },
   {
    "name": "AiguillesPin",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.25,
+    "Ondulation": 0.0,
+    "Frisson": 3.0,
+    "Flexibilite": 1.0
+   },
    "BC": "T_AiguillesPin_BC",
    "N": "T_AiguillesPin_N"
   },
   {
    "name": "FeuillesCypres",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.25,
+    "Ondulation": 0.0,
+    "Frisson": 2.5,
+    "Flexibilite": 1.0
+   },
    "BC": "T_FeuillesCypres_BC",
    "N": "T_FeuillesCypres_N"
   },
   {
    "name": "FeuillesGarrigue",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.55,
+    "Ondulation": 4.0,
+    "Frisson": 3.0,
+    "Flexibilite": 0.0
+   },
    "BC": "T_FeuillesGarrigue_BC",
    "N": "T_FeuillesGarrigue_N"
   },
   {
    "name": "Lavande",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 1.0,
+    "Ondulation": 10.0,
+    "Frisson": 2.0,
+    "Flexibilite": 0.0
+   },
    "BC": "T_Lavande_BC",
    "N": "T_Lavande_N"
   },
   {
    "name": "HerbeSeche",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 1.0,
+    "Ondulation": 14.0,
+    "Frisson": 2.0,
+    "Flexibilite": 0.0
+   },
    "BC": "T_HerbeSeche_BC",
    "N": "T_HerbeSeche_N"
   },
   {
    "name": "HerbeVerte",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 1.0,
+    "Ondulation": 14.0,
+    "Frisson": 2.0,
+    "Flexibilite": 0.0
+   },
    "BC": "T_HerbeVerte_BC",
    "N": "T_HerbeVerte_N"
   },
   {
    "name": "Fleurs",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.25,
+    "Ondulation": 2.0,
+    "Frisson": 3.0,
+    "Flexibilite": 0.0
+   },
    "BC": "T_Fleurs_BC",
    "N": "T_Fleurs_N"
   },
   {
    "name": "Glycine",
    "master": "Feuillage",
-   "params": {},
+   "params": {
+    "Souplesse": 0.0,
+    "Ondulation": 0.0,
+    "Frisson": 2.0,
+    "Flexibilite": 0.0
+   },
    "BC": "T_Glycine_BC",
    "N": "T_Glycine_N"
   },
@@ -47837,6 +47910,46 @@
      3251.4
     ]
    ]
+  },
+  {
+   "name": "S_Vent",
+   "file": "Sons/Vent.wav",
+   "volume": 1.0,
+   "spatial": false,
+   "loop": true,
+   "locations": []
+  },
+  {
+   "name": "S_Froissement_0",
+   "file": "Sons/Froissement_0.wav",
+   "volume": 1.0,
+   "spatial": false,
+   "loop": false,
+   "locations": []
+  },
+  {
+   "name": "S_Froissement_1",
+   "file": "Sons/Froissement_1.wav",
+   "volume": 1.0,
+   "spatial": false,
+   "loop": false,
+   "locations": []
+  },
+  {
+   "name": "S_Froissement_2",
+   "file": "Sons/Froissement_2.wav",
+   "volume": 1.0,
+   "spatial": false,
+   "loop": false,
+   "locations": []
+  },
+  {
+   "name": "S_Froissement_3",
+   "file": "Sons/Froissement_3.wav",
+   "volume": 1.0,
+   "spatial": false,
+   "loop": false,
+   "locations": []
   }
  ],
  "credits": [

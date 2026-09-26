@@ -21,7 +21,8 @@ Un village provençal complet de **4 × 4 km**, construit sur le **plan réel de
 | **Rues** | Calades de galets dans le vieux village, places dallées en terrasse avec murs de soutènement, routes goudronnées avec lignes blanches, chemins, escaliers, 47 plaques de rue émaillées aux vrais noms (rue de l'Église, rue des Bourgades…), panneaux d'entrée « ROUSSILLON », panneaux directionnels, 223 réverbères, lanternes murales, bancs. |
 | **Nature** | Environ 900 000 plantes : pinèdes et chênes verts, garrigue, 167 000 segments de rangs de vigne, champs de lavande en rangs, oliveraies, vergers, haies de cyprès contre le mistral, allée de platanes à l'entrée du village, pins parasols, lauriers-roses, balles de foin sur les champs moissonnés, 269 piscines de mas. Le feuillage bouge avec le vent. |
 | **Terrain** | Relief réel (village perché à 330 m, vallée à 180 m), falaises d'ocre du sentier des Ocres, 8 types de sol (garrigue sèche, terre labourée, ocre, roche, sous-bois, herbe, chemin, chaume). À l'horizon : le Luberon, les monts de Vaucluse et le **mont Ventoux**. |
-| **Ambiance** | Soleil de fin d'après-midi, ciel et atmosphère physiques, nuages volumétriques, brume, Lumen. Sons en boucle : **chant des cigales** et **fontaines**. |
+| **Ambiance** | Soleil de fin d'après-midi, ciel et atmosphère physiques, nuages volumétriques, brume, Lumen. Sons en boucle : **chant des cigales**, **fontaines** et **vent**. |
+| **Vent et passage** | Arbres, herbes, lavande, vigne et buissons bougent avec le mistral et ses rafales, et s'écartent au passage du joueur et des personnages IA. |
 
 Tout est généré : aucune texture, aucun modèle ni aucun son n'a été copié d'Internet. Les textures (pierre, enduit à la chaux, tuiles canal, calade…) ont été calculées pour ce projet.
 
@@ -57,6 +58,38 @@ Les autres commandes du même menu :
 - Le village est à l'échelle réelle (1 unité = 1 cm). Les toits, les murs et le terrain ont des collisions exactes : tu peux marcher dans les ruelles et **courir sur les toits** avec le plugin TMMouvements. Les troncs d'arbres, les réverbères et les bancs bloquent aussi le joueur. Les herbes, la lavande et la vigne se traversent.
 - La lumière, le ciel, la brume et le Post Process ne sont ajoutés que s'ils manquent : ceux de ton niveau ne sont pas modifiés.
 
+## 4. Vent et végétation vivante
+
+![Un personnage traverse un champ de lavande par vent de mistral](Docs/vent.gif)
+
+Toute la végétation bouge, sans aucun réglage à faire :
+
+- **Le vent** : les arbres plient et se balancent (le tronc, les branches et les feuilles ensemble), les feuilles frémissent, et des vagues traversent les champs de lavande et les herbes. Les rafales balaient le paysage dans le sens du vent. Par défaut, un mistral léger souffle du nord-nord-ouest.
+- **Le passage des personnages** : les herbes, la lavande, les buissons, la vigne et les branches basses s'écartent autour du joueur **et de tous les personnages IA** (tous les pions), puis se relèvent doucement derrière eux. En courant, on couche les plantes plus largement. En sautant par-dessus, on ne les touche pas.
+- **Les sons** : un souffle de vent qui suit les rafales, et un froissement quand le joueur traverse les herbes, la lavande ou les buissons.
+
+### Régler le vent
+
+Sélectionne l'acteur **VP_Vent** dans le dossier `VillageProvence/Ambiance` (la flèche bleue montre où le vent pousse) :
+
+| Réglage | Effet |
+| --- | --- |
+| Direction Degres | D'où vient le vent : 330 = mistral (nord-nord-ouest), 180 = vent du sud |
+| Force | 0 = calme plat, 0,4 = brise, 1 = mistral fort, 1,5 = tempête |
+| Rafales | 0 = vent régulier, 1 = très irrégulier |
+| Rayon Passage | Taille de la zone écartée autour d'un personnage (0 = selon sa capsule) |
+| Temps Redressement | Temps que mettent les plantes à se relever |
+| Son du vent, Froissements | Volume ou désactivation des sons |
+
+**Depuis le jeu** (Blueprint ou C++), par exemple pour la météo de ton IA : **Get VPVegetationSubsystem** puis **Set Vent** (direction, force, rafales). **Get Force Vent Actuelle** donne la force du moment, rafales comprises.
+
+### Personnaliser par plante
+
+- Dans chaque instance de matériau de feuillage (`MI_Lavande`, `MI_HerbeSeche`, `MI_FeuillesChene`…) : **Souplesse** (0 à 1, écartement au passage), **Ondulation** (cm, vagues du vent), **Frisson** (cm, frémissement des feuilles), **Flexibilite** (flexion du tronc, à garder identique entre l'écorce et le feuillage d'une même espèce).
+- Pour régler un personnage en particulier, ajoute-lui le composant **Interaction végétation (village)** : rayon, force, ou désactivation (utile pour un fantôme ou un drone). Il permet aussi de faire écarter les plantes par un acteur qui n'est pas un pion (véhicule, ballon…).
+
+Le mouvement est calculé par la carte graphique : il ne coûte presque rien, même avec 900 000 plantes. Au-delà de 60 à 90 m, les petites plantes arrêtent de bouger pour économiser des performances ; les arbres bougent à toutes les distances.
+
 ## Performances
 
 La zone est grande et très détaillée. Si ton PC peine :
@@ -64,6 +97,7 @@ La zone est grande et très détaillée. Si ton PC peine :
 - Dans `VillageProvence/Vegetation`, cache ou supprime quelques acteurs `VP_Vegetation_x_y` éloignés : chacun couvre environ 1 km².
 - Réduis les distances d'affichage des herbes et buissons : sélectionne un composant dans l'acteur, puis règle **Instance End Cull Distance**.
 - Supprime les sons dans le dossier `Sons` si tu n'en veux pas.
+- Les petites plantes arrêtent de bouger à 60 m (herbes) et 90 m (lavande, buissons, vigne). Pour changer ces distances, règle **World Position Offset Disable Distance** sur les composants de végétation.
 - Tous les acteurs du village restent chargés en permanence : on voit ainsi le village perché depuis les champs de lavande, à 1,5 km. Si tu préfères que World Partition les décharge au loin, coche **Is Spatially Loaded** sur les acteurs du dossier `VillageProvence`, sauf `Terrain`. Le bâti et la voirie sont découpés en blocs de 256 m, la végétation par km².
 
 ## Personnaliser

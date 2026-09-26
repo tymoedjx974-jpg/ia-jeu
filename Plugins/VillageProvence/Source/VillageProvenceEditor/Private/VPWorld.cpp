@@ -28,6 +28,8 @@
 #include "Sound/AmbientSound.h"
 #include "Sound/SoundWave.h"
 #include "UObject/UnrealType.h"
+#include "VPVegetationShared.h"
+#include "VPVent.h"
 
 #define LOCTEXT_NAMESPACE "VillageProvence"
 
@@ -226,6 +228,22 @@ void FVPBuilder::SpawnInstances(FScopedSlowTask& Task)
 		{
 			Component->SetCastShadow(false);
 		}
+		if (bVegetation)
+		{
+			// la végétation bouge (vent, passage des personnages) : bornes élargies pour ne pas disparaître en pliant
+			const bool bSoft = MeshName.Contains(TEXT("Herbe")) || MeshName.Contains(TEXT("Lavande")) || MeshName.Contains(TEXT("Buisson")) || MeshName.Contains(TEXT("Vigne"));
+			Component->SetBoundsScale(bSoft ? 1.6f : 1.15f);
+			if (bSoft)
+			{
+				// herbes, lavande, buissons et vigne : froissement quand le joueur les traverse
+				Component->ComponentTags.AddUnique(VPVegetation::TagSouple());
+				// au loin, le mouvement des petites plantes ne se voit plus : on l'arrête pour économiser le processeur graphique
+				if (FIntProperty* Prop = FindFProperty<FIntProperty>(UPrimitiveComponent::StaticClass(), TEXT("WorldPositionOffsetDisableDistance")))
+				{
+					Prop->SetPropertyValue_InContainer(Component, MeshName.Contains(TEXT("Herbe")) ? 6000 : 9000);
+				}
+			}
+		}
 		if (ColR != 255 || ColG != 255 || ColB != 255)
 		{
 			for (const TCHAR* Slot : { TEXT("BoisPeint"), TEXT("Toile") })
@@ -388,7 +406,9 @@ void FVPBuilder::SetupSounds()
 				++Warnings;
 				continue;
 			}
-			Wave->bLooping = true;
+			bool bLoop = true;
+			S->TryGetBoolField(TEXT("loop"), bLoop);
+			Wave->bLooping = bLoop;
 			Wave->MarkPackageDirty();
 			Loaded.Add(Name, Wave);
 		}
@@ -417,6 +437,32 @@ void FVPBuilder::SetupSounds()
 				Audio->AttenuationOverrides.FalloffDistance = (float)Radius;
 			}
 			Tag(Emitter, FString::Printf(TEXT("VP_%s_%d"), *Name, Index++), TEXT("VillageProvence/Sons"), true);
+		}
+	}
+
+	// réglages du vent (lus par UVPVegetationSubsystem en jeu) avec le souffle et les froissements
+	AVPVent* Vent = nullptr;
+	for (TActorIterator<AVPVent> It(World); It; ++It)
+	{
+		Vent = *It;
+		break;
+	}
+	if (!Vent)
+	{
+		Vent = World->SpawnActor<AVPVent>(AVPVent::StaticClass(), FTransform(FVector(0.f, 0.f, 45000.f)));
+		Tag(Vent, TEXT("VP_Vent"), TEXT("VillageProvence/Ambiance"), true);
+	}
+	if (Vent)
+	{
+		Vent->Modify();
+		Vent->SonVent = Loaded.FindRef(TEXT("S_Vent"));
+		Vent->SonsFroissement.Reset();
+		for (int32 I = 0; I < VPVegetation::NumFroissements; ++I)
+		{
+			if (USoundWave* Wave = Loaded.FindRef(FString::Printf(TEXT("S_Froissement_%d"), I)))
+			{
+				Vent->SonsFroissement.Add(Wave);
+			}
 		}
 	}
 }

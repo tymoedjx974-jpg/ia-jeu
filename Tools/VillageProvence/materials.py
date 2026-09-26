@@ -60,3 +60,27 @@ TERRAIN_LAYERS = ["SolSec", "TerreLabouree", "Ocre", "Roche", "SolForet", "Herbe
 
 def uv_scale(mat):
     return TILE.get(mat, 1.0)
+
+
+# Vent et passage des personnages (paramètres des matériaux Unreal M_VP_Feuillage / M_VP_Ecorce) :
+#   Souplesse   : 0 à 1, les plantes s'écartent quand un personnage passe
+#   Ondulation  : cm, vagues du vent qui traversent herbes et lavande
+#   Frisson     : cm, frémissement des feuilles
+#   Flexibilite : flexion du tronc (même valeur pour l'écorce et le feuillage d'une espèce)
+ARBRE = dict(Souplesse=0.25, Ondulation=0.0, Frisson=5.0, Flexibilite=1.0)
+WIND = {
+    "FeuillesOlivier": ARBRE, "FeuillesPlatane": ARBRE, "FeuillesChene": ARBRE, "FeuillesFruitier": ARBRE,
+    "AiguillesPin": dict(ARBRE, Frisson=3.0), "FeuillesCypres": dict(ARBRE, Frisson=2.5),
+    "FeuillesVigne": dict(Souplesse=0.45, Ondulation=3.0, Frisson=4.0, Flexibilite=0.0),
+    "FeuillesGarrigue": dict(Souplesse=0.55, Ondulation=4.0, Frisson=3.0, Flexibilite=0.0),
+    "Lavande": dict(Souplesse=1.0, Ondulation=10.0, Frisson=2.0, Flexibilite=0.0),
+    "HerbeSeche": dict(Souplesse=1.0, Ondulation=14.0, Frisson=2.0, Flexibilite=0.0),
+    "HerbeVerte": dict(Souplesse=1.0, Ondulation=14.0, Frisson=2.0, Flexibilite=0.0),
+    "Fleurs": dict(Souplesse=0.25, Ondulation=2.0, Frisson=3.0, Flexibilite=0.0),
+    "Glycine": dict(Souplesse=0.0, Ondulation=0.0, Frisson=2.0, Flexibilite=0.0),
+    "EcorcePlatane": dict(Flexibilite=1.0), "EcorceOlivier": dict(Flexibilite=1.0),
+    "EcorcePin": dict(Flexibilite=1.0), "EcorceChene": dict(Flexibilite=1.0),
+}
+# l'écorce des arbres utilise le matériau maître qui plie au vent
+for _m in ("EcorcePlatane", "EcorceOlivier", "EcorcePin", "EcorceChene"):
+    MATS[_m]["master"] = "Ecorce"

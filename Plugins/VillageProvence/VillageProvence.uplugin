@@ -3,13 +3,18 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "Village provençal (Roussillon)",
-	"Description": "Construit dans le niveau ouvert un village provençal de 4 x 4 km (plan réel de Roussillon, Vaucluse) : terrain, rues, 1 949 bâtiments, église, beffroi, mairie, commerces, vignes, lavande, forêts, ambiance et sons. Menu Outils > Village provençal.",
+	"Description": "Construit dans le niveau ouvert un village provençal de 4 x 4 km (plan réel de Roussillon, Vaucluse) : terrain, rues, 1 949 bâtiments, église, beffroi, mairie, commerces, vignes, lavande, forêts, ambiance et sons. Vent et végétation qui réagit au passage des personnages. Menu Outils > Village provençal.",
 	"Category": "Toits Morts",
 	"CreatedBy": "",
 	"CanContainContent": true,
 	"EnabledByDefault": true,
 	"Installed": false,
 	"Modules": [
+		{
+			"Name": "VillageProvence",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		},
 		{
 			"Name": "VillageProvenceEditor",
 			"Type": "Editor",

@@ -9,6 +9,7 @@ class AActor;
 class FJsonObject;
 class UMaterial;
 class UMaterialInterface;
+class UMaterialParameterCollection;
 class UStaticMesh;
 class UTexture2D;
 class UWorld;
@@ -60,6 +61,7 @@ private:
 	UTexture2D* MakeTexture(const FString& Name, const FString& File, const FString& Kind, bool bSRGB);
 	UTexture2D* MakeSolidTexture(const FString& Name, FColor Color, const FString& Kind);
 	void BuildTextures(FScopedSlowTask& Task);
+	void BuildWindCollection();
 	void BuildMaterials(FScopedSlowTask& Task);
 	UMaterial* BuildMaster(const FString& Type);
 	UMaterialInterface* GetMaterial(const FString& Name) const;
@@ -86,6 +88,7 @@ private:
 
 	TMap<FString, UTexture2D*> Textures;
 	TMap<FString, UMaterial*> Masters;
+	UMaterialParameterCollection* WindCollection = nullptr;
 	TMap<FString, UMaterialInterface*> Materials;
 	TMap<FString, TSharedPtr<FJsonObject>> MaterialInfo;
 	TMap<FString, UMaterialInterface*> Tinted;

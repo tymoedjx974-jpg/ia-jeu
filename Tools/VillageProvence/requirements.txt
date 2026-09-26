@@ -1,0 +1,11 @@
+bpy==4.5.*
+numpy
+scipy
+pillow
+shapely>=2.1
+pyproj
+pyarrow
+tifffile
+imagecodecs
+mapbox_earcut
+triangle

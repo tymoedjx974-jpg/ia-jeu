@@ -1,0 +1,362 @@
+"""Étape 4 : répartition de la végétation d'après les vraies parcelles (forêts, garrigue, vignes, lavande, vergers, haies...)."""
+import sys, pickle, math, time, collections
+sys.path.insert(0, ".")
+from common import *
+from geomlib import MB, box, tube, WHITE
+from trees import make_vine, make_lavender, catalog
+
+T0 = time.time()
+G = np.load("terrain.npz")
+GROUND, SPLAT = G["ground"], G["splat"]
+V = pickle.load(open("vec.pkl", "rb"))
+rng = np.random.default_rng(2024)
+CENTER = Point(-10.0, 0.0)
+
+# ------------------------------------------------------------------ masque d'exclusion à 1 m (bâtiments, routes, piscines, places)
+R1 = 1.0
+NX1 = int((ZONE["xmax"] - ZONE["xmin"]) / R1) + 1
+NY1 = int((ZONE["ymax"] - ZONE["ymin"]) / R1) + 1
+
+
+def raster1(geoms):
+    img = Image.new("L", (NX1, NY1), 0)
+    d = ImageDraw.Draw(img)
+    for g in geoms:
+        for p in polys_of(g):
+            d.polygon([((x - ZONE["xmin"]) / R1, (y - ZONE["ymin"]) / R1) for x, y in p.exterior.coords], fill=255)
+    return np.asarray(img) > 0
+
+
+blocked_geoms = [b["poly"].buffer(1.6) for b in V["buildings"]]
+for r in V["roads"]:
+    extra = 0.9 if r["surface"] in ("asphalt", "stone", "gravel") else 0.4
+    blocked_geoms.append(r["line"].buffer(r["width"] / 2 + extra))
+blocked_geoms += [p.buffer(1.0) for p in V["pools"]] + V["plaza"] + [p.buffer(0.5) for p in V["parking"]]
+BLOCK = raster1(blocked_geoms)
+print("masque %.0fs" % (time.time() - T0), flush=True)
+
+
+def free(x, y):
+    i = np.clip(((x - ZONE["xmin"]) / R1).astype(int), 0, NX1 - 1)
+    j = np.clip(((y - ZONE["ymin"]) / R1).astype(int), 0, NY1 - 1)
+    return ~BLOCK[j, i]
+
+
+def zat(x, y):
+    return grid_sample(GROUND, x, y, order=1)
+
+
+def jitter_grid(geom, spacing, keep=1.0, jitter=0.45):
+    if geom is None or geom.is_empty:
+        return np.zeros((0, 2))
+    x0, y0, x1, y1 = geom.bounds
+    xs = np.arange(x0, x1, spacing)
+    ys = np.arange(y0, y1, spacing)
+    X, Y = np.meshgrid(xs, ys)
+    X = X.ravel() + rng.uniform(-jitter, jitter, X.size) * spacing
+    Y = Y.ravel() + rng.uniform(-jitter, jitter, Y.size) * spacing
+    m = shapely.contains_xy(geom, X, Y)
+    X, Y = X[m], Y[m]
+    if keep < 1.0:
+        k = rng.random(X.size) < keep
+        X, Y = X[k], Y[k]
+    f = free(X, Y)
+    return np.column_stack([X[f], Y[f]])
+
+
+INST = collections.defaultdict(list)
+
+
+def put(name, xy, scale=(0.8, 1.2), yaw=None, sink=0.05, tint=None, zscale=None):
+    if len(xy) == 0:
+        return
+    n = len(xy)
+    z = zat(xy[:, 0], xy[:, 1]) - sink
+    s = rng.uniform(*scale, n)
+    sz = s if zscale is None else s * rng.uniform(*zscale, n)
+    yw = rng.uniform(0, 2 * math.pi, n) if yaw is None else np.broadcast_to(yaw, (n,))
+    t = np.full((n, 3), 255.0) if tint is None else np.broadcast_to(np.asarray(tint, float), (n, 3))
+    arr = np.column_stack([xy, z, yw, s, s, sz, t])
+    INST[name].append(arr)
+
+
+def put_variants(prefix, nvar, xy, **kw):
+    if len(xy) == 0:
+        return
+    v = rng.integers(0, nvar, len(xy))
+    for k in range(nvar):
+        put(f"{prefix}_{k}", xy[v == k], **kw)
+
+
+def U(key):
+    return unary_union(V[key]).intersection(ZBOX) if V.get(key) else None
+
+
+# ------------------------------------------------------------------ forêts : pins + chênes, sous-bois de garrigue
+forest = unary_union((V.get("forest") or []) + (V.get("lc_forest") or [])).intersection(ZBOX)
+pts = jitter_grid(forest, 7.5)
+ochre_w = grid_sample(SPLAT[..., 2].astype(np.float32), pts[:, 0], pts[:, 1]) / 255.0
+patch = grid_sample(fbm((NY, NX), 60, 3, seed=77), pts[:, 0], pts[:, 1])
+p_pine = np.clip(0.35 + 0.35 * patch + 1.5 * ochre_w, 0.05, 0.95)
+u = rng.random(len(pts))
+pine = u < p_pine
+pp = pts[pine]
+sub = rng.random(len(pp))
+put_variants("Arbre_Pin", 4, pp[sub < 0.9], scale=(0.75, 1.2))
+put_variants("Arbre_PinParasol", 2, pp[sub >= 0.9], scale=(0.8, 1.1))
+put_variants("Arbre_Chene", 4, pts[~pine], scale=(0.7, 1.25))
+under = jitter_grid(forest, 4.0, keep=0.45)
+put_variants("Buisson_Garrigue", 4, under, scale=(0.7, 1.4))
+print("forêt:", len(pts), "arbres, %d buissons  %.0fs" % (len(under), time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ garrigue : buissons, romarins, herbes sèches, arbres isolés
+scrub = unary_union((V.get("scrub") or []) + (V.get("lc_shrub") or []) + (V.get("grass_nat") or [])).intersection(ZBOX).difference(forest)
+b = jitter_grid(scrub, 4.2, keep=0.8)
+put_variants("Buisson_Garrigue", 4, b, scale=(0.6, 1.5))
+b2 = jitter_grid(scrub, 7.0, keep=0.35)
+put_variants("Buisson_Romarin", 2, b2, scale=(0.8, 1.3))
+t = jitter_grid(scrub, 16.0, keep=0.5)
+tv = rng.random(len(t))
+put_variants("Arbre_Chene", 4, t[tv < 0.55], scale=(0.5, 0.9))
+put_variants("Arbre_Pin", 4, t[(tv >= 0.55) & (tv < 0.9)], scale=(0.5, 0.9))
+put_variants("Arbre_Cypres", 3, t[tv >= 0.9], scale=(0.7, 1.0))
+gr = jitter_grid(scrub, 2.6, keep=0.5)
+put_variants("Herbe_Seche", 3, gr, scale=(0.8, 1.5))
+print("garrigue %.0fs" % (time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ prés : herbes sèches
+meadow = U("meadow")
+gr = jitter_grid(meadow, 2.2, keep=0.55)
+put_variants("Herbe_Seche", 3, gr, scale=(0.9, 1.6))
+
+# ------------------------------------------------------------------ rangs (vigne, lavande) orientés selon la parcelle
+def rows(parcel, spacing, seg_len, name_prefix, nvar, margin=1.5, jitter=0.03):
+    placed = []
+    for pg in polys_of(parcel):
+        inner = pg.buffer(-margin)
+        if inner.is_empty or inner.area < 30:
+            continue
+        c, ax, Lm, Wm = ombr(inner)
+        perp = np.array([-ax[1], ax[0]])
+        half = max(Lm, Wm) * 0.75 + 5
+        k0 = -half
+        offs = np.arange(-half, half, spacing) + rng.uniform(0, spacing)
+        yaw = math.atan2(ax[1], ax[0])
+        for o in offs:
+            a = c + perp * o - ax * half
+            bb = c + perp * o + ax * half
+            ln = LineString([a, bb]).intersection(inner)
+            for seg in lines_of(ln):
+                n = int(seg.length / seg_len)
+                if n < 1:
+                    continue
+                s0 = (seg.length - n * seg_len) / 2 + seg_len / 2
+                for k in range(n):
+                    p = seg.interpolate(s0 + k * seg_len)
+                    placed.append((p.x, p.y, yaw))
+    if not placed:
+        return 0
+    P = np.array(placed)
+    f = free(P[:, 0], P[:, 1])
+    P = P[f]
+    v = rng.integers(0, nvar, len(P))
+    for kk in range(nvar):
+        m = v == kk
+        put(f"{name_prefix}_{kk}", P[m, :2], scale=(0.95, 1.05), yaw=P[m, 2] + rng.normal(0, 0.01, m.sum()), sink=0.02)
+    return len(P)
+
+
+nv = rows(U("vineyard"), 2.5, 4.8, "Vigne_Rang", 3)
+nl = rows(U("lavender"), 1.7, 4.0, "Lavande_Rang", 3, margin=1.2)
+print("vignes: %d segments, lavande: %d segments  %.0fs" % (nv, nl, time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ vergers : oliviers (et cerisiers), alignés sur la parcelle
+def orchard(parcel, spacing, species_fn):
+    out = []
+    for pg in polys_of(parcel):
+        inner = pg.buffer(-2.0)
+        if inner.is_empty:
+            continue
+        c, ax, Lm, Wm = ombr(inner)
+        perp = np.array([-ax[1], ax[0]])
+        n1, n2 = int(Lm / spacing) + 2, int(Wm / spacing) + 2
+        I, J = np.meshgrid(np.arange(-n1, n1 + 1), np.arange(-n2, n2 + 1))
+        P = c + np.outer(I.ravel() * spacing, ax) + np.outer(J.ravel() * spacing, perp)
+        P += rng.normal(0, 0.25, P.shape)
+        m = shapely.contains_xy(inner, P[:, 0], P[:, 1])
+        out.append(P[m])
+    if not out:
+        return np.zeros((0, 2))
+    P = np.concatenate(out)
+    return P[free(P[:, 0], P[:, 1])]
+
+
+olive_parcels = U("olive")
+orch = polys_of(U("orchard"))
+conv = [p for p in orch if rng.random() < 0.45]
+rest = [p for p in orch if p not in conv]
+op = orchard(unary_union([olive_parcels] + conv) if conv else olive_parcels, 7.0, None)
+put_variants("Arbre_Olivier", 4, op, scale=(0.75, 1.15))
+fp = orchard(unary_union(rest), 5.5, None)
+put_variants("Arbre_Fruitier", 3, fp, scale=(0.85, 1.15))
+gr = jitter_grid(unary_union([olive_parcels] + orch), 3.0, keep=0.35)
+put_variants("Herbe_Seche", 3, gr, scale=(0.8, 1.3))
+print("vergers: %d oliviers, %d fruitiers  %.0fs" % (len(op), len(fp), time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ champs moissonnés : balles de foin
+bales = []
+for pg in polys_of(U("farmland")):
+    if pg.area > 2500 and rng.random() < 0.4:
+        n = int(pg.area / 1800)
+        P = jitter_grid(pg.buffer(-6), 30.0, keep=1.0)
+        if len(P):
+            bales.append(P[: max(1, n)])
+if bales:
+    put("Balle_Foin", np.concatenate(bales), scale=(0.95, 1.05))
+
+# ------------------------------------------------------------------ haies de cyprès (brise-mistral), alignements de platanes
+hedge_pts = []
+for ln in V["hedges"]:
+    if not isinstance(ln, LineString):
+        ln = LineString(ln.coords)
+    n = int(ln.length / 1.9)
+    for k in range(n):
+        p = ln.interpolate((k + 0.5) * ln.length / max(n, 1))
+        hedge_pts.append((p.x, p.y))
+if hedge_pts:
+    H = np.array(hedge_pts)
+    H = H[free(H[:, 0], H[:, 1]) | True]
+    put_variants("Arbre_Cypres", 3, H, scale=(0.55, 0.8), sink=0.1)
+for ln in V.get("tree_rows", []):
+    n = int(ln.length / 8)
+    P = np.array([(ln.interpolate(k * 8 + 4).x, ln.interpolate(k * 8 + 4).y) for k in range(n)])
+    if len(P):
+        put_variants("Arbre_Platane", 3, P, scale=(0.8, 1.0))
+print("haies: %d cyprès  %.0fs" % (len(hedge_pts), time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ allée de platanes le long des routes à l'entrée du village
+allee = []
+for r in V["roads"]:
+    if r["surface"] != "asphalt" or r["cls"] not in ("secondary", "tertiary", "unclassified", "residential"):
+        continue
+    ln = r["line"]
+    n = int(ln.length / 11)
+    for k in range(n):
+        s = (k + 0.5) * 11
+        p = ln.interpolate(s)
+        d = CENTER.distance(p)
+        if not (160 < d < 650):
+            continue
+        a = ln.interpolate(max(0, s - 1))
+        b_ = ln.interpolate(min(ln.length, s + 1))
+        dv = np.array([b_.x - a.x, b_.y - a.y])
+        dv /= np.linalg.norm(dv) + 1e-9
+        nn = np.array([-dv[1], dv[0]])
+        for sd in (-1, 1):
+            q = np.array([p.x, p.y]) + nn * sd * (r["width"] / 2 + 2.2)
+            allee.append(q)
+if allee:
+    A = np.array(allee)
+    keep = rng.random(len(A)) < 0.55
+    A = A[keep]
+    fA = free(A[:, 0], A[:, 1]) | True
+    # pas de platane dans une maison
+    from shapely.strtree import STRtree
+    btree = STRtree([b["poly"] for b in V["buildings"]])
+    ok = np.array([len(btree.query(Point(*q).buffer(3.5))) == 0 for q in A])
+    put_variants("Arbre_Platane", 3, A[ok], scale=(0.75, 0.95))
+    print("allée de platanes:", int(ok.sum()), flush=True)
+
+# ------------------------------------------------------------------ places du village : platanes et bancs
+bu = unary_union([b["poly"] for b in V["buildings"]])
+plaza_trees = []
+for p in V["plaza"]:
+    freep = p.difference(bu.buffer(4.5))
+    if freep.is_empty or freep.area < 20:
+        continue
+    n = max(1, int(freep.area / 140))
+    P = jitter_grid(freep, 9.0, keep=1.0, jitter=0.2) if False else None
+    xs = []
+    for k in range(60):
+        q = freep.representative_point() if k == 0 else Point(rng.uniform(*freep.bounds[0::2]), rng.uniform(*freep.bounds[1::2]))
+        if freep.contains(q) and all(q.distance(Point(*o)) > 7 for o in xs):
+            xs.append((q.x, q.y))
+        if len(xs) >= n:
+            break
+    plaza_trees += xs
+if plaza_trees:
+    put_variants("Arbre_Platane", 3, np.array(plaza_trees), scale=(0.7, 0.9))
+
+# ------------------------------------------------------------------ jardins des villas et mas : oliviers, cyprès, lauriers-roses, lavande, pelouses
+gard_trees, gard_cyp, gard_bush, gard_lav, lawn = [], [], [], [], []
+for bld in V["buildings"]:
+    p = bld["poly"]
+    c = p.centroid
+    if V["core"].contains(c) or p.area < 40:
+        continue
+    ring = p.buffer(14).difference(p.buffer(2.5))
+    k = rng.random()
+    P = jitter_grid(ring, 6.0, keep=0.35)
+    if len(P) == 0:
+        continue
+    gard_trees.append(P[: rng.integers(1, 4)])
+    if k < 0.45:
+        # paire de cyprès près de l'entrée
+        d = rng.uniform(0, 2 * math.pi)
+        base = np.array([c.x, c.y]) + np.array([math.cos(d), math.sin(d)]) * (math.sqrt(p.area) / 2 + 6)
+        side = np.array([-math.sin(d), math.cos(d)]) * 2.2
+        gard_cyp += [base + side, base - side]
+    B = jitter_grid(ring, 4.0, keep=0.25)
+    gard_bush.append(B)
+    if rng.random() < 0.3:
+        L = jitter_grid(p.buffer(7).difference(p.buffer(3)), 1.4, keep=0.7)
+        gard_lav.append(L[:30])
+    lawn.append(jitter_grid(p.buffer(10).difference(p.buffer(2)), 1.8, keep=0.4))
+GT = np.concatenate(gard_trees) if gard_trees else np.zeros((0, 2))
+tv = rng.random(len(GT))
+put_variants("Arbre_Olivier", 4, GT[tv < 0.45], scale=(0.7, 1.05))
+put_variants("Arbre_Pin", 4, GT[(tv >= 0.45) & (tv < 0.65)], scale=(0.7, 1.0))
+put_variants("Arbre_PinParasol", 2, GT[(tv >= 0.65) & (tv < 0.75)], scale=(0.7, 1.0))
+put_variants("Arbre_Platane", 3, GT[(tv >= 0.75) & (tv < 0.85)], scale=(0.6, 0.8))
+put_variants("Arbre_Fruitier", 3, GT[tv >= 0.85], scale=(0.8, 1.1))
+if gard_cyp:
+    C_ = np.array(gard_cyp)
+    put_variants("Arbre_Cypres", 3, C_[free(C_[:, 0], C_[:, 1])], scale=(0.6, 0.85))
+GB = np.concatenate(gard_bush) if gard_bush else np.zeros((0, 2))
+bv = rng.random(len(GB))
+put_variants("Buisson_LaurierRose", 2, GB[bv < 0.4], scale=(0.7, 1.1))
+put_variants("Buisson_Romarin", 2, GB[(bv >= 0.4) & (bv < 0.7)], scale=(0.8, 1.2))
+put_variants("Buisson_Garrigue", 4, GB[bv >= 0.7], scale=(0.8, 1.2))
+if gard_lav:
+    put_variants("Lavande", 3, np.concatenate(gard_lav), scale=(0.8, 1.1))
+if lawn:
+    put_variants("Herbe_Verte", 3, np.concatenate(lawn), scale=(0.8, 1.2))
+print("jardins: %d arbres, %d buissons  %.0fs" % (len(GT), len(GB), time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ bas-côtés : herbes sèches le long des routes
+side = []
+for r in V["roads"]:
+    if r["surface"] not in ("asphalt", "gravel", "dirt"):
+        continue
+    buf = r["line"].buffer(r["width"] / 2 + 2.5).difference(r["line"].buffer(r["width"] / 2 + 0.9))
+    side.append(buf)
+sideg = unary_union(side).intersection(ZBOX).difference(V["core"].buffer(20))
+S = jitter_grid(sideg, 1.6, keep=0.45)
+put_variants("Herbe_Seche", 3, S, scale=(0.8, 1.6))
+print("bas-côtés: %d touffes  %.0fs" % (len(S), time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ arbres isolés OSM
+for (x, y, genus) in V["trees"]:
+    if not free(np.array([x]), np.array([y]))[0]:
+        continue
+    g = (genus or "").lower()
+    name = "Arbre_Platane" if "platan" in g else ("Arbre_Pin" if "pinus" in g else ("Arbre_Cypres" if "cupress" in g else ("Arbre_Olivier" if "olea" in g else "Arbre_Chene")))
+    nvar = {"Arbre_Platane": 3, "Arbre_Pin": 4, "Arbre_Cypres": 3, "Arbre_Olivier": 4, "Arbre_Chene": 4}[name]
+    put_variants(name, nvar, np.array([[x, y]]), scale=(0.8, 1.1))
+
+INST = {k: np.concatenate(v).astype(np.float32) for k, v in INST.items()}
+with open("nature_out.pkl", "wb") as f:
+    pickle.dump(INST, f)
+tot = sum(len(v) for v in INST.values())
+print("instances de végétation:", tot, {k: len(v) for k, v in sorted(INST.items())})
+print("%.0fs" % (time.time() - T0))

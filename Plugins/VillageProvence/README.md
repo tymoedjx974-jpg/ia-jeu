@@ -4,6 +4,13 @@ Un village provençal complet de **4 × 4 km**, construit sur le **plan réel de
 
 ![Place de la mairie](Docs/place.jpg)
 
+| | |
+| --- | --- |
+| ![Église et monument aux morts](Docs/eglise.jpg) | ![Vue générale du village perché](Docs/vue_generale.jpg) |
+| ![Champ de lavande](Docs/lavande.jpg) | ![Vignes au pied du village](Docs/vignes.jpg) |
+
+*Aperçus calculés avec Blender Cycles à partir des mêmes données que le plugin. Dans Unreal, avec Lumen, le rendu sera différent.*
+
 ## Contenu
 
 | | |

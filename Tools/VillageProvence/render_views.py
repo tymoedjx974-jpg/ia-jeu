@@ -61,7 +61,7 @@ w = bpy.context.scene.world
 bl.setup_render(1280, 720, samples=samples)
 bl.haze()
 bpy.context.scene.cycles.max_bounces = 4
-bpy.context.scene.cycles.transparent_max_bounces = 12
+bpy.context.scene.cycles.transparent_max_bounces = 64
 for v in views:
     loc, look, lens = VIEWS[v]
     bl.camera(loc, look, lens=lens, name="Cam_" + v)

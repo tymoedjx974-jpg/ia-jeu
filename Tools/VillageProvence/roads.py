@@ -188,6 +188,10 @@ def terrace_wall(mb_of, run, thick=0.5):
     zin = np.array([z for _, _, z, _ in run])
     zout = np.array([z for _, _, _, z in run])
     top = np.maximum(zin + 0.85 * (zin > zout), zout + 0.1)
+    # couronnement régulier : lissé le long du mur, jamais sous le sol de la place
+    k = np.exp(-0.5 * (np.arange(-6, 7) / 2.5) ** 2)
+    pad = np.pad(top, 6, mode="edge")
+    top = np.maximum(np.convolve(pad, k / k.sum(), mode="valid"), zin + 0.3)
     bot = np.minimum(zin, zout) - 0.6
     tile = TILE["PierreMoellons"]
     for i in range(len(pts) - 1):
@@ -207,6 +211,13 @@ def terrace_wall(mb_of, run, thick=0.5):
                 mb.quad("PierreMoellons", (p0[0], p0[1], bot[i]), (p1[0], p1[1], bot[i + 1]), (p1[0], p1[1], top[i + 1]), (p0[0], p0[1], top[i]), [(0, 0), (L / tile, 0), (L / tile, -1), (0, -1)])
         c0, c1, c2, c3 = a - nn * 1.1, b - nn * 1.1, b + nn * 1.1, a + nn * 1.1
         mb.quad("PierreTaille", (c0[0], c0[1], top[i]), (c1[0], c1[1], top[i + 1]), (c2[0], c2[1], top[i + 1]), (c3[0], c3[1], top[i]), [(0, 0), (L / 3, 0), (L / 3, 0.2), (0, 0.2)])
+        # extrémités fermées
+        for j, sd in ((i, -1), (i + 1, 1)):
+            if (sd < 0 and j != 0) or (sd > 0 and j != len(pts) - 1):
+                continue
+            e = pts[j]
+            l, r = e - nn * sd, e + nn * sd
+            mb.quad("PierreMoellons", (l[0], l[1], bot[j]), (r[0], r[1], bot[j]), (r[0], r[1], top[j]), (l[0], l[1], top[j]), [(0, 0), (thick / tile, 0), (thick / tile, -1), (0, -1)])
 
 
 def build():
@@ -245,7 +256,9 @@ def build():
     # murs de soutènement des places en terrasse (hors façades)
     nwall = 0
     for (p, gxp, gyp, c0) in V.get("plaza_planes", []):
-        ring = p.exterior
+        # contour adouci : les petites indentations du tracé ne donnent pas de murs en dents de scie
+        ps = p.buffer(1.5, join_style=2).buffer(-1.5, join_style=2).simplify(0.4)
+        ring = (ps if ps.geom_type == "Polygon" and not ps.is_empty else p).exterior
         n = max(2, int(ring.length / 1.0))
         run = []
         for k in range(n + 1):

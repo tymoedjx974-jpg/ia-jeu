@@ -1,0 +1,19 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "Mouvements réalistes (Toits Morts)",
+	"Description": "Course avec élan et endurance, accroupi, glissade, roulade, réceptions, caméra au rythme des pas, coup de pied, couteau et coups de poing. À ajouter à n'importe quel personnage.",
+	"Category": "Gameplay",
+	"CreatedBy": "",
+	"CanContainContent": false,
+	"EnabledByDefault": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "TMMouvements",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	]
+}

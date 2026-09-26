@@ -95,7 +95,19 @@ def U(key):
 # ------------------------------------------------------------------ forêts : pins + chênes, sous-bois de garrigue
 forest = unary_union((V.get("forest") or []) + (V.get("lc_forest") or [])).intersection(ZBOX)
 pts = jitter_grid(forest, 7.5)
-ochre_w = grid_sample(SPLAT[..., 2].astype(np.float32), pts[:, 0], pts[:, 1]) / 255.0
+
+
+def ochre_at(p):
+    return grid_sample(SPLAT[..., 2].astype(np.float32), p[:, 0], p[:, 1]) / 255.0 if len(p) else np.zeros(0)
+
+
+def bare_ochre(p, keep_min=0.12):
+    """Falaises et ravins d'ocre : sol presque nu, quelques pins clairsemés."""
+    return p[rng.random(len(p)) < np.clip(1 - 1.6 * ochre_at(p), keep_min, 1)]
+
+
+pts = bare_ochre(pts)
+ochre_w = ochre_at(pts)
 patch = grid_sample(fbm((NY, NX), 60, 3, seed=77), pts[:, 0], pts[:, 1])
 p_pine = np.clip(0.35 + 0.35 * patch + 1.5 * ochre_w, 0.05, 0.95)
 u = rng.random(len(pts))
@@ -105,17 +117,17 @@ sub = rng.random(len(pp))
 put_variants("Arbre_Pin", 4, pp[sub < 0.9], scale=(0.75, 1.2))
 put_variants("Arbre_PinParasol", 2, pp[sub >= 0.9], scale=(0.8, 1.1))
 put_variants("Arbre_Chene", 4, pts[~pine], scale=(0.7, 1.25))
-under = jitter_grid(forest, 4.0, keep=0.45)
+under = bare_ochre(jitter_grid(forest, 4.0, keep=0.45), 0.2)
 put_variants("Buisson_Garrigue", 4, under, scale=(0.7, 1.4))
 print("forêt:", len(pts), "arbres, %d buissons  %.0fs" % (len(under), time.time() - T0), flush=True)
 
 # ------------------------------------------------------------------ garrigue : buissons, romarins, herbes sèches, arbres isolés
 scrub = unary_union((V.get("scrub") or []) + (V.get("lc_shrub") or []) + (V.get("grass_nat") or [])).intersection(ZBOX).difference(forest)
-b = jitter_grid(scrub, 4.2, keep=0.8)
+b = bare_ochre(jitter_grid(scrub, 4.2, keep=0.8), 0.2)
 put_variants("Buisson_Garrigue", 4, b, scale=(0.6, 1.5))
 b2 = jitter_grid(scrub, 7.0, keep=0.35)
 put_variants("Buisson_Romarin", 2, b2, scale=(0.8, 1.3))
-t = jitter_grid(scrub, 16.0, keep=0.5)
+t = bare_ochre(jitter_grid(scrub, 16.0, keep=0.5))
 tv = rng.random(len(t))
 put_variants("Arbre_Chene", 4, t[tv < 0.55], scale=(0.5, 0.9))
 put_variants("Arbre_Pin", 4, t[(tv >= 0.55) & (tv < 0.9)], scale=(0.5, 0.9))

@@ -79,6 +79,7 @@ private:
 	void SpawnInstances(FScopedSlowTask& Task);
 	void SetupAmbiance();
 	void SetupSounds();
+	void SetupZombies();
 
 	EMode Mode;
 	FString DataDir;

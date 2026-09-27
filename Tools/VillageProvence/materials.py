@@ -7,6 +7,7 @@ TILE = {
     "Fer": 1.0, "Bronze": 1.0, "TerreCuite": 1.0, "Toile": 1.0, "Eau": 2.0, "Verre": 1.0,
     "EcorcePlatane": 1.0, "EcorceOlivier": 1.0, "EcorcePin": 1.0, "EcorceChene": 1.0,
     "Terrain": 4.0, "Paille": 1.0, "Piscine": 2.0, "EauPiscine": 2.0,
+    "Tomettes": 1.12, "Faience": 1.0, "TissuProvence": 0.5, "Carrosserie": 1.0,
 }
 
 # kind : opaque | masked | foliage | glass | water | terrain | emissive
@@ -53,6 +54,17 @@ MATS = {
     "Piscine": dict(kind="flat", color=(0.55, 0.78, 0.82), rough=0.3),
     "EauPiscine": dict(kind="water", tex="Eau", color=(0.12, 0.42, 0.48), rough=0.02),
     "Terrain": dict(kind="terrain"),
+    # intérieurs des maisons visitables
+    "Tomettes": dict(kind="opaque", tex="Tomettes"),
+    "Faience": dict(kind="opaque", tex="Faience"),
+    "TissuProvence": dict(kind="opaque", tex="TissuProvence"),
+    "Porcelaine": dict(kind="flat", color=(0.86, 0.85, 0.82), rough=0.12),
+    "Miroir": dict(kind="flat", color=(0.9, 0.9, 0.9), rough=0.02, metallic=1.0),
+    # village envahi : voitures abandonnées, inscriptions, sang
+    "Carrosserie": dict(kind="opaque", tex="Carrosserie"),
+    "Pneu": dict(kind="flat", color=(0.03, 0.03, 0.03), rough=0.85),
+    "Plastique": dict(kind="flat", color=(0.12, 0.26, 0.16), rough=0.55),
+    "Graffitis": dict(kind="masked", tex="Graffitis"),
 }
 
 TERRAIN_LAYERS = ["SolSec", "TerreLabouree", "Ocre", "Roche", "SolForet", "Herbe", "Chemin", "Chaume"]

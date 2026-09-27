@@ -46,7 +46,7 @@ def write_pvm(path, lods, pivot_local=(0.0, 0.0, 0.0)):
             nuv = UV.shape[1] // 2
             # recentre les UV (entiers) : la texture se répète, cela ne change rien mais garde la précision
             for k in range(nuv):
-                if m not in ("Enseignes",) and not m.startswith("Feuilles") and m not in ("AiguillesPin", "Lavande", "HerbeSeche", "HerbeVerte", "Fleurs", "Glycine", "Horizon", "Genoise"):
+                if m not in ("Enseignes", "Graffitis") and not m.startswith("Feuilles") and m not in ("AiguillesPin", "Lavande", "HerbeSeche", "HerbeVerte", "Fleurs", "Glycine", "Horizon", "Genoise"):
                     off = np.floor(UV[:, 2 * k:2 * k + 2].mean(axis=0))
                     UV[:, 2 * k:2 * k + 2] -= off
             C = np.asarray(d["C"], np.uint8).reshape(-1, 4)
@@ -126,16 +126,44 @@ print("bâti / voirie / mobilier :", dict(mesh_stats), "%.0fs" % (time.time() - 
 
 # ------------------------------------------------------------------ 2. éléments instanciés (modules d'architecture, végétation)
 from modules import MODULE_BUILDERS
+from modules_zombie import ZOMBIE_BUILDERS, ZOMBIE_COLLIDE
+from mobilier_int import SIZE as FURN_SIZE
 from trees import catalog
 
 COLLIDE = {"Lampadaire": ("capsule", 0.12, 3.6), "Borne": ("capsule", 0.15, 0.7), "Banc": ("box", 1.7, 0.5, 0.9), "Banc_Pierre": ("box", 1.8, 0.45, 0.5),
            "Table_Cafe": ("capsule", 0.33, 0.75), "Parasol": ("capsule", 0.08, 2.5), "Balle_Foin": ("box", 1.3, 1.5, 1.5)}
-for name, fn in MODULE_BUILDERS.items():
+# balcons praticables (parkour) : dalle + garde-corps
+for _b in ("PorteFenetre_Balcon", "PorteFenetreV_Balcon"):
+    COLLIDE[_b] = ("boxes", [0, -0.16, -0.05, 1.4, 0.52, 0.1, 0, -0.39, 0.5, 1.34, 0.06, 1.0])
+# mobilier d'intérieur : boîte d'encombrement (rien pour les tapis et les suspensions)
+for _k, (_w, _d, _h) in FURN_SIZE.items():
+    if _h > 0.05:
+        COLLIDE[_k] = ("box", _w, _d, _h)
+COLLIDE.update(ZOMBIE_COLLIDE)
+TAGS = {k: ["TM_Echelle"] for k in ZOMBIE_BUILDERS if k.startswith("Z_Echelle")}
+ALL_MODULES = dict(MODULE_BUILDERS)
+ALL_MODULES.update(ZOMBIE_BUILDERS)
+
+
+def collision_entry(col):
+    """Collision au format du plugin ; les boîtes décentrées passent en repère Unreal (Y inversé)."""
+    if not col:
+        return "none", []
+    if col[0] == "boxes":
+        d = list(col[1])
+        for k in range(0, len(d), 6):
+            d[k + 1] = -d[k + 1]
+        return "boxes", d
+    return col[0], list(col[1:])
+
+
+for name, fn in ALL_MODULES.items():
     arr = fn().arrays()
     tris, _ = write_pvm(os.path.join(OUT, "Meshes", f"Mod_{name}.pvm"), [arr])
-    col = COLLIDE.get(name)
-    manifest["meshes"].append(dict(name=f"Mod_{name}", file=f"Meshes/Mod_{name}.pvm", nanite=True, collision=col[0] if col else "none",
-                                   collision_dims=list(col[1:]) if col else [], folder="Modules", tintable=True))
+    ctype, cdims = collision_entry(COLLIDE.get(name))
+    folder = "Interieurs" if name.startswith("Int_") else ("Zombies" if name.startswith("Z_") else "Modules")
+    manifest["meshes"].append(dict(name=f"Mod_{name}", file=f"Meshes/Mod_{name}.pvm", nanite=True, collision=ctype,
+                                   collision_dims=cdims, folder=folder, tintable=True, tags=TAGS.get(name, [])))
 C = catalog()
 VEG_CULL = {"Herbe": 9000, "Lavande_": 25000, "Buisson_Romarin": 18000, "Buisson_Garrigue": 30000, "Vigne_Rang": 40000, "Lavande_Rang": 50000, "Balle": 60000}
 for name, fn in C.items():
@@ -157,8 +185,9 @@ print("modules + végétation exportés %.0fs" % (time.time() - T0), flush=True)
 
 # ------------------------------------------------------------------ 3. instances
 N = pickle.load(open("nature_out.pkl", "rb"))
+Z = pickle.load(open("envahi_out.pkl", "rb"))
 all_inst = {}
-for src, prefix in ((B["inst"], "Mod_"), (M["inst"], "Mod_"), (N, "Veg_")):
+for src, prefix in ((B["inst"], "Mod_"), (M["inst"], "Mod_"), (Z["inst"], "Mod_"), (N, "Veg_")):
     for k, a in src.items():
         if len(a):
             all_inst.setdefault(prefix + k, []).append(np.asarray(a, np.float32))
@@ -228,7 +257,7 @@ for t in sorted(used_tex):
             continue
         im = Image.open(src)
         has_alpha = im.mode == "RGBA" and np.asarray(im)[..., 3].min() < 250
-        if t in ("Enseignes",) and suf != "BC":
+        if t in ("Enseignes", "Graffitis") and suf != "BC":
             continue
         hero = t in ("PierreMoellons", "TuilesCanal", "Enduit", "Calade", "PierreTaille", "Dallage")
         maxs = {"BC": 2048 if (hero or t in TERRAIN_LAYERS) else 1024, "N": 2048 if hero else 1024, "ORM": 1024}[suf]
@@ -301,6 +330,13 @@ manifest["credits"] = ["Données cartographiques : © contributeurs OpenStreetMa
                        "Relief : Copernicus DEM GLO-30 © DLR e.V. 2010-2014 et © Airbus Defence and Space GmbH 2014-2018, fourni dans le cadre du programme Copernicus",
                        "Lieux : Overture Maps Foundation (CDLA Permissive 2.0)",
                        "Textures, modèles et sons : générés procéduralement pour ce projet"]
+# village envahi : points d'apparition des zombies, maisons visitables, parcours de parkour
+manifest["zombie_spawns"] = to_ue_points(np.array(Z["spawns"], np.float64)).round(1).tolist()
+manifest["visitable_houses"] = [dict(id=v["id"], loc=to_ue_points([(v["x"], v["y"], v["z"])])[0].round(1).tolist(), style=v["style"])
+                                for v in B.get("visit", [])]
+manifest["parkour"] = [dict(kind=r["kind"], loc=to_ue_points([(r["x"], r["y"], r.get("z", 0.0))])[0].round(1).tolist()) for r in Z["route"]]
+print("zombies : %d points d'apparition, %d maisons visitables, %d éléments de parcours"
+      % (len(manifest["zombie_spawns"]), len(manifest["visitable_houses"]), len(manifest["parkour"])))
 print("export terminé en %.0fs" % (time.time() - T0))
 with open(os.path.join(OUT, "Village.json"), "w", encoding="utf-8") as f:
     json.dump(manifest, f, ensure_ascii=False, indent=1)

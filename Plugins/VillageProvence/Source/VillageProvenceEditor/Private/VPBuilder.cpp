@@ -446,6 +446,17 @@ UStaticMesh* FVPBuilder::BuildStaticMesh(const FString& Name, const FString& Fol
 			Body->AggGeom.SphylElems.Add(Capsule);
 			Body->CollisionTraceFlag = CTF_UseSimpleAsComplex;
 		}
+		else if (Collision == TEXT("boxes") && CollisionDims.Num() >= 6)
+		{
+			// plusieurs boîtes décentrées : centre (x, y, z) puis taille (x, y, z), en mètres, repère Unreal
+			for (int32 K = 0; K + 5 < CollisionDims.Num(); K += 6)
+			{
+				FKBoxElem Box(CollisionDims[K + 3] * 100.f, CollisionDims[K + 4] * 100.f, CollisionDims[K + 5] * 100.f);
+				Box.Center = FVector(CollisionDims[K] * 100.f, CollisionDims[K + 1] * 100.f, CollisionDims[K + 2] * 100.f);
+				Body->AggGeom.BoxElems.Add(Box);
+			}
+			Body->CollisionTraceFlag = CTF_UseSimpleAsComplex;
+		}
 		else if (Collision == TEXT("box") && CollisionDims.Num() >= 3)
 		{
 			FKBoxElem Box(CollisionDims[0] * 100.f, CollisionDims[1] * 100.f, CollisionDims[2] * 100.f);
@@ -772,6 +783,7 @@ bool FVPBuilder::Run()
 	Task.EnterProgressFrame(2.f, LOCTEXT("Ambiance", "Lumière, ciel et sons..."));
 	SetupAmbiance();
 	SetupSounds();
+	SetupZombies();
 	Task.EnterProgressFrame(3.f, LOCTEXT("Saving", "Enregistrement des assets..."));
 	UEditorLoadingAndSavingUtils::SaveDirtyPackages(false, true);
 	GEditor->RedrawAllViewports();

@@ -645,6 +645,134 @@ def t_water(n, size):
     return dict(albedo=alb, height=h, rough=np.full((n, n), 0.05, F32))
 
 
+
+# ------------------------------------------------------------------ intérieurs : tomettes, faïence, tissu provençal
+def hex_cells(n, size, d, seed):
+    """Pavage hexagonal raccordable (pointes vers le haut) : distance au joint et identifiant de tomette."""
+    from scipy.spatial import cKDTree
+    nx = int(round(size / d))
+    ny = int(round(size / (d * math.sqrt(3))))
+    sx, sy = size / nx, size / (ny * 2)          # pas horizontal, pas vertical (deux rangées par période)
+    pts, ids = [], []
+    k = 0
+    for j in range(2 * ny):
+        for i in range(nx):
+            pts.append(((i + 0.5 * (j % 2)) * sx, j * sy))
+            ids.append(k)
+            k += 1
+    pts = np.array(pts)
+    ids = np.array(ids)
+    rep = np.concatenate([pts + np.array([ox, oy]) for ox in (-size, 0, size) for oy in (-size, 0, size)])
+    rid = np.tile(ids, 9)
+    tree = cKDTree(rep)
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) * (size / n)
+    q = np.column_stack([xx.ravel(), yy.ravel()])
+    dd, ii = tree.query(q, k=2)
+    edge = ((dd[:, 1] - dd[:, 0]) * 0.5).reshape(n, n)   # demi-écart aux deux centres les plus proches ~ distance au joint
+    ID = rid[ii[:, 0]].reshape(n, n)
+    return edge, ID
+
+
+import math
+
+
+@register("Tomettes", 1.12, 1024)
+def t_tomettes(n, size):
+    s = 1201
+    edge, ID = hex_cells(n, size, 0.16, s)
+    joint = 0.0025
+    tile = smooth(joint, joint + 0.004, edge)
+    bev = smooth(joint, joint + 0.02, edge)
+    pal = [hex2rgb(c) for c in ("#a4492b", "#b35a36", "#9a4128", "#bf6a41", "#8f3c26", "#b5603a", "#c47850")]
+    alb = palette_pick(ID, pal, s + 1) * (0.88 + 0.22 * rand_per_id(ID, s + 2))[..., None]
+    alb *= (1 + 0.07 * noise(n, n / 10, s + 3) + 0.05 * band(n, 5, s + 4))[..., None]
+    wear = smooth(0.4, 1.8, noise(n, n / 5, s + 5))
+    alb = lerp(alb, alb * 1.12 + 0.03, wear * 0.35)
+    alb = lerp(hex2rgb("#8a7f70"), alb, tile)
+    h = tile * (0.0015 * bev + (rand_per_id(ID, s + 6) - 0.5) * 0.0012 + band(n, 20, s + 7) * 0.0002) - (1 - tile) * 0.002
+    rough = np.clip(0.42 + 0.18 * wear + 0.08 * noise(n, n / 12, s + 8) + 0.4 * (1 - tile), 0.3, 0.95)
+    return dict(albedo=alb, height=h, rough=rough)
+
+
+@register("Faience", 1.0, 1024)
+def t_faience(n, size):
+    s = 1301
+    k = 10                       # carreaux de 10 cm
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) * (size / n)
+    fx, fy = (xx * k / size) % 1.0, (yy * k / size) % 1.0
+    ID = (np.floor(xx * k / size) + k * np.floor(yy * k / size)).astype(np.int64)
+    e = np.minimum(np.minimum(fx, 1 - fx), np.minimum(fy, 1 - fy)) * (size / k)
+    tile = smooth(0.0012, 0.0025, e)
+    # émail blanc cassé, quelques carreaux décorés (motif bleu ou ocre) ; teinte par instance via le masque
+    base = hex2rgb("#efe9dc") * (0.95 + 0.06 * rand_per_id(ID, s + 1))[..., None]
+    r = np.hypot(fx - 0.5, fy - 0.5)
+    ang = np.arctan2(fy - 0.5, fx - 0.5)
+    motif = smooth(0.34, 0.3, r * (1.0 - 0.3 * np.cos(4 * ang))) * smooth(0.12, 0.15, r) + smooth(0.08, 0.06, r)
+    deco = (rand_per_id(ID, s + 2) < 0.22).astype(F32)
+    col = np.where((rand_per_id(ID, s + 3) < 0.6)[..., None], hex2rgb("#2d5a8a"), hex2rgb("#c9892f"))
+    alb = lerp(base, col, (np.clip(motif, 0, 1) * deco)[..., None])
+    alb = lerp(hex2rgb("#d6cfc1"), alb, tile)
+    pillow = np.clip(e / 0.01, 0, 1) ** 0.5
+    h = tile * (0.0008 * pillow + band(n, 30, s + 4) * 0.0001) - (1 - tile) * 0.0012
+    rough = np.clip(0.08 + 0.05 * noise(n, n / 20, s + 5) + 0.7 * (1 - tile), 0.05, 0.9)
+    return dict(albedo=alb, height=h, rough=rough, mask=tile * (1 - np.clip(motif, 0, 1) * deco))
+
+
+@register("TissuProvence", 0.5, 512)
+def t_tissu(n, size):
+    """Indienne provençale : petites fleurs et rinceaux sur un fond teinté par instance (masque = fond)."""
+    s = 1401
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32)
+    per = n / 6
+    u, v = (xx % per) / per, (yy % per) / per
+    row = np.floor(yy / per) % 2
+    u = (u + 0.5 * row) % 1.0
+    r = np.hypot(u - 0.5, v - 0.5)
+    ang = np.arctan2(v - 0.5, u - 0.5)
+    petals = smooth(0.40, 0.36, r * (1.0 - 0.3 * np.cos(5 * ang)))
+    heart = smooth(0.12, 0.1, r)
+    vine = smooth(0.06, 0.035, np.abs(np.sin((xx / per + 0.25 * np.sin(yy / per * 2 * np.pi)) * np.pi)) * 0.25)
+    ground_ = 1.0 - np.clip(petals + vine * 0.8, 0, 1)
+    alb = np.ones((n, n, 3), F32) * 0.92
+    alb = lerp(alb, hex2rgb("#f3e6c4"), petals[..., None])
+    alb = lerp(alb, hex2rgb("#b3372a"), heart[..., None])
+    alb = lerp(alb, hex2rgb("#3f6b3a"), (vine * (1 - petals))[..., None] * 0.9)
+    weave = np.sin(xx / 1.5 * np.pi) * np.sin(yy / 1.5 * np.pi)
+    alb *= (1 + 0.03 * weave)[..., None]
+    h = weave * 0.00015
+    return dict(albedo=alb, height=h, rough=np.full((n, n), 0.92, F32), mask=ground_)
+
+
+
+@register("Carrosserie", 1.0, 1024)
+def t_carrosserie(n, size):
+    """Peinture de voiture abandonnée : poussière, coulures, rayures, plaques de rouille (masque = peinture, teintée par instance)."""
+    s = 1501
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) / n
+    dust = np.clip(0.35 + 0.5 * noise(n, n / 3, s) + 0.25 * (yy ** 1.5), 0, 1)
+    streak = np.clip(noise(n, n / 40, s + 1, aniso=8.0) * 0.5 + 0.5, 0, 1) * yy
+    rust = smooth(1.2, 2.0, noise(n, n / 6, s + 2) + 0.8 * band(n, n / 30, s + 3))
+    scr = np.zeros((n, n), F32)
+    rng = np.random.default_rng(s + 4)
+    for _ in range(90):
+        x0, y0 = rng.random(2) * n
+        ang = rng.normal(0, 0.4)
+        L = rng.uniform(0.03, 0.2) * n
+        t = np.linspace(0, 1, int(L))
+        px = ((x0 + np.cos(ang) * L * t) % n).astype(int)
+        py = ((y0 + np.sin(ang) * L * t) % n).astype(int)
+        scr[py, px] = 1.0
+    scr = np.clip(blur(scr, 0.8) * 3, 0, 1)
+    paint = np.ones((n, n, 3), F32) * 0.85
+    alb = lerp(paint, hex2rgb("#b9ab92"), (dust * 0.45 + streak * 0.25)[..., None])
+    alb = lerp(alb, hex2rgb("#d8d4cc"), scr[..., None] * 0.6)
+    alb = lerp(alb, hex2rgb("#6b3a1e") * (0.8 + 0.3 * noise(n, n / 50, s + 5))[..., None], rust[..., None])
+    h = rust * 0.0006 * noise(n, n / 60, s + 6) - scr * 0.0002
+    rough = np.clip(0.35 + 0.45 * dust + 0.4 * rust, 0.2, 1)
+    mask = np.clip(1 - rust - scr * 0.5, 0, 1)
+    return dict(albedo=alb, height=h, rough=rough, mask=mask)
+
+
 def build(names=None, preview_dir="texprev"):
     os.makedirs(preview_dir, exist_ok=True)
     for name, cfg in TEX.items():

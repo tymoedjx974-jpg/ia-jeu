@@ -22,7 +22,8 @@ public class VillageProvenceEditor : ModuleRules
 			"ImageWrapper",
 			"Json",
 			"Projects",
-			"VillageProvence"
+			"VillageProvence",
+			"NavigationSystem"
 		});
 	}
 }

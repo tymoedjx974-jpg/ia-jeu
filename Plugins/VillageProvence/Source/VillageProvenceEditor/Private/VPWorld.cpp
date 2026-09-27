@@ -30,6 +30,11 @@
 #include "UObject/UnrealType.h"
 #include "VPVegetationShared.h"
 #include "VPVent.h"
+#include "VPPointsApparition.h"
+#include "Builders/CubeBuilder.h"
+#include "BSPOps.h"
+#include "NavigationSystem.h"
+#include "NavMesh/NavMeshBoundsVolume.h"
 
 #define LOCTEXT_NAMESPACE "VillageProvence"
 
@@ -215,6 +220,15 @@ void FVPBuilder::SpawnInstances(FScopedSlowTask& Task)
 		Owner->AddInstanceComponent(Component);
 		Component->RegisterComponent();
 
+		// étiquettes (par exemple TM_Echelle : le composant de parkour y grimpe)
+		const TArray<TSharedPtr<FJsonValue>>* MeshTags = nullptr;
+		if ((*Info)->TryGetArrayField(TEXT("tags"), MeshTags))
+		{
+			for (const TSharedPtr<FJsonValue>& T : *MeshTags)
+			{
+				Component->ComponentTags.AddUnique(FName(*T->AsString()));
+			}
+		}
 		if ((*Info)->GetStringField(TEXT("collision")) == TEXT("none"))
 		{
 			Component->SetCollisionEnabled(ECollisionEnabled::NoCollision);
@@ -246,7 +260,7 @@ void FVPBuilder::SpawnInstances(FScopedSlowTask& Task)
 		}
 		if (ColR != 255 || ColG != 255 || ColB != 255)
 		{
-			for (const TCHAR* Slot : { TEXT("BoisPeint"), TEXT("Toile") })
+			for (const TCHAR* Slot : { TEXT("BoisPeint"), TEXT("Toile"), TEXT("TissuProvence"), TEXT("Carrosserie") })
 			{
 				const int32 Index = Mesh->GetMaterialIndex(FName(Slot));
 				if (Index != INDEX_NONE)
@@ -464,6 +478,55 @@ void FVPBuilder::SetupSounds()
 				Vent->SonsFroissement.Add(Wave);
 			}
 		}
+	}
+}
+
+void FVPBuilder::SetupZombies()
+{
+	// points d'apparition des zombies et maisons visitables, pour le mode de jeu
+	if (AVPPointsApparition* Points = World->SpawnActor<AVPPointsApparition>(AVPPointsApparition::StaticClass(), FTransform(FVector(0.f, 0.f, 40000.f))))
+	{
+		const TArray<TSharedPtr<FJsonValue>>* Spawns = nullptr;
+		if (Manifest->TryGetArrayField(TEXT("zombie_spawns"), Spawns))
+		{
+			for (const TSharedPtr<FJsonValue>& V : *Spawns)
+			{
+				Points->Points.Add(JsonVector(V));
+			}
+		}
+		const TArray<TSharedPtr<FJsonValue>>* Houses = nullptr;
+		if (Manifest->TryGetArrayField(TEXT("visitable_houses"), Houses))
+		{
+			for (const TSharedPtr<FJsonValue>& V : *Houses)
+			{
+				if (TSharedPtr<FJsonValue> Loc = V->AsObject()->TryGetField(TEXT("loc")))
+				{
+					Points->MaisonsVisitables.Add(JsonVector(Loc));
+				}
+			}
+		}
+		Tag(Points, TEXT("VP_PointsApparition"), TEXT("VillageProvence/Zombies"), true);
+	}
+
+	// volume de navigation (1,6 x 1,6 km autour du village) pour les IA qui se déplacent avec le navmesh
+	for (TActorIterator<ANavMeshBoundsVolume> It(World); It; ++It)
+	{
+		return;
+	}
+	if (ANavMeshBoundsVolume* Nav = World->SpawnActor<ANavMeshBoundsVolume>(ANavMeshBoundsVolume::StaticClass(), FTransform(FVector(-1000.f, -2000.f, 3000.f))))
+	{
+		UCubeBuilder* Cube = NewObject<UCubeBuilder>();
+		Cube->X = 160000.f;
+		Cube->Y = 160000.f;
+		Cube->Z = 30000.f;
+		Cube->Build(World, Nav);
+		FBSPOps::csgPrepMovingBrush(Nav);
+		Nav->PostEditChange();
+		if (UNavigationSystemV1* NavSys = UNavigationSystemV1::GetCurrent<UNavigationSystemV1>(World))
+		{
+			NavSys->OnNavigationBoundsUpdated(Nav);
+		}
+		Tag(Nav, TEXT("VP_Navigation"), TEXT("VillageProvence/Zombies"), true);
 	}
 }
 

@@ -38,6 +38,36 @@ def casement(mb, w, h, y=DEPTH, panes=3, leaves=2):
         glass(mb, x0 + 0.03, x1 - 0.03, 0.09, h - 0.09, y + 0.01)
 
 
+def rotated_into(dst, src, ang, pivot):
+    """Ajoute à dst le contenu de src tourné de ang (rad) autour de l'axe vertical passant par pivot (x, y)."""
+    ca, sa = math.cos(ang), math.sin(ang)
+    for mat, a in src.arrays().items():
+        P = a["P"].astype(np.float64).copy()
+        N = a["N"].astype(np.float64).copy()
+        x, y = P[:, 0] - pivot[0], P[:, 1] - pivot[1]
+        P[:, 0], P[:, 1] = x * ca - y * sa + pivot[0], x * sa + y * ca + pivot[1]
+        nx, ny = N[:, 0].copy(), N[:, 1].copy()
+        N[:, 0], N[:, 1] = nx * ca - ny * sa, nx * sa + ny * ca
+        dst.add(mat, P, N, a["UV"], a["C"], a["I"])
+
+
+def casement_open(mb, w, h, y=DEPTH, panes=3, leaves=2, ang=math.radians(96)):
+    """Fenêtre ouverte vers l'intérieur (maisons visitables) : dormant fixe, vantaux rabattus contre le tableau."""
+    frame_rect(mb, -w / 2, w / 2, 0, h, y + 0.02, t=0.06, d=0.06)
+    lw = w / leaves
+    for k in range(leaves):
+        leaf = MB()
+        x0 = -w / 2 + k * lw + 0.05
+        x1 = -w / 2 + (k + 1) * lw - 0.05
+        frame_rect(leaf, x0, x1, 0.06, h - 0.06, y + 0.03, t=0.045, d=0.045)
+        for p in range(1, panes):
+            z = 0.06 + (h - 0.12) * p / panes
+            box(leaf, "BoisPeint", ((x0 + x1) / 2, y + 0.03, z), (x1 - x0 - 0.06, 0.03, 0.022), uv_scale=1)
+        left = (k == 0) if leaves > 1 else True
+        pivot = (x0, y + 0.05) if left else (x1, y + 0.05)
+        rotated_into(mb, leaf, ang if left else -ang, pivot)
+
+
 def sill(mb, w, depth_out=0.06, thick=0.06, mat="PierreTaille"):
     box(mb, mat, (0, (DEPTH + 0.04 - depth_out) / 2, -thick / 2 + 0.005), (w + 0.12, DEPTH + 0.04 + depth_out, thick), uv_scale=T(mat))
 
@@ -97,9 +127,12 @@ def surround(mb, w, h, band=0.14, proud=0.012, mat="Enduit"):
         box(mb, mat, (cx, y, cz), (sx, proud, sz), col=col, uv_scale=T(mat), faces=("-y", "-x", "+x", "+z", "-z"))
 
 
-def window(w=0.9, h=1.35, state="open", louvers=False, grille=False, surround_band=True, panes=3):
+def window(w=0.9, h=1.35, state="open", louvers=False, grille=False, surround_band=True, panes=3, open_in=False):
     mb = MB()
-    casement(mb, w, h, panes=panes)
+    if open_in:
+        casement_open(mb, w, h, panes=panes)
+    else:
+        casement(mb, w, h, panes=panes)
     sill(mb, w)
     if surround_band:
         surround(mb, w, h)
@@ -114,25 +147,29 @@ def window(w=0.9, h=1.35, state="open", louvers=False, grille=False, surround_ba
     return mb
 
 
-def small_window(w=0.55, h=0.55):
+def small_window(w=0.55, h=0.55, open_in=False):
     mb = MB()
     frame_rect(mb, -w / 2, w / 2, 0, h, DEPTH, t=0.05, d=0.05)
-    glass(mb, -w / 2 + 0.04, w / 2 - 0.04, 0.04, h - 0.04, DEPTH + 0.01)
+    if not open_in:
+        glass(mb, -w / 2 + 0.04, w / 2 - 0.04, 0.04, h - 0.04, DEPTH + 0.01)
     box(mb, "BoisPeint", (0, DEPTH, h / 2), (0.03, 0.03, h - 0.08), uv_scale=1)
     sill(mb, w, depth_out=0.04, thick=0.05)
     return mb
 
 
-def door(w=1.0, h=2.2, transom=True, stone=True):
+def door(w=1.0, h=2.2, transom=True, stone=True, open_in=False):
     mb = MB()
     y = DEPTH - 0.04
     frame_rect(mb, -w / 2, w / 2, 0, h, y + 0.03, t=0.07, d=0.07)
     ht = h - 0.45 if transom else h - 0.07
-    # vantail : lames verticales + cadre
-    box(mb, "BoisPeint", (0, y, (0.02 + ht) / 2), (w - 0.14, 0.05, ht - 0.02), uv_scale=1)
+    # vantail : lames verticales + cadre (ouvert vers l'intérieur dans les maisons visitables)
+    leaf = MB() if open_in else mb
+    box(leaf, "BoisPeint", (0, y, (0.02 + ht) / 2), (w - 0.14, 0.05, ht - 0.02), uv_scale=1)
     for zc in (0.25, ht * 0.5, ht - 0.25):
-        box(mb, "BoisPeint", (0, y - 0.03, zc), (w - 0.2, 0.02, 0.1), uv_scale=1)
-    tube(mb, "Fer", [(w / 2 - 0.16, y - 0.08, 1.0), (w / 2 - 0.16, y - 0.03, 1.0)], 0.018, segs=6)
+        box(leaf, "BoisPeint", (0, y - 0.03, zc), (w - 0.2, 0.02, 0.1), uv_scale=1)
+    tube(leaf, "Fer", [(w / 2 - 0.16, y - 0.08, 1.0), (w / 2 - 0.16, y - 0.03, 1.0)], 0.018, segs=6)
+    if open_in:
+        rotated_into(mb, leaf, math.radians(100), (-w / 2 + 0.07, y + 0.03))
     if transom:
         box(mb, "BoisPeint", (0, y, ht + 0.02), (w - 0.1, 0.07, 0.05), uv_scale=1)
         glass(mb, -w / 2 + 0.07, w / 2 - 0.07, ht + 0.05, h - 0.07, y + 0.02)
@@ -173,13 +210,16 @@ def arched_infill(mb, w, h, rise, mat="Enduit", y=0.0, col=WHITE):
         mb.quad(mat, (xb, y, zb), (xa, y, za), (xa, DEPTH, za), (xb, DEPTH, zb), [(0, 0), (0.1, 0), (0.1, 0.1), (0, 0.1)], col)
 
 
-def carriage_door(w=2.4, h=2.6, rise=0.45):
+def carriage_door(w=2.4, h=2.6, rise=0.45, open_in=False):
     mb = MB()
     y = DEPTH - 0.02
     for k, (x0, x1) in enumerate(((-w / 2 + 0.05, -0.01), (0.01, w / 2 - 0.05))):
-        box(mb, "BoisPeint", ((x0 + x1) / 2, y, (h - rise * 0.2) / 2), (x1 - x0, 0.06, h - rise * 0.2), uv_scale=1)
+        leaf = MB() if open_in else mb
+        box(leaf, "BoisPeint", ((x0 + x1) / 2, y, (h - rise * 0.2) / 2), (x1 - x0, 0.06, h - rise * 0.2), uv_scale=1)
         for zc in (0.3, 1.3, 2.1):
-            box(mb, "BoisPeint", ((x0 + x1) / 2, y - 0.035, zc), (x1 - x0 - 0.1, 0.02, 0.12), uv_scale=1)
+            box(leaf, "BoisPeint", ((x0 + x1) / 2, y - 0.035, zc), (x1 - x0 - 0.1, 0.02, 0.12), uv_scale=1)
+        if open_in:
+            rotated_into(mb, leaf, math.radians(100) * (1 if k == 0 else -1), (x0, y + 0.03) if k == 0 else (x1, y + 0.03))
     arched_infill(mb, w, h, rise, y=-0.001, col=(240, 236, 226, 0))
     box(mb, "PierreTaille", (0, 0.02, -0.08), (w + 0.1, DEPTH + 0.3, 0.2), uv_scale=3)
     return mb
@@ -215,9 +255,12 @@ def shopfront(w=2.6, h=2.7, awning=True):
     return mb
 
 
-def balcony_door(w=0.9, h=2.15):
+def balcony_door(w=0.9, h=2.15, open_in=False):
     mb = MB()
-    casement(mb, w, h, panes=4)
+    if open_in:
+        casement_open(mb, w, h, panes=4)
+    else:
+        casement(mb, w, h, panes=4)
     shutters(mb, w, h, "open")
     surround(mb, w, h)
     # dalle en pierre + garde-corps en fer forgé
@@ -404,6 +447,18 @@ MODULE_BUILDERS = {
     "Vitrine": lambda: shopfront(2.6, 2.75, awning=True),
     "Vitrine_SansStore": lambda: shopfront(2.6, 2.75, awning=False),
     "PorteFenetre_Balcon": lambda: balcony_door(0.9, 2.15),
+    # maisons visitables : ouvertures sans vitre, vantaux ouverts vers l'intérieur
+    "FenetreV_Ouverte": lambda: window(0.9, 1.35, "open", open_in=True),
+    "FenetreV_Fermee": lambda: window(0.9, 1.35, "closed", open_in=True),
+    "FenetreV_MiClose": lambda: window(0.9, 1.35, "half", open_in=True),
+    "FenetreV_Persiennes": lambda: window(0.9, 1.35, "open", louvers=True, open_in=True),
+    "FenetreV_Nue": lambda: window(0.9, 1.35, None, surround_band=False, open_in=True),
+    "FenetreV_Barreaux": lambda: window(0.8, 1.1, None, grille=True, surround_band=False, panes=2, open_in=True),
+    "FenestronV": lambda: small_window(0.55, 0.55, open_in=True),
+    "PorteV": lambda: door(1.0, 2.25, transom=True, open_in=True),
+    "PorteV_Simple": lambda: door(0.95, 2.15, transom=False, stone=False, open_in=True),
+    "RemiseV": lambda: carriage_door(2.4, 2.6, open_in=True),
+    "PorteFenetreV_Balcon": lambda: balcony_door(0.9, 2.15, open_in=True),
     "Lanterne_Murale": wall_lantern,
     "Lampadaire": street_lamp,
     "Banc": bench,
@@ -425,3 +480,14 @@ OPENINGS = {
     "Fenestron": (0.55, 0.55), "Porte": (1.0, 2.25), "Porte_Simple": (0.95, 2.15), "Remise": (2.4, 2.6),
     "Vitrine": (2.6, 2.75), "Vitrine_SansStore": (2.6, 2.75), "PorteFenetre_Balcon": (0.9, 2.15),
 }
+# variantes ouvertes des maisons visitables (mêmes dimensions)
+VISIT = {"Fenetre_Ouverte": "FenetreV_Ouverte", "Fenetre_Fermee": "FenetreV_Fermee", "Fenetre_MiClose": "FenetreV_MiClose",
+         "Fenetre_Persiennes": "FenetreV_Persiennes", "Fenetre_Nue": "FenetreV_Nue", "Fenetre_Barreaux": "FenetreV_Barreaux",
+         "Fenestron": "FenestronV", "Porte": "PorteV", "Porte_Simple": "PorteV_Simple", "Remise": "RemiseV",
+         "PorteFenetre_Balcon": "PorteFenetreV_Balcon"}
+for _k, _v in VISIT.items():
+    OPENINGS[_v] = OPENINGS[_k]
+
+# mobilier d'intérieur
+from mobilier_int import FURNITURE as _FURN
+MODULE_BUILDERS.update(_FURN)

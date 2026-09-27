@@ -5,6 +5,7 @@ from common import *
 from geomlib import MB, planar_polygon, triangulate, tube, box, revolve, disk, rect_sign, nrm, WHITE
 from materials import TILE
 from modules import OPENINGS
+import interiors
 from shapely.geometry.polygon import orient
 from shapely.strtree import STRtree
 import shapely.prepared
@@ -279,6 +280,11 @@ def attributes(b):
 for b in blds:
     attributes(b)
 
+# maisons visitables (intérieurs) : candidates réparties dans le village, validées à la génération
+VISIT_CANDS = interiors.candidates(blds, CENTER)
+VISITED = []
+MAX_VISIT = 48
+
 
 # ------------------------------------------------------------------ analyse des façades
 def edge_analysis(b):
@@ -450,6 +456,14 @@ def gen_building(b, mb, inst):
     tw = TILE[wall]
     # ---------------- ouvertures
     openings = layout(b, info) if st not in ("shelter",) else []
+    # maison visitable : plan de l'intérieur, porte et fenêtres ouvertes
+    pl = None
+    if b.get("visit_cand") and len(VISITED) < MAX_VISIT:
+        pl = interiors.plan(b, info, openings, gz)
+        if pl:
+            interiors.apply_openings(b, pl, openings, info)
+            b["visit"] = True
+            VISITED.append(b)
     by_edge = collections.defaultdict(list)
     for o in openings:
         by_edge[o["edge"]].append(o)
@@ -481,7 +495,7 @@ def gen_building(b, mb, inst):
                            lambda v2, P, per=per: np.stack([(per + v2[:, 0]) / tw, -v2[:, 1] / tw], -1), col)
             # tableaux des ouvertures (profondeur vers l'intérieur)
             inward = np.array([-e["out"][0], -e["out"][1], 0.0])
-            D = 0.22
+            D = interiors.T_WALL if pl else 0.22
             for o in by_edge.get(ei, []):
                 a0 = origin + e1 * o["s0"]
                 a1 = origin + e1 * o["s1"]
@@ -494,7 +508,8 @@ def gen_building(b, mb, inst):
                 mb.quad(wall, a1 + e2 * z0, a0 + e2 * z0, a0 + e2 * z0 + inward * D, a1 + e2 * z0 + inward * D, [(0, 0), (o["s1"] / tw - o["s0"] / tw, 0), (o["s1"] / tw - o["s0"] / tw, D / tw), (0, D / tw)], col)
                 # fond sombre derrière les vitres (pas d'intérieur modélisé)
                 back = inward * 0.6
-                mb.quad("Verre", a1 + e2 * z0 + back, a0 + e2 * z0 + back, a0 + e2 * z1 + back, a1 + e2 * z1 + back, [(0, 0), (1, 0), (1, 1), (0, 1)], WHITE, n=-inward)
+                if not pl:
+                    mb.quad("Verre", a1 + e2 * z0 + back, a0 + e2 * z0 + back, a0 + e2 * z1 + back, a1 + e2 * z1 + back, [(0, 0), (1, 0), (1, 1), (0, 1)], WHITE, n=-inward)
                 # instance du module
                 yaw = math.atan2(u[1], u[0])
                 sc = (o["s1"] - o["s0"]) / OPENINGS[o["type"]][0]
@@ -577,6 +592,17 @@ def gen_building(b, mb, inst):
             chimney(b, mb, rinfo, planes)
     # plaques, enseignes, mairie
     decorations(b, mb, info, openings, inst)
+    # intérieur de la maison visitable
+    if pl:
+        interiors.build(b, pl, mb, inst, rng)
+    # données pour l'habillage (barricades, inscriptions) et le parkour (échelles, planches entre toits)
+    b["meta"] = dict(id=b["id"], style=st, poly=np.array(p.exterior.coords)[:-1].tolist(), zref=float(b["zref"]), eave=float(eave),
+                     nf=int(b["nf"]), roof=b["roof"], visit=bool(pl), shop=b.get("shop"), mairie=bool(b.get("mairie")),
+                     planes=[(A.tolist(), float(B_)) for A, B_ in planes],
+                     edges=[dict(p0=e["p0"].tolist(), p1=e["p1"].tolist(), out=e["out"].tolist(), L=float(e["L"]), street=bool(e["street"]),
+                                 party=bool(e["party"]), g=float(e["g_out"].min()) if len(e["g_out"]) else float(b["zref"])) for e in info],
+                     openings=[dict(edge=o["edge"], type=o["type"], s0=float(o["s0"]), s1=float(o["s1"]), z0=float(o["z0"]), z1=float(o["z1"]))
+                               for o in openings])
 
 
 def genoise(b, mb, info, planes):
@@ -1128,7 +1154,11 @@ if __name__ == "__main__":
             print(n, "bâtiments  %.0fs" % (time.time() - T0), flush=True)
     npl = street_plaques(chunks[(0, 0)])
     print("plaques de rue:", npl)
-    out = dict(chunks={k: v.arrays() for k, v in chunks.items()}, specials={k: (v[0].arrays(), v[1]) for k, v in specials.items()},
+    print("maisons visitables : %d (sur %d candidates)" % (len(VISITED), len(VISIT_CANDS)))
+    out = dict(visit=[dict(id=b["id"], x=b["poly"].centroid.x, y=b["poly"].centroid.y, z=b["zref"], style=b["style"], plan=b.get("visit_plan"))
+                      for b in VISITED],
+               meta=[b["meta"] for b in blds if "meta" in b],
+               chunks={k: v.arrays() for k, v in chunks.items()}, specials={k: (v[0].arrays(), v[1]) for k, v in specials.items()},
                inst={k: np.array(v, np.float32) for k, v in inst.items()})
     with open("buildings_out.pkl" if not only_core else "buildings_core.pkl", "wb") as f:
         pickle.dump(out, f)

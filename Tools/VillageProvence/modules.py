@@ -157,19 +157,18 @@ def small_window(w=0.55, h=0.55, open_in=False):
     return mb
 
 
-def door(w=1.0, h=2.2, transom=True, stone=True, open_in=False):
+def door(w=1.0, h=2.2, transom=True, stone=True, open_in=False, leaf=True):
+    """Porte d'entrée. leaf=False : encadrement seul, le vantail est un acteur mobile dans Unreal (maisons visitables)."""
     mb = MB()
     y = DEPTH - 0.04
     frame_rect(mb, -w / 2, w / 2, 0, h, y + 0.03, t=0.07, d=0.07)
     ht = h - 0.45 if transom else h - 0.07
     # vantail : lames verticales + cadre (ouvert vers l'intérieur dans les maisons visitables)
-    leaf = MB() if open_in else mb
-    box(leaf, "BoisPeint", (0, y, (0.02 + ht) / 2), (w - 0.14, 0.05, ht - 0.02), uv_scale=1)
-    for zc in (0.25, ht * 0.5, ht - 0.25):
-        box(leaf, "BoisPeint", (0, y - 0.03, zc), (w - 0.2, 0.02, 0.1), uv_scale=1)
-    tube(leaf, "Fer", [(w / 2 - 0.16, y - 0.08, 1.0), (w / 2 - 0.16, y - 0.03, 1.0)], 0.018, segs=6)
-    if open_in:
-        rotated_into(mb, leaf, math.radians(100), (-w / 2 + 0.07, y + 0.03))
+    if leaf:
+        lf = MB() if open_in else mb
+        door_leaf(lf, w, ht, y)
+        if open_in:
+            rotated_into(mb, lf, math.radians(100), (-w / 2 + 0.07, y + 0.03))
     if transom:
         box(mb, "BoisPeint", (0, y, ht + 0.02), (w - 0.1, 0.07, 0.05), uv_scale=1)
         glass(mb, -w / 2 + 0.07, w / 2 - 0.07, ht + 0.05, h - 0.07, y + 0.02)
@@ -184,6 +183,45 @@ def door(w=1.0, h=2.2, transom=True, stone=True, open_in=False):
         for (cx, cz, sx, sz) in (((-w / 2 - band / 2), h / 2, band, h), ((w / 2 + band / 2), h / 2, band, h), (0, h + band / 2, w + 2 * band, band)):
             box(mb, "PierreTaille", (cx, -0.01, cz), (sx, 0.03, sz), uv_scale=3, faces=("-y", "-x", "+x", "+z"))
     return mb
+
+
+def door_leaf(mb, w, ht, y):
+    """Vantail en lames verticales avec traverses et poignée (repère de la porte)."""
+    box(mb, "BoisPeint", (0, y, (0.02 + ht) / 2), (w - 0.14, 0.05, ht - 0.02), uv_scale=1)
+    for zc in (0.25, ht * 0.5, ht - 0.25):
+        box(mb, "BoisPeint", (0, y - 0.03, zc), (w - 0.2, 0.02, 0.1), uv_scale=1)
+    tube(mb, "Fer", [(w / 2 - 0.16, y - 0.08, 1.0), (w / 2 - 0.16, y - 0.03, 1.0)], 0.018, segs=6)
+    # poignée côté intérieur
+    tube(mb, "Fer", [(w / 2 - 0.16, y + 0.025, 1.0), (w / 2 - 0.16, y + 0.07, 1.0)], 0.018, segs=6)
+
+
+# vantaux mobiles des maisons visitables : charnière à l'origine, porte fermée le long de +X, extérieur vers -Y
+LEAF_HINGE_Y = DEPTH - 0.04 + 0.03
+LEAVES = {  # nom du vantail : (largeur de la porte, hauteur du vantail)
+    "Vantail_Porte": (1.0, 2.25 - 0.45),
+    "Vantail_PorteSimple": (0.95, 2.15 - 0.07),
+}
+DOOR_LEAF = {"PorteI": "Vantail_Porte", "PorteI_Simple": "Vantail_PorteSimple"}
+
+
+def moving_leaf(name):
+    w, ht = LEAVES[name]
+    src = MB()
+    door_leaf(src, w, ht, DEPTH - 0.04)
+    out = MB()
+    for mat, a in src.arrays().items():
+        P = a["P"].astype(np.float64).copy()
+        P[:, 0] -= -w / 2 + 0.07
+        P[:, 1] -= LEAF_HINGE_Y
+        out.add(mat, P, a["N"], a["UV"], a["C"], a["I"])
+    return out
+
+
+def leaf_collision(name):
+    """Boîte de collision du vantail (centre, taille) dans son repère."""
+    w, ht = LEAVES[name]
+    lw = w - 0.14
+    return ("boxes", [lw / 2, -0.03, (0.02 + ht) / 2, lw, 0.07, ht - 0.02])
 
 
 def arched_infill(mb, w, h, rise, mat="Enduit", y=0.0, col=WHITE):
@@ -458,6 +496,10 @@ MODULE_BUILDERS = {
     "PorteV": lambda: door(1.0, 2.25, transom=True, open_in=True),
     "PorteV_Simple": lambda: door(0.95, 2.15, transom=False, stone=False, open_in=True),
     "RemiseV": lambda: carriage_door(2.4, 2.6, open_in=True),
+    "PorteI": lambda: door(1.0, 2.25, transom=True, open_in=True, leaf=False),
+    "PorteI_Simple": lambda: door(0.95, 2.15, transom=False, stone=False, open_in=True, leaf=False),
+    "Vantail_Porte": lambda: moving_leaf("Vantail_Porte"),
+    "Vantail_PorteSimple": lambda: moving_leaf("Vantail_PorteSimple"),
     "PorteFenetreV_Balcon": lambda: balcony_door(0.9, 2.15, open_in=True),
     "Lanterne_Murale": wall_lantern,
     "Lampadaire": street_lamp,
@@ -483,10 +525,11 @@ OPENINGS = {
 # variantes ouvertes des maisons visitables (mêmes dimensions)
 VISIT = {"Fenetre_Ouverte": "FenetreV_Ouverte", "Fenetre_Fermee": "FenetreV_Fermee", "Fenetre_MiClose": "FenetreV_MiClose",
          "Fenetre_Persiennes": "FenetreV_Persiennes", "Fenetre_Nue": "FenetreV_Nue", "Fenetre_Barreaux": "FenetreV_Barreaux",
-         "Fenestron": "FenestronV", "Porte": "PorteV", "Porte_Simple": "PorteV_Simple", "Remise": "RemiseV",
+         "Fenestron": "FenestronV", "Porte": "PorteI", "Porte_Simple": "PorteI_Simple", "Remise": "RemiseV",
          "PorteFenetre_Balcon": "PorteFenetreV_Balcon"}
 for _k, _v in VISIT.items():
     OPENINGS[_v] = OPENINGS[_k]
+OPENINGS["PorteV"], OPENINGS["PorteV_Simple"] = OPENINGS["Porte"], OPENINGS["Porte_Simple"]
 
 # mobilier d'intérieur
 from mobilier_int import FURNITURE as _FURN

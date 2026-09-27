@@ -80,6 +80,7 @@ private:
 	void SetupAmbiance();
 	void SetupSounds();
 	void SetupZombies();
+	void SetupDoors();
 
 	EMode Mode;
 	FString DataDir;

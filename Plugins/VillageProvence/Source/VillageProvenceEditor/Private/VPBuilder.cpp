@@ -784,6 +784,7 @@ bool FVPBuilder::Run()
 	SetupAmbiance();
 	SetupSounds();
 	SetupZombies();
+	SetupDoors();
 	Task.EnterProgressFrame(3.f, LOCTEXT("Saving", "Enregistrement des assets..."));
 	UEditorLoadingAndSavingUtils::SaveDirtyPackages(false, true);
 	GEditor->RedrawAllViewports();

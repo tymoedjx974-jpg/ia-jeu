@@ -54,7 +54,8 @@ def proto(name, builder=None):
         return _proto[name]
     if builder is None:
         from modules import MODULE_BUILDERS
-        builder = MODULE_BUILDERS[name]
+        from modules_zombie import ZOMBIE_BUILDERS
+        builder = MODULE_BUILDERS.get(name) or ZOMBIE_BUILDERS[name]
     arr = builder() if callable(builder) else builder
     if hasattr(arr, "arrays"):
         arr = arr.arrays()

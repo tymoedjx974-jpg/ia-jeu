@@ -1,5 +1,5 @@
 """Sons d'ambiance synthétisés (boucles parfaites) : chœur de cigales, filet d'eau de fontaine, souffle du vent,
-froissements d'herbes et de feuilles au passage du joueur."""
+froissements d'herbes et de feuilles au passage du joueur, grincement et fermeture des portes."""
 import numpy as np, wave, sys, os
 SR = 32000
 OUT = sys.argv[1] if len(sys.argv) > 1 else "sons"
@@ -86,4 +86,29 @@ for v in range(4):
     x = body + crack / (np.abs(crack).max() + 1e-9) * 0.8
     fade = np.minimum(1, np.minimum(t / 0.015, (L - t) / 0.06))
     save(f"Froissement_{v}.wav", x * fade)
+# porte : grincement de gonds (frottement saccadé filtré par des résonances du bois) puis claquement sourd + loquet
+def resonate(x, freqs, q=30.0):
+    X = np.fft.rfft(x)
+    f = np.fft.rfftfreq(len(x), 1 / SR)
+    H = sum(1.0 / (1.0 + (q * (f / f0 - f0 / np.maximum(f, 1))) ** 2) for f0 in freqs)
+    return np.fft.irfft(X * H, len(x))
+
+L = 1.3
+n = int(L * SR)
+t = np.arange(n) / SR
+rate = 45 + 35 * np.sin(np.pi * t / L) + 8 * np.sin(2 * np.pi * 3.1 * t)
+ph = np.cumsum(rate) / SR
+pulses = (np.diff(np.floor(ph), prepend=0) > 0).astype(float) * rng.uniform(0.5, 1.0, n)
+creak = resonate(pulses + 0.02 * rng.standard_normal(n), [520, 1180, 2300], q=25)
+env = np.sin(np.pi * np.clip(t / L, 0, 1)) ** 0.6
+save("Porte_Ouverture.wav", creak * env)
+L = 0.7
+n = int(L * SR)
+t = np.arange(n) / SR
+thump = np.sin(2 * np.pi * 95 * t) * np.exp(-t / 0.08) + 0.6 * band_noise(n, 80, 600) * np.exp(-t / 0.05)
+click = np.zeros(n)
+c0 = int(0.035 * SR)
+click[c0:c0 + 400] = rng.standard_normal(400) * np.exp(-np.arange(400) / 60)
+click = resonate(click, [2600, 4100], q=12)
+save("Porte_Fermeture.wav", thump + 0.5 * click / (np.abs(click).max() + 1e-9))
 print("ok")

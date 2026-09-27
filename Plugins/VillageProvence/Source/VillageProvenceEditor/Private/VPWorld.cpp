@@ -31,6 +31,7 @@
 #include "VPVegetationShared.h"
 #include "VPVent.h"
 #include "VPPointsApparition.h"
+#include "VPPorte.h"
 #include "Builders/CubeBuilder.h"
 #include "BSPOps.h"
 #include "NavigationSystem.h"
@@ -527,6 +528,59 @@ void FVPBuilder::SetupZombies()
 			NavSys->OnNavigationBoundsUpdated(Nav);
 		}
 		Tag(Nav, TEXT("VP_Navigation"), TEXT("VillageProvence/Zombies"), true);
+	}
+}
+
+void FVPBuilder::SetupDoors()
+{
+	// portes mobiles des maisons visitables : vantail qui pivote sur sa charnière, s'ouvre à l'approche du joueur
+	const TArray<TSharedPtr<FJsonValue>>* Doors = nullptr;
+	if (!Manifest->TryGetArrayField(TEXT("doors"), Doors))
+	{
+		return;
+	}
+	USoundWave* SonOuverture = FindExisting<USoundWave>(TEXT("Sons"), TEXT("S_Porte_Ouverture"));
+	USoundWave* SonFermeture = FindExisting<USoundWave>(TEXT("Sons"), TEXT("S_Porte_Fermeture"));
+	int32 Index = 0;
+	for (const TSharedPtr<FJsonValue>& V : *Doors)
+	{
+		const TSharedPtr<FJsonObject> D = V->AsObject();
+		UStaticMesh* Mesh = Meshes.FindRef(D->GetStringField(TEXT("mesh")));
+		if (!Mesh)
+		{
+			++Warnings;
+			continue;
+		}
+		const FVector Loc = JsonVector(D->GetField<EJson::Array>(TEXT("loc")));
+		const float Yaw = (float)D->GetNumberField(TEXT("yaw"));
+		AVPPorte* Porte = World->SpawnActor<AVPPorte>(AVPPorte::StaticClass(), FTransform(FRotator(0.f, Yaw, 0.f), Loc));
+		if (!Porte)
+		{
+			++Warnings;
+			continue;
+		}
+		Porte->Vantail->SetStaticMesh(Mesh);
+		Porte->Vantail->SetRelativeScale3D(FVector((float)D->GetNumberField(TEXT("scale")), 1.f, 1.f));
+		const TArray<TSharedPtr<FJsonValue>>& Col = D->GetArrayField(TEXT("color"));
+		if (Col.Num() >= 3)
+		{
+			const FColor Color((uint8)Col[0]->AsNumber(), (uint8)Col[1]->AsNumber(), (uint8)Col[2]->AsNumber());
+			const int32 Slot = Mesh->GetMaterialIndex(FName(TEXT("BoisPeint")));
+			if (Slot != INDEX_NONE)
+			{
+				if (UMaterialInterface* Mat = GetTinted(TEXT("BoisPeint"), Color))
+				{
+					Porte->Vantail->SetMaterial(Slot, Mat);
+				}
+			}
+		}
+		Porte->AngleOuverture = (float)D->GetNumberField(TEXT("open_angle"));
+		Porte->bOuverteAuDepart = D->GetBoolField(TEXT("open"));
+		Porte->Maison = D->GetStringField(TEXT("house"));
+		Porte->SonOuverture = SonOuverture;
+		Porte->SonFermeture = SonFermeture;
+		Porte->DefinirEtat(Porte->bOuverteAuDepart);
+		Tag(Porte, FString::Printf(TEXT("VP_Porte_%d"), Index++), TEXT("VillageProvence/Portes"), true);
 	}
 }
 

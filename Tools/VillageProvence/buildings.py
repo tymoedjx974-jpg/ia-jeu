@@ -4,7 +4,7 @@ sys.path.insert(0, ".")
 from common import *
 from geomlib import MB, planar_polygon, triangulate, tube, box, revolve, disk, rect_sign, nrm, WHITE
 from materials import TILE
-from modules import OPENINGS
+from modules import OPENINGS, DOOR_LEAF, LEAVES, LEAF_HINGE_Y
 import interiors
 from shapely.geometry.polygon import orient
 from shapely.strtree import STRtree
@@ -283,7 +283,8 @@ for b in blds:
 # maisons visitables (intérieurs) : candidates réparties dans le village, validées à la génération
 VISIT_CANDS = interiors.candidates(blds, CENTER)
 VISITED = []
-MAX_VISIT = 48
+MOVING_DOORS = []   # portes mobiles des maisons visitables
+MAX_VISIT = 140
 
 
 # ------------------------------------------------------------------ analyse des façades
@@ -516,6 +517,13 @@ def gen_building(b, mb, inst):
                 pos = origin + e1 * ((o["s0"] + o["s1"]) / 2) + e2 * z0
                 colr = o.get("color", b["shutter"])
                 inst[o["type"]].append((pos[0], pos[1], pos[2], yaw, sc, 1.0, 1.0, *colr))
+                if o["type"] in DOOR_LEAF:
+                    # vantail mobile (acteur porte dans Unreal) : charnière dans le repère du module, mise à l'échelle de l'ouverture
+                    lw_, _ = LEAVES[DOOR_LEAF[o["type"]]]
+                    hx, hy = sc * (-lw_ / 2 + 0.07), LEAF_HINGE_Y
+                    cy_, sy_ = math.cos(yaw), math.sin(yaw)
+                    MOVING_DOORS.append(dict(x=float(pos[0] + hx * cy_ - hy * sy_), y=float(pos[1] + hx * sy_ + hy * cy_), z=float(pos[2]), yaw=float(yaw),
+                                      sx=float(sc), leaf=DOOR_LEAF[o["type"]], house=b["id"], color=[int(c_) for c_ in colr]))
                 for extra in o.get("extras", []):
                     kind, dz, dx, ecol = extra
                     pe = pos + e1 * dx + e2 * dz
@@ -1160,8 +1168,11 @@ if __name__ == "__main__":
             print(n, "bâtiments  %.0fs" % (time.time() - T0), flush=True)
     npl = street_plaques(chunks[(0, 0)])
     print("plaques de rue:", npl)
-    print("maisons visitables : %d (sur %d candidates)" % (len(VISITED), len(VISIT_CANDS)))
-    out = dict(visit=[dict(id=b["id"], x=b["poly"].centroid.x, y=b["poly"].centroid.y, z=b["zref"], style=b["style"], plan=b.get("visit_plan"))
+    print("maisons visitables : %d (sur %d candidates) ; refus : %s" % (len(VISITED), len(VISIT_CANDS), dict(interiors.REJECT)))
+    themes = {b["id"]: (b.get("visit_plan") or {}).get("theme", "") for b in VISITED}
+    for dr in MOVING_DOORS:
+        dr["theme"] = themes.get(dr["house"], "")
+    out = dict(doors=MOVING_DOORS, visit=[dict(id=b["id"], x=b["poly"].centroid.x, y=b["poly"].centroid.y, z=b["zref"], style=b["style"], plan=b.get("visit_plan"))
                       for b in VISITED],
                meta=[b["meta"] for b in blds if "meta" in b],
                chunks={k: v.arrays() for k, v in chunks.items()}, specials={k: (v[0].arrays(), v[1]) for k, v in specials.items()},

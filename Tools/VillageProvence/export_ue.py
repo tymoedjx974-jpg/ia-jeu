@@ -140,6 +140,10 @@ for _k, (_w, _d, _h) in FURN_SIZE.items():
     if _h > 0.05:
         COLLIDE[_k] = ("box", _w, _d, _h)
 COLLIDE.update(ZOMBIE_COLLIDE)
+# vantaux mobiles des portes des maisons visitables
+from modules import LEAVES, leaf_collision
+for _k in LEAVES:
+    COLLIDE[_k] = leaf_collision(_k)
 TAGS = {k: ["TM_Echelle"] for k in ZOMBIE_BUILDERS if k.startswith("Z_Echelle")}
 ALL_MODULES = dict(MODULE_BUILDERS)
 ALL_MODULES.update(ZOMBIE_BUILDERS)
@@ -327,18 +331,28 @@ manifest["sounds"] = [
     dict(name="S_Fontaine", file="Sons/Fontaine.wav", volume=0.7, spatial=True, radius_cm=1800.0, locations=fountains),
     # joués par le jeu (UVPVegetationSubsystem) : souffle du vent, froissements au passage dans la végétation
     dict(name="S_Vent", file="Sons/Vent.wav", volume=1.0, spatial=False, loop=True, locations=[]),
-] + [dict(name=f"S_Froissement_{k}", file=f"Sons/Froissement_{k}.wav", volume=1.0, spatial=False, loop=False, locations=[]) for k in range(4)]
+] + [dict(name=f"S_Froissement_{k}", file=f"Sons/Froissement_{k}.wav", volume=1.0, spatial=False, loop=False, locations=[]) for k in range(4)] + [
+    dict(name=f"S_Porte_{k}", file=f"Sons/Porte_{k}.wav", volume=1.0, spatial=False, loop=False, locations=[]) for k in ("Ouverture", "Fermeture")]
 manifest["credits"] = ["Données cartographiques : © contributeurs OpenStreetMap (ODbL), via Overture Maps Foundation",
                        "Relief : Copernicus DEM GLO-30 © DLR e.V. 2010-2014 et © Airbus Defence and Space GmbH 2014-2018, fourni dans le cadre du programme Copernicus",
                        "Lieux : Overture Maps Foundation (CDLA Permissive 2.0)",
                        "Textures, modèles et sons : générés procéduralement pour ce projet"]
 # village envahi : points d'apparition des zombies, maisons visitables, parcours de parkour
 manifest["zombie_spawns"] = to_ue_points(np.array(Z["spawns"], np.float64)).round(1).tolist()
-manifest["visitable_houses"] = [dict(id=v["id"], loc=to_ue_points([(v["x"], v["y"], v["z"])])[0].round(1).tolist(), style=v["style"])
+# portes mobiles (acteurs AVPPorte) : charnière, orientation, vantail, sens d'ouverture (vers l'intérieur)
+manifest["doors"] = []
+_rng_doors = np.random.default_rng(77)
+for dr in B.get("doors", []):
+    loc = to_ue_points([(dr["x"], dr["y"], dr["z"])])[0].round(1).tolist()
+    ouverte = dr.get("theme") in ("saccagee",) or (dr.get("theme") not in ("refuge", "bourgeoise") and _rng_doors.random() < 0.15)
+    manifest["doors"].append(dict(loc=loc, yaw=round(float(-np.degrees(dr["yaw"])), 2), mesh=f"Mod_{dr['leaf']}", scale=round(dr["sx"], 3),
+                                  open_angle=-100.0, color=dr["color"], open=bool(ouverte), house=dr["house"]))
+manifest["visitable_houses"] = [dict(id=v["id"], loc=to_ue_points([(v["x"], v["y"], v["z"])])[0].round(1).tolist(), style=v["style"],
+                                     theme=(v.get("plan") or {}).get("theme", ""))
                                 for v in B.get("visit", [])]
 manifest["parkour"] = [dict(kind=r["kind"], loc=to_ue_points([(r["x"], r["y"], r.get("z", 0.0))])[0].round(1).tolist()) for r in Z["route"]]
-print("zombies : %d points d'apparition, %d maisons visitables, %d éléments de parcours"
-      % (len(manifest["zombie_spawns"]), len(manifest["visitable_houses"]), len(manifest["parkour"])))
+print("zombies : %d points d'apparition, %d maisons visitables (%d portes), %d éléments de parcours"
+      % (len(manifest["zombie_spawns"]), len(manifest["visitable_houses"]), len(manifest["doors"]), len(manifest["parkour"])))
 print("export terminé en %.0fs" % (time.time() - T0))
 with open(os.path.join(OUT, "Village.json"), "w", encoding="utf-8") as f:
     json.dump(manifest, f, ensure_ascii=False, indent=1)

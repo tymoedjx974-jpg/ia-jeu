@@ -24,7 +24,7 @@ Un village provençal complet de **4 × 4 km**, construit sur le **plan réel de
 | **Ambiance** | Soleil de fin d'après-midi, ciel et atmosphère physiques, nuages volumétriques, brume, Lumen. Sons en boucle : **chant des cigales**, **fontaines** et **vent**. |
 | **Vent et passage** | Arbres, herbes, lavande, vigne et buissons bougent avec le mistral et ses rafales, et s'écartent au passage du joueur et des personnages IA. |
 | **Zombies** | Village abandonné : voitures, barricades, inscriptions, sang, camp de survivants ; 1 235 points d'apparition ; volume de navigation. |
-| **Intérieurs** | 34 maisons visitables et meublées : cuisine, séjour avec cheminée, chambre, salle de bain. |
+| **Intérieurs** | 87 maisons visitables, 8 ambiances différentes (bourgeoise, atelier, refuge de survivants, grand-mère…), portes qui s'ouvrent. |
 | **Parkour** | Planches entre les toits, échelles, échafaudages, caisses, balcons praticables. |
 
 Tout est généré : aucune texture, aucun modèle ni aucun son n'a été copié d'Internet. Les textures (pierre, enduit à la chaux, tuiles canal, calade…) ont été calculées pour ce projet.
@@ -101,19 +101,42 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 ## 5. Maisons visitables
 
-| | |
-| --- | --- |
-| ![Pièce à vivre : cuisine, séjour, cheminée, escalier](Docs/interieur_rdc.jpg) | ![Chambre à l'étage](Docs/interieur_chambre.jpg) |
+![Quatre intérieurs : maison bourgeoise, atelier, refuge de survivants, maison de grand-mère](Docs/interieurs_varies.jpg)
 
-34 maisons du village s'ouvrent : la porte d'entrée est ouverte, et les fenêtres des deux premiers niveaux sont ouvertes, sans vitre. On peut entrer par la porte, ou par une fenêtre en parkour.
+87 maisons du village s'ouvrent. On entre par la porte (elle s'ouvre toute seule quand le joueur approche), ou par une fenêtre en parkour : les fenêtres des deux premiers niveaux sont ouvertes, sans vitre.
 
-- **Rez-de-chaussée, pièce à vivre** : séjour avec cheminée en pierre, canapé, fauteuil, table basse, bibliothèque et tapis provençal. Côté cuisine : plan de travail peint avec évier en grès et cuisinière, crédence en faïence, réfrigérateur, vaisselier, table avec nappe provençale et chaises paillées, suspension.
-- **Escalier** droit le long d'un mur, avec main courante.
-- **Étage** : salle de bain (baignoire sur pieds, lavabo et miroir, WC, commode) et chambre (lit avec boutis provençal, tables de chevet, armoire provençale, commode, chaise).
-- **Partout** : murs épais enduits à la chaux, sol en tomettes, plafonds à poutres apparentes.
-- **Maisons abandonnées** : dans environ la moitié des maisons, il y a des chaises renversées, des cartons et des traces de sang.
+**Plan** : rez-de-chaussée (deux pièces), escalier droit avec main courante, étage avec salle de bain (baignoire, lavabo et miroir, WC) et une chambre.
 
-La position de chaque maison est dans `VP_PointsApparition → Maisons Visitables`. Tu peux y cacher du butin ou des zombies. Les intérieurs ne sont éclairés que par les fenêtres : ils sont sombres, et une lampe torche fait son effet.
+**Huit ambiances**, tirées au hasard pour chaque maison (les villas penchent vers la maison bourgeoise, les mas vers la salle commune et l'atelier) :
+
+| Ambiance | Rez-de-chaussée | Étage |
+| --- | --- | --- |
+| Classique | cuisine équipée, table et chaises paillées ; séjour avec cheminée, canapé, bibliothèque | chambre des parents |
+| Salle commune | une seule grande pièce : grande table, évier en pierre, pétrin, horloge comtoise, bocaux | chambre des parents |
+| Bourgeoise | salle à manger (table en noyer, 6 chaises, vaisselier) ; salon avec piano, horloge, lampadaire, tableaux | chambre des parents |
+| Atelier | établi, outils, tonneaux, casier à bouteilles, cartons, malle | petite chambre avec bureau |
+| Grand-mère | cuisine, poêle à bois, fauteuils, machine à coudre, horloge, plantes, cadres | chambre avec malle et fauteuil |
+| Famille | comme la classique, avec des plantes | chambre d'enfants (deux lits, bureau, coffre) |
+| Refuge de survivants | réchaud, conserves, jerricans, matelas et sacs de couchage au sol | dortoir |
+| Saccagée | meubles déplacés, chaises renversées, cartons, traces de sang | chambre des parents |
+
+**Décor différent d'une maison à l'autre** : sol en tomettes, carreaux de ciment (motif de couleur différente), dallage de pierre ou parquet ; murs blanc cassé, ocre, rose, bleu, vert ou gris ; poutres foncées, naturelles ou blanchies (ou plafond lisse) ; frise de la faïence de la salle de bain.
+
+![Meubles ajoutés](Docs/meubles.jpg)
+
+### Portes (acteur VP_Porte)
+
+![Porte fermée et ouverte](Docs/porte_mobile.jpg)
+
+Chaque maison visitable a une vraie porte (acteur **AVPPorte**, dossier `VillageProvence/Portes`) :
+
+- elle s'ouvre vers l'intérieur quand le joueur s'approche (**Ouverture Auto**), avec un grincement ; elle ne se referme pas toute seule sauf si **Fermeture Auto** est cochée ;
+- pour ouvrir ou fermer avec une touche : dans le Blueprint du personnage, sur la touche **E**, appelle **Basculer Porte Proche** (Qui = Self) ;
+- **Ouverture Par IA** : les zombies ouvrent aussi les portes (décoché par défaut, donc une porte fermée les arrête) ;
+- **Verrouillée** : la porte ne s'ouvre plus (maison barricadée, objectif) ; fonctions **Ouvrir**, **Fermer**, **Basculer**, **Est Ouverte**, **Définir État** ;
+- pendant le mouvement, le vantail ne bloque pas le joueur (on ne reste pas coincé), et le navmesh traverse l'embrasure.
+
+Les portes des maisons saccagées et quelques autres sont ouvertes au départ. La position de chaque maison est aussi dans `VP_PointsApparition → Maisons Visitables` : tu peux y cacher du butin ou des zombies. Les intérieurs ne sont éclairés que par les fenêtres : ils sont sombres, et une lampe torche fait son effet.
 
 ## 6. Parkour
 

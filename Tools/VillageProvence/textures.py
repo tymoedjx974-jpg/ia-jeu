@@ -476,6 +476,13 @@ def t_wood_raw(n, size):
     return planks(n, size, 751, width=0.16, base_col="#9a7b58", grey=0.15)
 
 
+@register("BoisVernis", 1.0, 1024)
+def t_wood_varnish(n, size):
+    """Bois verni (noyer) des beaux meubles : larges panneaux, veinage fin, peu de relief, reflets."""
+    r = planks(n, size, 761, width=0.25, base_col="#6e4a30", age=0.05, grey=0.0)
+    return dict(albedo=r["albedo"] * 0.95, height=r["height"] * 0.25, rough=np.clip(r["rough"] * 0.45, 0.15, 0.6))
+
+
 @register("Fer", 1.0, 512)
 def t_iron(n, size):
     s = 801
@@ -788,6 +795,65 @@ def t_tomettes(n, size):
     h = tile * (0.0015 * bev + (rand_per_id(ID, s + 6) - 0.5) * 0.0012 + band(n, 20, s + 7) * 0.0002) - (1 - tile) * 0.002
     rough = np.clip(0.42 + 0.18 * wear + 0.08 * noise(n, n / 12, s + 8) + 0.4 * (1 - tile), 0.3, 0.95)
     return dict(albedo=alb, height=h, rough=rough)
+
+
+@register("Parquet", 1.2, 1024)
+def t_parquet(n, size):
+    """Parquet de chêne en lames de 10 cm à coupes décalées, ciré et usé ; la teinte (chêne clair à noyer) se règle par maison."""
+    s = 1251
+    r = planks(n, size, s, width=0.1, base_col="#b98e5e", age=0.2, grey=0.03)
+    px = size / n
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) * px
+    npl = int(round(size / 0.1))
+    k = np.floor(xx / (size / npl)).astype(np.int64) % npl
+    off = rand_per_id(k, s + 11, npl) * size
+    Lb = size / 2                                   # lames de 60 cm
+    t = ((yy + off) % Lb)
+    joint = (t < 0.0025) | (t > Lb - 0.0025)
+    jm = blur(joint.astype(F32), 0.8)
+    lame = np.floor((yy + off) / Lb).astype(np.int64) + 7 * k
+    tone = 0.9 + 0.2 * rand_per_id(lame % 997, s + 12, 997)
+    alb = r["albedo"] * tone[..., None]
+    alb = lerp(alb, hex2rgb("#3b2a1c"), jm * 0.7)
+    wear = smooth(0.3, 1.6, noise(n, n / 4, s + 13))
+    alb = lerp(alb, alb * 1.1 + 0.02, wear * 0.3)
+    h = r["height"] * 0.6 - jm * 0.0012
+    rough = np.clip(r["rough"] * 0.7 - 0.1 + 0.15 * wear, 0.2, 0.95)
+    return dict(albedo=alb, height=h, rough=rough, mask=np.ones((n, n), F32))
+
+
+@register("CarreauxCiment", 0.8, 1024)
+def t_carreaux_ciment(n, size):
+    """Carreaux de ciment de 20 cm (motif provençal à symétrie 4) ; les parties colorées prennent la teinte de la maison."""
+    s = 1271
+    k = 4
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) * (size / n)
+    fx, fy = (xx * k / size) % 1.0, (yy * k / size) % 1.0
+    ID = (np.floor(xx * k / size) + k * np.floor(yy * k / size)).astype(np.int64)
+    e = np.minimum(np.minimum(fx, 1 - fx), np.minimum(fy, 1 - fy)) * (size / k)
+    tile = smooth(0.0008, 0.002, e)
+    u, v = np.abs(fx - 0.5), np.abs(fy - 0.5)
+    a_, b_ = np.maximum(u, v), np.minimum(u, v)
+    r = np.hypot(u, v)
+    th = np.arctan2(v, u)
+    # étoile à 8 branches au centre, anneau fin, quarts de disque aux coins (cercles entre carreaux), bande de bordure
+    star = smooth(0.2, 0.18, r / (0.55 + 0.45 * np.abs(np.cos(4 * th)) ** 0.6))
+    anneau = smooth(0.012, 0.004, np.abs(r - 0.27))
+    rc = np.hypot(0.5 - u, 0.5 - v)
+    coin = smooth(0.17, 0.155, rc)
+    bord = smooth(0.012, 0.004, np.abs(a_ - 0.44)) * smooth(0.16, 0.2, rc)
+    motif1 = np.clip(star + coin, 0, 1)              # couleur principale (teintée par maison)
+    motif2 = np.clip(anneau + bord, 0, 1)            # couleur secondaire (anthracite)
+    base = hex2rgb("#e6dccb") * (0.95 + 0.05 * rand_per_id(ID, s + 1))[..., None]
+    alb = lerp(base, hex2rgb("#c7cbd0"), motif1[..., None])
+    alb = lerp(alb, hex2rgb("#3d3a37"), motif2[..., None])
+    wear = smooth(0.5, 1.8, noise(n, n / 6, s + 2))
+    alb = alb * (0.92 + 0.08 * noise(n, n / 30, s + 3))[..., None]
+    alb = lerp(alb, alb * 0.9 + 0.06, wear[..., None] * 0.3)
+    alb = lerp(hex2rgb("#b9b0a2"), alb, tile)
+    h = tile * (band(n, 30, s + 4) * 0.0001) - (1 - tile) * 0.0008
+    rough = np.clip(0.5 + 0.2 * wear + 0.3 * (1 - tile), 0.2, 0.95)
+    return dict(albedo=alb, height=h, rough=rough, mask=motif1 * tile)
 
 
 @register("Faience", 1.0, 1024)

@@ -23,12 +23,15 @@ Un village provençal complet de **4 × 4 km**, construit sur le **plan réel de
 | **Terrain** | Relief réel (village perché à 330 m, vallée à 180 m), falaises d'ocre du sentier des Ocres, 8 types de sol (garrigue sèche, terre labourée, ocre, roche, sous-bois, herbe, chemin, chaume). À l'horizon : le Luberon, les monts de Vaucluse et le **mont Ventoux**. |
 | **Ambiance** | Soleil de fin d'après-midi, ciel et atmosphère physiques, nuages volumétriques, brume, Lumen. Sons en boucle : **chant des cigales**, **fontaines** et **vent**. |
 | **Vent et passage** | Arbres, herbes, lavande, vigne et buissons bougent avec le mistral et ses rafales, et s'écartent au passage du joueur et des personnages IA. |
+| **Zombies** | Village abandonné : voitures, barricades, inscriptions, sang, camp de survivants ; 1 235 points d'apparition ; volume de navigation. |
+| **Intérieurs** | 34 maisons visitables et meublées : cuisine, séjour avec cheminée, chambre, salle de bain. |
+| **Parkour** | Planches entre les toits, échelles, échafaudages, caisses, balcons praticables. |
 
 Tout est généré : aucune texture, aucun modèle ni aucun son n'a été copié d'Internet. Les textures (pierre, enduit à la chaux, tuiles canal, calade…) ont été calculées pour ce projet.
 
 ## 1. Installer le plugin
 
-1. Copie le dossier `Plugins/VillageProvence` (avec son sous-dossier `Data`, 125 Mo) dans le dossier `Plugins` de ton projet, à côté de `TMMouvements`.
+1. Copie le dossier `Plugins/VillageProvence` (avec son sous-dossier `Data`, 132 Mo) dans le dossier `Plugins` de ton projet, à côté de `TMMouvements`.
 2. Ouvre le projet. Unreal propose de compiler le nouveau module : réponds **Oui**. Il faut Visual Studio 2022 avec « Développement Desktop en C++ », comme pour l'autre plugin.
 3. Vérifie dans **Edit > Plugins** que « Village provençal (Roussillon) » est coché.
 
@@ -58,7 +61,65 @@ Les autres commandes du même menu :
 - Le village est à l'échelle réelle (1 unité = 1 cm). Les toits, les murs et le terrain ont des collisions exactes : tu peux marcher dans les ruelles et **courir sur les toits** avec le plugin TMMouvements. Les troncs d'arbres, les réverbères et les bancs bloquent aussi le joueur. Les herbes, la lavande et la vigne se traversent.
 - La lumière, le ciel, la brume et le Post Process ne sont ajoutés que s'ils manquent : ceux de ton niveau ne sont pas modifiés.
 
-## 4. Vent et végétation vivante
+## 4. Un village envahi par les zombies
+
+Le village garde son style provençal, mais il a été abandonné dans l'urgence :
+
+- **Rues** : 300 voitures abandonnées (citadines, berlines, fourgonnettes, épaves brûlées), dont certaines en travers de la route. Un barrage de police bloque la route principale à l'entrée du village. Il y a aussi des sacs-poubelle, des poubelles renversées, des palettes, des caisses, des pneus, des gravats et des terrasses de café renversées.
+- **Façades** : 550 fenêtres et portes condamnées par des planches, des croix de fouille peintes à côté des portes, de la suie au-dessus des fenêtres incendiées, des impacts de balles. Environ 100 inscriptions à la bombe : « ZONE INFECTÉE », « NE PAS ENTRER », « ILS SONT DEDANS », « SURVIVANTS → MAIRIE », « PAS DE BRUIT »…
+- **Sang** : 450 traces au sol dans les rues, sur les places et dans les maisons.
+- **Camp de survivants** sur la place de la mairie : cercle de sacs de sable, bâches, brasero, caisses, matelas et « SOS » peint au sol.
+
+### Faire apparaître les zombies
+
+La construction place l'acteur **VP_PointsApparition** (dossier `VillageProvence/Zombies`). Il contient 1 235 points d'apparition (rues, places, champs autour du village, maisons visitables) et la liste des maisons visitables.
+
+Dans ton mode de jeu (Blueprint ou C++) :
+
+1. **Get VP Points Apparition** (nœud statique) donne l'acteur.
+2. **Get Points Autour** (Centre = position du joueur, Distance Min, Distance Max, Nombre, Regard = direction de la caméra) renvoie des points hors de la vue du joueur.
+3. Fais apparaître un zombie sur chaque point.
+
+En C++ :
+
+```cpp
+if (AVPPointsApparition* Points = AVPPointsApparition::Get(this))
+{
+    const FVector Regard = Joueur->GetControlRotation().Vector();
+    for (const FVector& P : Points->GetPointsAutour(Joueur->GetActorLocation(), 2500.f, 6000.f, 4, Regard))
+    {
+        GetWorld()->SpawnActor<ATMZombie>(ATMZombie::StaticClass(), P + FVector(0, 0, 100), FRotator::ZeroRotator);
+    }
+}
+```
+
+Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav Mesh Bounds Volume** de 1,6 × 1,6 km est aussi créé autour du village, pour les IA qui se déplacent avec le navmesh. Appuie sur **P** dans l'éditeur pour voir le navmesh. Il couvre les rues, les places, les maisons visitables et les toits praticables.
+
+## 5. Maisons visitables
+
+34 maisons du village s'ouvrent : la porte d'entrée est ouverte, et les fenêtres des deux premiers niveaux sont ouvertes, sans vitre. On peut entrer par la porte, ou par une fenêtre en parkour.
+
+- **Rez-de-chaussée, pièce à vivre** : séjour avec cheminée en pierre, canapé, fauteuil, table basse, bibliothèque et tapis provençal. Côté cuisine : plan de travail peint avec évier en grès et cuisinière, crédence en faïence, réfrigérateur, vaisselier, table avec nappe provençale et chaises paillées, suspension.
+- **Escalier** droit le long d'un mur, avec main courante.
+- **Étage** : salle de bain (baignoire sur pieds, lavabo et miroir, WC, commode) et chambre (lit avec boutis provençal, tables de chevet, armoire provençale, commode, chaise).
+- **Partout** : murs épais enduits à la chaux, sol en tomettes, plafonds à poutres apparentes.
+- **Maisons abandonnées** : dans environ la moitié des maisons, il y a des chaises renversées, des cartons et des traces de sang.
+
+La position de chaque maison est dans `VP_PointsApparition → Maisons Visitables`. Tu peux y cacher du butin ou des zombies. Les intérieurs ne sont éclairés que par les fenêtres : ils sont sombres, et une lampe torche fait son effet.
+
+## 6. Parkour
+
+Ajoute le composant **TM Parkour** du plugin TMMouvements à ton personnage (voir son README). Il sert à se hisser, franchir des obstacles et monter aux échelles. Le village offre des parcours de toit en toit :
+
+- **72 passages entre les toits** : planches posées au-dessus des ruelles, ou inclinées quand les deux toits ne sont pas à la même hauteur.
+- **90 échelles** fixées aux façades, jusqu'au bord du toit.
+- **13 échafaudages** sur les façades du vieux village, avec échelle intérieure et planchers tous les deux mètres.
+- **68 départs** : caisses, piles de palettes et bennes contre des remises ou des garages bas, pour grimper sur leur toit.
+- **Balcons** en fer forgé praticables, voitures et sacs de sable à franchir en courant.
+
+Tous les toits en tuiles ont des collisions exactes et une pente douce (15 à 18°) : on y court sans glisser.
+
+## 7. Vent et végétation vivante
 
 ![Un personnage traverse un champ de lavande par vent de mistral](Docs/vent.gif)
 

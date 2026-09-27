@@ -1,4 +1,5 @@
 #include "TMMovementComponent.h"
+#include "TMParkourComponent.h"
 
 #include "TMMShapes.h"
 
@@ -69,6 +70,11 @@ void UTMMovementComponent::CrouchPressed()
 void UTMMovementComponent::JumpPressed()
 {
 	if (!Character || RollT > 0.f) return;
+	// parkour : se hisser, franchir, échelles (si le personnage a un UTMParkourComponent)
+	if (UTMParkourComponent* Parkour = Character->FindComponentByClass<UTMParkourComponent>())
+	{
+		if (Parkour->TryParkour()) return;
+	}
 	const float Tired = Stamina < 0.1f ? 0.9f : 1.f;
 	if (bSliding)
 	{

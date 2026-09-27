@@ -1,8 +1,9 @@
 # Mouvements réalistes — plugin Unreal Engine 5
 
-Deux composants à ajouter au personnage de ton jeu, sans ville ni arme :
+Trois composants à ajouter au personnage de ton jeu, sans ville ni arme :
 
 - **TM Movement** : course avec élan et endurance, accroupi progressif, glissade, roulade, réceptions lourdes, caméra au rythme des pas, jambes visibles pendant les glissades et les coups de pied.
+- **TM Parkour** (facultatif) : attraper un rebord et se hisser, franchir en courant les obstacles bas, monter aux échelles.
 - **TM Melee** (facultatif) : coup de pied sur **A**, couteau et coups de poing. Ton arme actuelle reste en place.
 
 Ton personnage garde ses propres entrées. Il suffit de relier quelques touches aux fonctions des composants.
@@ -15,7 +16,7 @@ Ton personnage garde ses propres entrées. Il suffit de relier quelques touches 
 
 ## 2. Ajouter les composants au personnage
 
-Ouvre le Blueprint de ton personnage, puis **Add Component** : ajoute **TM Movement**, et **TM Melee** si tu veux le corps à corps.
+Ouvre le Blueprint de ton personnage, puis **Add Component** : ajoute **TM Movement**, **TM Parkour** pour le parkour et **TM Melee** si tu veux le corps à corps.
 
 La caméra doit être attachée à la capsule, comme dans le modèle First Person d'Unreal. Le composant la trouve tout seul. Sinon, appelle `Set Camera` au démarrage.
 
@@ -43,6 +44,20 @@ Pour cacher ton arme quand le couteau ou les poings sont en main, utilise l'év�
 - **Dégâts** : les coups arrivent sur les ennemis par `Apply Point Damage`. Leur événement `Event AnyDamage` ou `Event PointDamage` les reçoit déjà. Les ennemis de type Character sont aussi repoussés par les coups.
 - **Dégâts de chute** : ils sont appliqués à ton personnage par `Apply Damage`. Décoche `Apply Fall Damage` si tu ne les veux pas, ou utilise l'événement `On Fall Damage`.
 - **Exécutions** : pour qu'un coup de couteau tue d'un coup un ennemi qui ne t'a pas vu, crée un Blueprint enfant de TM Melee. Redéfinis-y la fonction `Is Target Unaware`, et renvoie « vrai » quand ton IA n'a pas repéré le joueur.
+
+## Parkour (TM Parkour)
+
+Il se déclenche tout seul avec la touche Saut de TM Movement. Il n'y a rien à brancher en plus.
+
+| Figure | Comment |
+| --- | --- |
+| **Se hisser** | Face à un mur, appuie sur Saut : le personnage saute, attrape le rebord et se hisse, jusqu'à 2,30 m au-dessus des pieds. En l'air, il attrape tout seul le rebord devant lui si tu avances vers le mur (toits, balcons, caisses, bennes, murets). |
+| **Franchir** | En courant vers un obstacle bas (40 à 130 cm : voiture, sacs de sable, barrière, muret), le personnage passe par-dessus sans ralentir. |
+| **Échelles** | Avance vers une échelle pour l'attraper. Avancer fait monter. Reculer, ou avancer en regardant vers le bas, fait descendre. En haut, le personnage se hisse sur le toit. Saut te repousse de l'échelle. |
+
+Les échelles sont les composants qui portent l'étiquette **TM_Echelle**. Le village provençal les étiquette déjà. Pour tes propres échelles, ajoute cette étiquette dans **Component Tags**.
+
+Si ton personnage n'utilise pas TM Movement, appelle `TM Parkour → Try Parkour` à l'appui de Saut, et ne fais `Jump` que s'il renvoie faux.
 
 ## Réglages
 

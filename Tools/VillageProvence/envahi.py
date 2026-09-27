@@ -190,7 +190,7 @@ for r in street_roads:
     in_core = core.buffer(15).intersects(ln)
     while pos < ln.length:
         p = ln.interpolate(pos)
-        pos += rng.uniform(6, 14) if in_core else rng.uniform(18, 40)
+        pos += rng.uniform(6, 13) if in_core else rng.uniform(10, 24)
         ks = tree.query(p.buffer(6.0))
         if len(ks) == 0:
             continue
@@ -263,7 +263,7 @@ for m in metas:
             put("Z_Tag_croix", cx[0], cx[1], o["z0"] + 1.0, yaw, s=(0.8, 0.8, 0.8))
     # inscriptions sur les façades côté rue, entre les ouvertures
     for ei, e in enumerate(m["edges"]):
-        if e["party"] or e["L"] < 2.4 or rng.random() > (0.45 if e["street"] else 0.12) * fac:
+        if e["party"] or e["L"] < 2.4 or rng.random() > (0.6 if e["street"] else 0.15) * fac:
             continue
         spans = sorted((o["s0"], o["s1"]) for o in m["openings"] if o["edge"] == ei and o["z0"] - m["zref"] < 2.6)
         key = tag_keys[rng.choice(len(tag_keys), p=tag_p)]
@@ -291,7 +291,7 @@ print("ouvertures condamnées :", boarded, " inscriptions :", tags, flush=True)
 blood = 0
 for r in street_roads:
     ln = r["line"]
-    for _ in range(int(ln.length / 55) + (1 if rng.random() < 0.4 else 0)):
+    for _ in range(int(ln.length / 40) + (1 if rng.random() < 0.5 else 0)):
         p = ln.interpolate(rng.uniform(0, ln.length))
         key = rng.choice(["sang_1", "sang_2", "sang_flaque", "sang_trainee"], p=[0.3, 0.3, 0.2, 0.2])
         sc = rng.uniform(0.8, 1.4)

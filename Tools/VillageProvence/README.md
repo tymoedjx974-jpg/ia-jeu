@@ -22,7 +22,7 @@ Le script remplace le dossier `Plugins/VillageProvence/Data`. Ensuite, dans Unre
 
 | Fichier | Contenu |
 | --- | --- |
-| `plan_terrain.py` | zone jouable (`ZONE` dans `common.py`), relief, falaises d'ocre, couches du sol |
+| `plan_terrain.py` | zone jouable (`ZONE` dans `common.py`), relief réel + collines, buttes, bosses et ravines hors du village, affleurements calcaires, falaises d'ocre, couches du sol |
 | `buildings.py` | palettes des façades et des volets (`OCHRES`, `CREAMS`, `SHUTTERS`), étages, toits, commerces, mairie, église |
 | `modules.py` | fenêtres, volets, portes, vitrines, balcons, lanternes, mobilier |
 | `trees.py` | espèces d'arbres et de plantes |

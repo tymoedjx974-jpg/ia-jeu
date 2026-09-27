@@ -455,8 +455,14 @@ def build():
     # Cyprès : écailles sombres
     at = Atlas(1024)
     for q in range(4):
-        scales(at, q, rng, [(46, 62, 38), (54, 70, 42), (40, 54, 34), (62, 78, 48)], blobs=1100, r=(4, 8))
-    at.save("FeuillesCypres", (48, 64, 40))
+        # vert franc du cyprès de Provence (d'après photo), ombres profondes, quelques cônes clairs
+        scales(at, q, rng, [(58, 92, 36), (70, 106, 42), (44, 72, 28), (84, 120, 50), (36, 58, 24)], blobs=1300, r=(4, 8))
+        ox, oy, h = at.quad(q)
+        for _ in range(10):
+            x, y, rr = ox + h * rng.uniform(0.2, 0.8), oy + h * rng.uniform(0.2, 0.8), rng.uniform(3, 4.5) * SS
+            at.dc.ellipse([x - rr, y - rr, x + rr, y + rr], fill=(150, 146, 104, 255))
+            at.dh.ellipse([x - rr, y - rr, x + rr, y + rr], fill=250)
+    at.save("FeuillesCypres", (60, 92, 38))
     # Garrigue (chêne kermès, genévrier, romarin)
     at = Atlas(1024)
     for q in range(4):

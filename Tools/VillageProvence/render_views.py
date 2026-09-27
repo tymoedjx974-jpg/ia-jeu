@@ -1,5 +1,5 @@
 """Rendus d'aperçu de la scène complète (Cycles)."""
-import sys, pickle, math, time
+import sys, os, pickle, math, time
 sys.path.insert(0, ".")
 import numpy as np
 import bl, bpy, scene
@@ -22,6 +22,7 @@ _V = {
     "lavande": ((-1050, 945, 1.6), (-15, 15, 16), 55),
     "ocres": ((520, -540, 28), (400, -320, 2), 24),
     "vignes": ((22, 1318, 2.2), (-15, 15, 14), 50),
+    "relief": ((265, 425, 1.8), (175, 330, 0.5), 24),
 }
 VIEWS = {k: ((a[0], a[1], _z(a[0], a[1], a[2])), (b[0], b[1], _z(b[0], b[1], b[2])), f) for k, (a, b, f) in _V.items()}
 views = [v for v in sys.argv[1:] if v in VIEWS] or ["vue_generale"]
@@ -55,7 +56,7 @@ C = catalog()
 builders = {k: (lambda k=k: C[k](0)[0]) for k in C}
 scene.load_instances(N, bbox, builders=builders)
 print("végétation %.0fs" % (time.time() - T0), flush=True)
-bl.setup_world(sun_elev=24, sun_azim=250)
+bl.setup_world(sun_elev=int(os.environ.get("SUN_ELEV", 24)), sun_azim=int(os.environ.get("SUN_AZIM", 250)))
 # légère brume atmosphérique pour la profondeur
 w = bpy.context.scene.world
 bl.setup_render(1280, 720, samples=samples)

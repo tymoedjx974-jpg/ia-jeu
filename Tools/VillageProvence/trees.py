@@ -166,22 +166,36 @@ def leaf_card(mb, mat, c, crown_c, rng, size, rx, quad=None, sway=None, spherica
 
 
 def make_cypress(seed, lod=0):
+    """Cyprès de Provence (Cupressus sempervirens 'Stricta') : fuseau très élancé, plus large au tiers inférieur,
+    pointe effilée qui s'incline un peu (d'après photo)."""
     rng = np.random.default_rng(seed)
-    H = rng.uniform(9, 14)
-    R = H * rng.uniform(0.09, 0.12)
+    H = rng.uniform(10, 16)
+    R = H * rng.uniform(0.065, 0.085)
+    a_lean = rng.uniform(0, 2 * math.pi)
+    lean = np.array([math.cos(a_lean), math.sin(a_lean)]) * H * rng.uniform(0.02, 0.06)
     mb = MB()
-    tube(mb, "EcorcePin", [(0, 0, 0), (0, 0, H * 0.3)], [0.22, 0.12], segs=6)
-    n = {0: 700, 1: 300, 2: 80}[lod]
-    size = {0: 1.0, 1: 1.5, 2: 2.8}[lod] * H / 12
+    tube(mb, "EcorcePin", [(0, 0, 0), (0, 0, H * 0.3)], [0.2, 0.1], segs=6)
+    n = {0: 950, 1: 380, 2: 100}[lod]
+    size = {0: 0.85, 1: 1.35, 2: 2.6}[lod] * H / 12
     for i in range(n):
-        z = H * (0.04 + 0.96 * rng.random() ** 0.85)
+        z = H * (0.03 + 0.97 * rng.random() ** 0.8)
         t = z / H
-        rad = R * (math.sin(math.pi * min(1.0, t * 1.05)) ** 0.75) * (1.1 - 0.35 * t)
+        # profil en flamme : maximum vers 30 % de la hauteur, bosses irrégulières le long du tronc
+        prof = (min(1.0, t / 0.3) ** 0.5) * (1.0 - smooth_t(t, 0.3, 1.0) ** 1.3)
+        bump = 1.0 + 0.12 * math.sin(t * 23.0 + seed) + 0.08 * math.sin(t * 41.0 + 2 * seed)
+        rad = R * max(prof, 0.04) * bump
+        off = lean * t ** 2.5
         a = rng.uniform(0, 2 * math.pi)
-        rr = rad * math.sqrt(rng.uniform(0.3, 1.0))
-        c = np.array([rr * math.cos(a), rr * math.sin(a), z])
-        leaf_card(mb, "FeuillesCypres", c, np.array([0, 0, z]), rng, size * rng.uniform(0.8, 1.2), R * 2, sway=int(80 + 175 * t), spherical=0.7)
+        rr = rad * math.sqrt(rng.uniform(0.35, 1.0))
+        c = np.array([off[0] + rr * math.cos(a), off[1] + rr * math.sin(a), z])
+        leaf_card(mb, "FeuillesCypres", c, np.array([off[0], off[1], z]), rng, size * rng.uniform(0.75, 1.15) * (0.6 + 0.4 * max(prof, 0.3)), R * 2,
+                  sway=int(80 + 175 * t), spherical=0.7)
     return mb, H, R
+
+
+def smooth_t(t, a, b):
+    x = min(1.0, max(0.0, (t - a) / (b - a)))
+    return x * x * (3 - 2 * x)
 
 
 def make_bush(seed, mat="FeuillesGarrigue", size=(0.6, 1.3), cards=24, lod=0, quad=None, flowers=None):
@@ -295,6 +309,68 @@ def make_bale(seed):
 
 
 
+def _icosphere(sub):
+    t = (1 + 5 ** 0.5) / 2
+    V = [(-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0), (0, -1, t), (0, 1, t), (0, -1, -t), (0, 1, -t),
+         (t, 0, -1), (t, 0, 1), (-t, 0, -1), (-t, 0, 1)]
+    F = [(0, 11, 5), (0, 5, 1), (0, 1, 7), (0, 7, 10), (0, 10, 11), (1, 5, 9), (5, 11, 4), (11, 10, 2), (10, 7, 6), (7, 1, 8),
+         (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9), (4, 9, 5), (2, 4, 11), (6, 2, 10), (8, 6, 7), (9, 8, 1)]
+    V = [np.array(v, float) / np.linalg.norm(v) for v in V]
+    for _ in range(sub):
+        cache, F2 = {}, []
+        def mid(a, b):
+            k = (min(a, b), max(a, b))
+            if k not in cache:
+                m = V[a] + V[b]
+                V.append(m / np.linalg.norm(m))
+                cache[k] = len(V) - 1
+            return cache[k]
+        for a, b, c in F:
+            ab, bc, ca = mid(a, b), mid(b, c), mid(c, a)
+            F2 += [(a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca)]
+        F = F2
+    return np.array(V), np.array(F, np.int64)
+
+
+def make_rock(seed, lod=0, kind="bloc"):
+    """Rocher calcaire : sphère déformée (bruit de faces planes = cassures), base enterrée.
+    kind : bloc (rond, 0,6-1,4 m), dalle (affleurement plat et large), eboulis (petit, anguleux)."""
+    rng = np.random.default_rng(seed)
+    P, F = _icosphere((3, 2, 1)[lod])
+    # cassures : on rabote la sphère par quelques plans aléatoires, puis bruit doux
+    for _ in range(9 if kind != "eboulis" else 6):
+        n = nrm(rng.normal(size=3))
+        d = rng.uniform(0.55, 0.85)
+        proj = P @ n
+        over = proj > d
+        P[over] -= np.outer(proj[over] - d, n) * 0.85
+    freqs = [(rng.normal(size=3) * f, rng.uniform(0, 6.28), a) for f, a in ((2.0, 0.08), (4.5, 0.04), (9.0, 0.02))]
+    r = 1.0 + sum(a * np.sin(P @ k + ph) for k, ph, a in freqs)
+    P = P * r[:, None]
+    size = {"bloc": (rng.uniform(1.0, 1.5), rng.uniform(0.8, 1.2), rng.uniform(0.95, 1.35)),
+            "dalle": (rng.uniform(2.2, 3.4), rng.uniform(1.6, 2.4), rng.uniform(0.45, 0.7)),
+            "eboulis": (rng.uniform(0.35, 0.55), rng.uniform(0.3, 0.45), rng.uniform(0.25, 0.4))}[kind]
+    P = P * np.array(size) * 0.5
+    zmin = P[:, 2].min()
+    P[:, 2] -= zmin + size[2] * 0.22          # un quart enfoui dans le sol
+    # normales lissées par sommet
+    fn = np.cross(P[F[:, 1]] - P[F[:, 0]], P[F[:, 2]] - P[F[:, 0]])
+    N = np.zeros_like(P)
+    for k in range(3):
+        np.add.at(N, F[:, k], fn)
+    N = nrm(N)
+    # UV : projection cylindrique (en mètres), la texture Roche est à grain fin et sans orientation marquée
+    ang = np.arctan2(P[:, 1], P[:, 0])
+    circ = math.pi * (size[0] + size[1]) / 2
+    UV = np.column_stack([(ang / (2 * math.pi) + 0.5) * circ, -P[:, 2] + 0.35 * (P[:, 0] + P[:, 1])])
+    # base plus sombre (terre, humidité)
+    h = np.clip((P[:, 2] + 0.05) / max(size[2] * 0.4, 0.1), 0, 1)
+    C = np.column_stack([np.repeat((170 + 85 * h)[:, None], 3, 1), np.zeros(len(P))]).astype(np.uint8)
+    mb = MB()
+    mb.add("Rocher", P, N, UV, C, F)
+    return mb, float(P[:, 2].max()), float(max(size[:2]) * 0.5)
+
+
 def make_vine_row(seed, lod=0):
     """Segment de rang de vigne (4 ceps sur 4,8 m, le long de l'axe X) + piquet."""
     mb = MB()
@@ -325,7 +401,7 @@ def catalog():
     for sp, nvar in (("Platane", 3), ("Olivier", 4), ("Chene", 4), ("Fruitier", 3), ("Pin", 4), ("PinParasol", 2)):
         for v in range(nvar):
             C[f"Arbre_{sp}_{v}"] = (lambda lod, sp=sp, v=v: make_tree(sp, 1000 * v + sum(map(ord, sp)) * 7, lod))
-    for v in range(3):
+    for v in range(4):
         C[f"Arbre_Cypres_{v}"] = (lambda lod, v=v: make_cypress(50 + v, lod))
     for v in range(4):
         C[f"Buisson_Garrigue_{v}"] = (lambda lod, v=v: make_bush(300 + v, "FeuillesGarrigue", (0.5, 1.2), 24, lod))
@@ -341,4 +417,9 @@ def catalog():
         C[f"Vigne_Rang_{v}"] = (lambda lod, v=v: make_vine_row(650 + v, lod))
         C[f"Lavande_Rang_{v}"] = (lambda lod, v=v: make_lavender_row(550 + v, lod))
     C["Balle_Foin"] = (lambda lod: make_bale(900))
+    for v in range(4):
+        C[f"Rocher_Bloc_{v}"] = (lambda lod, v=v: make_rock(1100 + v, lod, "bloc"))
+    for v in range(3):
+        C[f"Rocher_Dalle_{v}"] = (lambda lod, v=v: make_rock(1200 + v, lod, "dalle"))
+        C[f"Rocher_Eboulis_{v}"] = (lambda lod, v=v: make_rock(1300 + v, lod, "eboulis"))
     return C

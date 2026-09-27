@@ -252,6 +252,23 @@ n2 = fbm((NY, NX), 7, octaves=2, seed=12)
 micro = 1.4 * n1 * (1.0 - 0.65 * fields_b) + 0.35 * n2 * (1.0 - 0.8 * fields_b)
 ground = ground + micro.astype(np.float32)
 
+# relief naturel renforcé hors du village : ondulations de colline, buttes, bosses, ravines d'écoulement
+def _norm(a):
+    return (a - a.mean()) / (a.std() + 1e-6)
+b_dist = ndimage.distance_transform_edt(Bm < 0.5) * RES
+core_m = ndimage.gaussian_filter(rasterize([core.buffer(40.0)]).astype(np.float32) / 255.0, 8.0)
+NAT = (smoothstep(12.0, 70.0, b_dist) * (1.0 - core_m)).astype(np.float32)
+h_hill = _norm(fbm((NY, NX), 70, 3, seed=21))       # ~140 m
+h_mound = _norm(fbm((NY, NX), 12, 2, seed=22))      # ~25 m
+h_bump = _norm(fbm((NY, NX), 3, 2, seed=23))        # ~6 m
+rv = _norm(fbm((NY, NX), 40, 2, seed=24))
+ravine = np.exp(-(rv / 0.14) ** 2) * smoothstep(-0.3, 0.8, _norm(fbm((NY, NX), 90, 2, seed=25)))
+relief = 2.6 * h_hill + 0.9 * h_mound + 0.28 * h_bump - 2.4 * ravine
+# les parcelles cultivées restent plus douces (terrasses), les bois et la garrigue plus accidentés
+ground = ground + (relief * NAT * (1.0 - 0.6 * fields_b)).astype(np.float32)
+# affleurements calcaires : sommets des bosses en garrigue et en forêt
+OUTCROP = (smoothstep(1.1, 2.2, h_mound + 0.5 * h_bump) * NAT * (1.0 - fields_b)).astype(np.float32)
+
 # falaises d'ocre : marche nette (haut à gauche du sens de tracé, bas à droite)
 for ln in V["cliffs"]:
     if ln.length < 8:
@@ -373,6 +390,7 @@ ochre_macro = np.clip(0.5 + 0.9 * fbm((NY, NX), 25, 3, seed=5), 0, 1)
 W[L["ochre"]] += 2.2 * ochre * (0.6 + 0.4 * ochre_macro)
 rockm = smoothstep(28.0, 42.0, slope)
 W[L["rock"]] += 2.5 * rockm * (1 - np.clip(ochre * 2, 0, 1))
+W[L["rock"]] += 1.8 * OUTCROP * (1 - np.clip(ochre * 2, 0, 1))
 W[L["ochre"]] += 2.5 * rockm * np.clip(ochre * 2, 0, 1)
 # chemins de terre et pistes
 track_lines = [r["line"].buffer(r["width"] / 2.0) for r in roads if r["surface"] in ("dirt", "path")]
@@ -395,7 +413,8 @@ W /= W.sum(axis=0, keepdims=True) + 1e-6
 splat = np.round(W.transpose(1, 2, 0) * 255).astype(np.uint8)
 print("couches %.0f s" % (time.time() - t0))
 
-np.savez_compressed("terrain.npz", ground=ground.astype(np.float32), splat=splat, slope=slope.astype(np.float16))
+np.savez_compressed("terrain.npz", ground=ground.astype(np.float32), splat=splat, slope=slope.astype(np.float16),
+                    outcrop=OUTCROP.astype(np.float16), nat=NAT.astype(np.float16))
 V = dict(V)
 V["roads"] = roads
 V["buildings"] = blds

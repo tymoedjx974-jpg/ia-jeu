@@ -131,7 +131,7 @@ t = bare_ochre(jitter_grid(scrub, 16.0, keep=0.5))
 tv = rng.random(len(t))
 put_variants("Arbre_Chene", 4, t[tv < 0.55], scale=(0.5, 0.9))
 put_variants("Arbre_Pin", 4, t[(tv >= 0.55) & (tv < 0.9)], scale=(0.5, 0.9))
-put_variants("Arbre_Cypres", 3, t[tv >= 0.9], scale=(0.7, 1.0))
+put_variants("Arbre_Cypres", 4, t[tv >= 0.9], scale=(0.7, 1.0))
 gr = jitter_grid(scrub, 2.6, keep=0.5)
 put_variants("Herbe_Seche", 3, gr, scale=(0.8, 1.5))
 print("garrigue %.0fs" % (time.time() - T0), flush=True)
@@ -238,7 +238,7 @@ for ln in V["hedges"]:
 if hedge_pts:
     H = np.array(hedge_pts)
     H = H[free(H[:, 0], H[:, 1]) | True]
-    put_variants("Arbre_Cypres", 3, H, scale=(0.55, 0.8), sink=0.1)
+    put_variants("Arbre_Cypres", 4, H, scale=(0.55, 0.8), sink=0.1)
 for ln in V.get("tree_rows", []):
     n = int(ln.length / 8)
     P = np.array([(ln.interpolate(k * 8 + 4).x, ln.interpolate(k * 8 + 4).y) for k in range(n)])
@@ -333,7 +333,7 @@ put_variants("Arbre_Platane", 3, GT[(tv >= 0.75) & (tv < 0.85)], scale=(0.6, 0.8
 put_variants("Arbre_Fruitier", 3, GT[tv >= 0.85], scale=(0.8, 1.1))
 if gard_cyp:
     C_ = np.array(gard_cyp)
-    put_variants("Arbre_Cypres", 3, C_[free(C_[:, 0], C_[:, 1])], scale=(0.6, 0.85))
+    put_variants("Arbre_Cypres", 4, C_[free(C_[:, 0], C_[:, 1])], scale=(0.6, 0.85))
 GB = np.concatenate(gard_bush) if gard_bush else np.zeros((0, 2))
 bv = rng.random(len(GB))
 put_variants("Buisson_LaurierRose", 2, GB[bv < 0.4], scale=(0.7, 1.1))
@@ -399,6 +399,25 @@ if RD_:
     extra.append(len(RD_))
 print("oliviers ajoutés : %d (oliveraies, vieux village, places, routes)  %.0fs" % (sum(extra), time.time() - T0), flush=True)
 
+# ------------------------------------------------------------------ rochers calcaires : affleurements, blocs, éboulis
+OUT_M = G["outcrop"].astype(np.float32) if "outcrop" in G.files else np.zeros_like(GROUND)
+SLOPE = G["slope"].astype(np.float32)
+wild = unary_union([forest, scrub] + ([meadow] if meadow is not None else [])).intersection(ZBOX).difference(V["core"].buffer(40))
+def _pick(p, base, k_out, k_slope=0.0):
+    if len(p) == 0:
+        return p
+    o = grid_sample(OUT_M, p[:, 0], p[:, 1])
+    sl = grid_sample(SLOPE, p[:, 0], p[:, 1])
+    pr = base + k_out * o + k_slope * smoothstep(14.0, 32.0, sl)
+    return p[rng.random(len(p)) < pr]
+rb = _pick(jitter_grid(wild, 11.0), 0.05, 0.75, 0.25)
+put_variants("Rocher_Bloc", 4, rb, scale=(0.6, 1.5), zscale=(0.8, 1.2))
+rd = _pick(jitter_grid(wild, 22.0), 0.0, 0.9)
+put_variants("Rocher_Dalle", 3, rd, scale=(0.7, 1.3), zscale=(0.7, 1.1), sink=0.12)
+re_ = _pick(jitter_grid(wild, 4.5), 0.015, 0.25, 0.35)
+put_variants("Rocher_Eboulis", 3, re_, scale=(0.6, 1.6))
+print("rochers : %d blocs, %d dalles, %d éboulis  %.0fs" % (len(rb), len(rd), len(re_), time.time() - T0), flush=True)
+
 # ------------------------------------------------------------------ bas-côtés : herbes sèches le long des routes
 side = []
 for r in V["roads"]:
@@ -417,8 +436,32 @@ for (x, y, genus) in V["trees"]:
         continue
     g = (genus or "").lower()
     name = "Arbre_Platane" if "platan" in g else ("Arbre_Pin" if "pinus" in g else ("Arbre_Cypres" if "cupress" in g else ("Arbre_Olivier" if "olea" in g else "Arbre_Chene")))
-    nvar = {"Arbre_Platane": 3, "Arbre_Pin": 4, "Arbre_Cypres": 3, "Arbre_Olivier": 4, "Arbre_Chene": 4}[name]
+    nvar = {"Arbre_Platane": 3, "Arbre_Pin": 4, "Arbre_Cypres": 4, "Arbre_Olivier": 4, "Arbre_Chene": 4}[name]
     put_variants(name, nvar, np.array([[x, y]]), scale=(0.8, 1.1))
+
+# ------------------------------------------------------------------ cyprès dans le village : une partie des arbres de la ville devient des cyprès,
+# souvent en bouquets de 2 à 4 fuseaux comme dans les jardins provençaux
+town = unary_union([V["core"].buffer(60)] + [p.buffer(10) for p in (V.get("residential") or [])]).intersection(ZBOX)
+n_cyp = 0
+for sp in ("Arbre_Chene", "Arbre_Pin", "Arbre_PinParasol", "Arbre_Fruitier"):
+    for k in [k for k in INST if k.startswith(sp + "_")]:
+        arr = np.concatenate(INST[k])
+        inside = shapely.contains_xy(town, arr[:, 0], arr[:, 1])
+        conv = inside & (rng.random(len(arr)) < 0.45)
+        INST[k] = [arr[~conv]]
+        xy = arr[conv, :2]
+        n_cyp += len(xy)
+        put_variants("Arbre_Cypres", 4, xy, scale=(0.75, 1.1), sink=0.1)
+        grp = xy[rng.random(len(xy)) < 0.35]
+        for g in grp:
+            m = int(rng.integers(1, 4))
+            a = rng.uniform(0, 2 * math.pi) + np.arange(m) * 2.1
+            d = rng.uniform(1.4, 2.4, m)
+            ex = np.column_stack([g[0] + np.cos(a) * d, g[1] + np.sin(a) * d])
+            ex = ex[free(ex[:, 0], ex[:, 1])]
+            n_cyp += len(ex)
+            put_variants("Arbre_Cypres", 4, ex, scale=(0.6, 0.95), sink=0.1)
+print("cyprès dans le village : %d" % n_cyp, flush=True)
 
 INST = {k: np.concatenate(v).astype(np.float32) for k, v in INST.items()}
 with open("nature_out.pkl", "wb") as f:

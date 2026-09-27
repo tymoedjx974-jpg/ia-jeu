@@ -195,33 +195,50 @@ def door_leaf(mb, w, ht, y):
     tube(mb, "Fer", [(w / 2 - 0.16, y + 0.025, 1.0), (w / 2 - 0.16, y + 0.07, 1.0)], 0.018, segs=6)
 
 
-# vantaux mobiles des maisons visitables : charnière à l'origine, porte fermée le long de +X, extérieur vers -Y
+# vantaux mobiles des bâtiments visitables : charnière à l'origine, vantail fermé le long de +X, extérieur vers -Y
 LEAF_HINGE_Y = DEPTH - 0.04 + 0.03
-LEAVES = {  # nom du vantail : (largeur de la porte, hauteur du vantail)
-    "Vantail_Porte": (1.0, 2.25 - 0.45),
-    "Vantail_PorteSimple": (0.95, 2.15 - 0.07),
+LEAVES = {  # nom : (constructeur dans le repère du module, charnière x, charnière y)
+    "Vantail_Porte": (lambda mb: door_leaf(mb, 1.0, 2.25 - 0.45, DEPTH - 0.04), -1.0 / 2 + 0.07, LEAF_HINGE_Y),
+    "Vantail_PorteSimple": (lambda mb: door_leaf(mb, 0.95, 2.15 - 0.07, DEPTH - 0.04), -0.95 / 2 + 0.07, LEAF_HINGE_Y),
+    "Vantail_Vitrine": (lambda mb: shop_leaf(mb, 2.6, 2.75), 2.6 / 2 - 0.09 - 0.95 + 0.02, DEPTH - 0.05 - 0.01),
+    "Vantail_EgliseG": (lambda mb: church_leaf(mb, False), 0.0, 0.0),
+    "Vantail_EgliseD": (lambda mb: church_leaf(mb, True), 0.0, 0.0),
 }
-DOOR_LEAF = {"PorteI": "Vantail_Porte", "PorteI_Simple": "Vantail_PorteSimple"}
+def church_leaf(mb, right=False):
+    """Vantail du portail de l'église (0,9 x 3,2 m) : planches, pentures en fer, clous, anneau ; charnière à l'origine."""
+    sg = -1.0 if right else 1.0
+    w, h, y = 0.9, 3.2, 0.09
+    box(mb, "BoisPeint", (sg * w / 2, y, h / 2), (w - 0.01, 0.08, h), uv_scale=1)
+    for z in (0.5, 1.6, 2.7):
+        box(mb, "Fer", (sg * 0.3, y - 0.045, z), (0.6, 0.012, 0.07), col=(40, 38, 35, 255))
+    for k in range(7):
+        box(mb, "BoisPeint", (sg * (0.06 + k * 0.13), y - 0.042, h / 2), (0.012, 0.006, h - 0.1), uv_scale=1)
+    revolve(mb, "Fer", [(0.055, -0.01), (0.065, 0.0), (0.055, 0.01)], (sg * (w - 0.12), y - 0.06, 1.2), segs=12, col=(40, 38, 35, 255))
+
+
+DOOR_LEAF = {"PorteI": "Vantail_Porte", "PorteI_Simple": "Vantail_PorteSimple", "VitrineV": "Vantail_Vitrine",
+             "VitrineV_SansStore": "Vantail_Vitrine"}
 
 
 def moving_leaf(name):
-    w, ht = LEAVES[name]
+    fn, hx, hy = LEAVES[name]
     src = MB()
-    door_leaf(src, w, ht, DEPTH - 0.04)
+    fn(src)
     out = MB()
     for mat, a in src.arrays().items():
         P = a["P"].astype(np.float64).copy()
-        P[:, 0] -= -w / 2 + 0.07
-        P[:, 1] -= LEAF_HINGE_Y
+        P[:, 0] -= hx
+        P[:, 1] -= hy
         out.add(mat, P, a["N"], a["UV"], a["C"], a["I"])
     return out
 
 
 def leaf_collision(name):
-    """Boîte de collision du vantail (centre, taille) dans son repère."""
-    w, ht = LEAVES[name]
-    lw = w - 0.14
-    return ("boxes", [lw / 2, -0.03, (0.02 + ht) / 2, lw, 0.07, ht - 0.02])
+    """Boîte de collision du vantail (centre, taille) dans son repère, d'après ses sommets."""
+    P = np.concatenate([a["P"] for a in moving_leaf(name).arrays().values()])
+    lo, hi = P.min(0), P.max(0)
+    c, sz = (lo + hi) / 2, np.maximum(hi - lo, 0.04)
+    return ("boxes", [float(c[0]), float(c[1]), float(c[2]), float(sz[0]), float(sz[1]), float(sz[2])])
 
 
 def arched_infill(mb, w, h, rise, mat="Enduit", y=0.0, col=WHITE):
@@ -263,7 +280,8 @@ def carriage_door(w=2.4, h=2.6, rise=0.45, open_in=False):
     return mb
 
 
-def shopfront(w=2.6, h=2.7, awning=True):
+def shopfront(w=2.6, h=2.7, awning=True, leaf=True):
+    """Devanture : vitrine, porte vitrée, imposte, store. leaf=False : porte vitrée mobile (commerces visitables)."""
     mb = MB()
     y = DEPTH - 0.05
     # soubassement bois, vitrine, porte vitrée, imposte
@@ -276,9 +294,8 @@ def shopfront(w=2.6, h=2.7, awning=True):
     box(mb, "BoisPeint", (0, y, h - 0.46), (w - 0.1, 0.08, 0.07), uv_scale=1)
     glass(mb, -w / 2 + 0.1, w / 2 - 0.1, h - 0.42, h - 0.1, y + 0.03)
     # porte vitrée
-    frame_rect(mb, xd + 0.02, w / 2 - 0.09, 0.0, h - 0.5, y - 0.01, t=0.08, d=0.05)
-    glass(mb, xd + 0.1, w / 2 - 0.17, 0.35, h - 0.58, y + 0.0)
-    box(mb, "BoisPeint", ((xd + w / 2 - 0.09) / 2, y - 0.01, 0.18), (dw - 0.1, 0.05, 0.3), uv_scale=1)
+    if leaf:
+        shop_leaf(mb, w, h)
     box(mb, "PierreTaille", (0, 0.02, -0.08), (w + 0.1, DEPTH + 0.3, 0.2), uv_scale=3)
     if awning:
         # store banne en toile (teinté par instance) : pente + lambrequin
@@ -291,6 +308,17 @@ def shopfront(w=2.6, h=2.7, awning=True):
         for sx in (-1, 1):
             tube(mb, "Fer", [(sx * (w / 2 + 0.05), -0.02, h + 0.1), (sx * (w / 2 + 0.05), -d + 0.05, z0 + 0.02)], 0.015, segs=6)
     return mb
+
+
+def shop_leaf(mb, w=2.6, h=2.7):
+    """Porte vitrée de la devanture (repère de la devanture)."""
+    y = DEPTH - 0.05
+    xd = w / 2 - 0.09 - 0.95
+    frame_rect(mb, xd + 0.02, w / 2 - 0.09, 0.0, h - 0.5, y - 0.01, t=0.08, d=0.05)
+    glass(mb, xd + 0.1, w / 2 - 0.17, 0.35, h - 0.58, y + 0.0)
+    box(mb, "BoisPeint", ((xd + w / 2 - 0.09) / 2, y - 0.01, 0.18), (0.95 - 0.1, 0.05, 0.3), uv_scale=1)
+    tube(mb, "Fer", [(w / 2 - 0.22, y - 0.07, 1.05), (w / 2 - 0.22, y - 0.07, 1.35)], 0.012, segs=6, col=(200, 200, 200, 255))
+    tube(mb, "Fer", [(w / 2 - 0.22, y + 0.04, 1.05), (w / 2 - 0.22, y + 0.04, 1.35)], 0.012, segs=6, col=(200, 200, 200, 255))
 
 
 def balcony_door(w=0.9, h=2.15, open_in=False):
@@ -500,6 +528,11 @@ MODULE_BUILDERS = {
     "PorteI_Simple": lambda: door(0.95, 2.15, transom=False, stone=False, open_in=True, leaf=False),
     "Vantail_Porte": lambda: moving_leaf("Vantail_Porte"),
     "Vantail_PorteSimple": lambda: moving_leaf("Vantail_PorteSimple"),
+    "Vantail_Vitrine": lambda: moving_leaf("Vantail_Vitrine"),
+    "Vantail_EgliseG": lambda: moving_leaf("Vantail_EgliseG"),
+    "Vantail_EgliseD": lambda: moving_leaf("Vantail_EgliseD"),
+    "VitrineV": lambda: shopfront(2.6, 2.75, awning=True, leaf=False),
+    "VitrineV_SansStore": lambda: shopfront(2.6, 2.75, awning=False, leaf=False),
     "PorteFenetreV_Balcon": lambda: balcony_door(0.9, 2.15, open_in=True),
     "Lanterne_Murale": wall_lantern,
     "Lampadaire": street_lamp,
@@ -526,7 +559,7 @@ OPENINGS = {
 VISIT = {"Fenetre_Ouverte": "FenetreV_Ouverte", "Fenetre_Fermee": "FenetreV_Fermee", "Fenetre_MiClose": "FenetreV_MiClose",
          "Fenetre_Persiennes": "FenetreV_Persiennes", "Fenetre_Nue": "FenetreV_Nue", "Fenetre_Barreaux": "FenetreV_Barreaux",
          "Fenestron": "FenestronV", "Porte": "PorteI", "Porte_Simple": "PorteI_Simple", "Remise": "RemiseV",
-         "PorteFenetre_Balcon": "PorteFenetreV_Balcon"}
+         "PorteFenetre_Balcon": "PorteFenetreV_Balcon", "Vitrine": "VitrineV", "Vitrine_SansStore": "VitrineV_SansStore"}
 for _k, _v in VISIT.items():
     OPENINGS[_v] = OPENINGS[_k]
 OPENINGS["PorteV"], OPENINGS["PorteV_Simple"] = OPENINGS["Porte"], OPENINGS["Porte_Simple"]

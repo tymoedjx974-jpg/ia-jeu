@@ -24,7 +24,7 @@ TREAD = 0.235
 RISE_MAX = 0.2
 PART = 0.1          # épaisseur des cloisons
 COL_PLAFOND = (247, 244, 238, 255)
-DOOR_TYPES = ("Porte", "Porte_Simple", "Remise")
+DOOR_TYPES = ("Porte", "Porte_Simple", "Remise", "Vitrine", "Vitrine_SansStore")
 PAINT = [(96, 132, 160), (122, 150, 128), (170, 186, 170), (214, 204, 170), (120, 140, 170), (150, 170, 190), (196, 120, 90)]
 FABRIC = [(222, 176, 64), (70, 104, 160), (176, 64, 50), (120, 136, 70), (206, 150, 60), (90, 120, 150)]
 REJECT = collections.Counter()   # raisons de refus des maisons candidates (diagnostic)
@@ -32,28 +32,36 @@ LINEN = [(236, 226, 204), (212, 196, 170), (190, 170, 140), (160, 170, 150)]
 
 
 # ------------------------------------------------------------------ sélection
-def candidates(blds, center, max_n=260, spacing=11.0):
-    """Maisons simples (presque rectangulaires, 2 niveaux ou plus) réparties dans le village."""
+def candidates(blds, center, max_n=340, spacing=9.0):
+    """Bâtiments à ouvrir : maisons presque rectangulaires (à étage ou de plain-pied), commerces et mairie."""
     out = []
     for b in blds:
-        if b["style"] not in ("core", "faubourg", "mas", "villa") or b.get("shop") or b.get("mairie") or b["nf"] < 2:
+        if b["style"] not in ("core", "faubourg", "mas", "villa"):
             continue
+        public = bool(b.get("shop") or b.get("mairie"))
         p = b["poly"]
-        if not (40 <= p.area <= 210):
+        if not ((22 if public else 34) <= p.area <= (380 if public else 240)):
             continue
         r = p.minimum_rotated_rectangle
-        if p.area / max(r.area, 1e-6) < 0.9:
+        if p.area / max(r.area, 1e-6) < (0.5 if public else 0.86):
             continue
         _, _, Lm, Wm = b["ombr"]
-        if Lm < 7.4 or Wm < 3.9:
+        if public:
+            if Lm < 4.5 or Wm < 3.4:
+                continue
+        elif Lm < (7.0 if b["nf"] == 1 else 7.4) or Wm < 3.9:
             continue
         out.append(b)
     pri = {"core": 0, "faubourg": 1, "villa": 2, "mas": 2}
-    out.sort(key=lambda b: (pri[b["style"]], b["poly"].centroid.distance(center)))
+    # commerces et mairie d'abord (ils sont peu nombreux), puis les maisons du centre vers l'extérieur
+    # (les maisons hautes et larges passent avant : ce sont elles qui peuvent avoir un 2e étage avec colimaçon)
+    out.sort(key=lambda b: (0 if (b.get("shop") or b.get("mairie")) else 1,
+                            0 if (b["nf"] >= 3 and b["ombr"][3] >= 4.6) else 1, pri[b["style"]], b["poly"].centroid.distance(center)))
     chosen = []
     for b in out:
         c = b["poly"].centroid
-        if all(c.distance(o["poly"].centroid) > spacing for o in chosen):
+        public = b.get("shop") or b.get("mairie")
+        if public or all(c.distance(o["poly"].centroid) > spacing for o in chosen if not (o.get("shop") or o.get("mairie"))):
             chosen.append(b)
         if len(chosen) >= max_n:
             break
@@ -63,45 +71,59 @@ def candidates(blds, center, max_n=260, spacing=11.0):
 
 
 # ------------------------------------------------------------------ plan
+SPIRAL = 1.8       # emprise de l'escalier en colimaçon (carré, m)
+
+
 def plan(b, info, openings, gz):
-    """Étudie la maison ; renvoie le plan de l'intérieur, ou None si elle ne se prête pas à un intérieur simple."""
-    if b["nf"] < 2:
-        REJECT["niveaux"] += 1
-        return None
+    """Étudie le bâtiment ; renvoie le plan de l'intérieur, ou None s'il ne se prête pas à un intérieur simple.
+    Trois sortes : maison à étage(s) (escalier droit, parfois colimaçon vers un 2e étage), maison de plain-pied,
+    commerce ou mairie (rez-de-chaussée seulement)."""
+    public = bool(b.get("shop") or b.get("mairie"))
+    kind = "commerce" if public else ("plainpied" if b["nf"] == 1 else "maison")
+    rng = b["rng"]
     p = b["poly"]
     ip = p.buffer(-T_WALL, join_style=2)
-    if ip.geom_type != "Polygon" or ip.area < 20:
-        REJECT["forme"] += 1
+    if ip.geom_type != "Polygon" or ip.area < (12 if public else 20):
+        REJECT[kind + ":forme"] += 1
         return None
     ip = ip.simplify(0.02)
     c, a, L, W = ombr(ip)
-    if ip.area / (L * W) < 0.92:
-        REJECT["pas rectangulaire"] += 1
+    rect_ratio = ip.area / (L * W)
+    if rect_ratio < (0.5 if public else 0.92):
+        REJECT[kind + ":pas rectangulaire"] += 1
         return None
     q = np.array([-a[1], a[0]])
     fh = b["fh"]
     l0 = b["zref"]
-    l1 = l0 + fh[0]
-    ctop = l1 + fh[1] - 0.05 if b["nf"] == 2 else l1 + fh[1] - SLAB
+    lv = [l0 + sum(fh[:k]) for k in range(len(fh) + 1)]      # niveaux des planchers (et du dessus du dernier)
+    nlev = 1
+    if kind == "maison":
+        nlev = 3 if (b["nf"] >= 3 and L >= 8.0 and W >= 3.7 and rng.random() < 0.85) else 2
+    top = lv[nlev] - (0.05 if b["nf"] == nlev else SLAB)       # plafond du dernier niveau ouvert
+    l1 = lv[1]
+    ctop = top if nlev <= 2 else lv[2] - SLAB                   # plafond de l'étage 1
     n = int(math.ceil(fh[0] / RISE_MAX))
     rise = fh[0] / n
     run = n * TREAD
-    if L < run + 2.7 or W < STAIR_W + PART + 1.75:
-        REJECT["trop petite"] += 1
+    if kind == "maison" and (L < run + 2.7 or W < STAIR_W + PART + 1.75):
+        REJECT[kind + ":trop petite"] += 1
+        return None
+    if kind == "plainpied" and L < 7.0:
+        REJECT[kind + ":trop petite"] += 1
         return None
     # le terrain ne doit pas traverser le plancher
     xs = np.linspace(-L / 2 + 0.2, L / 2 - 0.2, 7)
     ys = np.linspace(-W / 2 + 0.2, W / 2 - 0.2, 4)
-    pts = [c + x * a + y * q for x in xs for y in ys]
+    pts = [pt for pt in (c + x * a + y * q for x in xs for y in ys) if ip.contains(Point(*pt))] or [c]
     if max(gz(pt[0], pt[1]) for pt in pts) > l0 - 0.05:
-        REJECT["terrain"] += 1
+        REJECT[kind + ":terrain"] += 1
         return None
 
     def to_local(P):
         d = np.asarray(P) - c
         return float(d @ a), float(d @ q)
 
-    # ouvertures dans le repère local
+    # ouvertures dans le repère local ; niveau = nombre de planchers franchis
     locs = []
     for idx, o in enumerate(openings):
         e = info[o["edge"]]
@@ -112,17 +134,56 @@ def plan(b, info, openings, gz):
         side = "+x" if ox > 0.8 else "-x" if ox < -0.8 else "+y" if oy > 0.8 else "-y" if oy < -0.8 else None
         w = o["s1"] - o["s0"]
         span = (lx - w / 2, lx + w / 2) if side in ("+y", "-y") else (ly - w / 2, ly + w / 2)
-        floor = 0 if o["z0"] < l1 - 0.6 else (1 if o["z0"] < ctop - 0.3 else 2)
+        floor = sum(1 for z in lv[1:-1] if o["z0"] >= z - 0.6)
         is_door = o["type"] in DOOR_TYPES
         locs.append(dict(i=idx, side=side, span=span, z0=o["z0"], z1=o["z1"], floor=floor, door=is_door, type=o["type"]))
     doors = [d for d in locs if d["door"] and d["floor"] == 0 and d["side"] and -0.8 <= d["z0"] - l0 <= 0.45]
     if not doors:
-        REJECT["porte"] += 1
+        REJECT[kind + ":porte"] += 1
         return None
     main = min(doors, key=lambda d: abs(d["z0"] - l0))
+    ip_local = Polygon([to_local(P_) for P_ in np.array(ip.exterior.coords)])
+    base = dict(kind=kind, nlev=nlev, lv=lv, c=c, a=a, q=q, L=L, W=W, ip=ip, ip_local=ip_local, rect=rect_ratio >= 0.9, l0=l0, l1=l1,
+                ctop=ctop, top=top, locs=locs, main=main)
 
     def overlaps(a0, a1, b0, b1, m=0.0):
         return a0 < b1 + m and a1 > b0 - m
+
+    def wall_free(side, lo, hi, floor, m=0.15):
+        return not any(o["floor"] == floor and o["side"] == side and overlaps(*o["span"], lo, hi, m) for o in locs)
+
+    if kind == "commerce":
+        # arrière-boutique quand on entre par un petit côté et que la boutique est assez profonde
+        back = None
+        if main["side"] in ("+x", "-x") and L >= 7.0 and rect_ratio >= 0.85:
+            sgn = 1 if main["side"] == "+x" else -1
+            xp = -sgn * (L / 2 - 2.3)
+            if wall_free("+y", xp - 0.1, xp + 0.1, 0) and wall_free("-y", xp - 0.1, xp + 0.1, 0):
+                back = dict(x=xp, sgn=sgn, door_y=float(rng.choice([-1, 1])) * (W / 2 - 0.75))
+        return dict(base, back=back)
+    if kind == "plainpied":
+        # pièces en enfilade le long du grand axe : séjour-cuisine (côté entrée), chambre, salle de bain
+        ent = (main["span"][0] + main["span"][1]) / 2 if main["side"] in ("+y", "-y") else (L / 2 if main["side"] == "+x" else -L / 2)
+        d = -1 if ent > 0 else 1                    # on s'éloigne de l'entrée
+        start = d * -L / 2
+        la = max(3.3, L * 0.48)
+        lb = max(2.6, (L - la) * 0.6)
+        if L - la - lb < 1.7:
+            lb = L - la - 1.7
+        cuts = []
+        for x_ in (start + d * la, start + d * (la + lb)):
+            best = None
+            for dx in (0, 0.2, -0.2, 0.4, -0.4, 0.6, -0.6):
+                xp = x_ + dx
+                if wall_free("+y", xp - 0.1, xp + 0.1, 0) and wall_free("-y", xp - 0.1, xp + 0.1, 0):
+                    best = xp
+                    break
+            if best is None:
+                REJECT[kind + ":cloisons"] += 1
+                return None
+            cuts.append(best)
+        sd = float(rng.choice([-1, 1]))
+        return dict(base, d=d, start=start, cuts=cuts, door_y=sd * (W / 2 - 0.7))
 
     best = None
     order = [(s, d) for s in (1, -1) for d in (1, -1)]
@@ -164,18 +225,48 @@ def plan(b, info, openings, gz):
         if best:
             break
     if not best:
-        REJECT["escalier"] += 1
+        REJECT[kind + ":escalier"] += 1
         return None
-    return dict(c=c, a=a, q=q, L=L, W=W, ip=ip, l0=l0, l1=l1, ctop=ctop, n=n, rise=rise, run=run, locs=locs, main=main, **best)
+    spiral = None
+    if nlev == 3:
+        # colimaçon dans un angle de la chambre (au fond), sinon contre la cloison de la salle de bain, côté mur plein
+        far = -best["end"]
+        dd, ss = best["d"], best["s"]
+
+        def pl_lv(f):
+            return lv[f]
+        cands = []
+        sx = far - dd * (SPIRAL / 2 + 0.02)
+        for sy in (ss * (W / 2 - SPIRAL / 2 - 0.02), -ss * (W / 2 - SPIRAL / 2 - 0.02)):
+            cands.append((sx, sy, -dd, -(1.0 if sy > 0 else -1.0), True))
+        sx2 = best["xc"] + dd * (PART / 2 + SPIRAL / 2 + 0.03)
+        sy2 = -ss * (W / 2 - SPIRAL / 2 - 0.02)
+        cands.append((sx2, sy2, dd, -(1.0 if sy2 > 0 else -1.0), False))
+        for sx_, sy_, dxr, dyr, corner in cands:
+            side_y = "+y" if sy_ > 0 else "-y"
+            side_x = "+x" if sx_ > 0 else "-x"
+            walls_ = [(side_y, sx_ - SPIRAL / 2, sx_ + SPIRAL / 2)] + ([(side_x, sy_ - SPIRAL / 2, sy_ + SPIRAL / 2)] if corner else [])
+            # une fenêtre derrière l'escalier est acceptée (on la voit entre les marches), pas une porte-fenêtre
+            if not any(o["floor"] in (1, 2) and o["side"] == sd_ and overlaps(*o["span"], lo_, hi_, 0.05)
+                       and ("Porte" in o["type"] or o["z0"] < pl_lv(o["floor"]) + 0.5)
+                       for sd_, lo_, hi_ in walls_ for o in locs):
+                spiral = (sx_, sy_, dxr, dyr)
+                break
+        if spiral is None or abs(far - best["xc"]) < SPIRAL + 2.4:
+            REJECT["maison:pas de colimaçon"] += 1
+            base.update(nlev=2, top=lv[2] - (0.05 if b["nf"] == 2 else SLAB))
+            base["ctop"] = base["top"]
+            spiral = None
+    return dict(base, n=n, rise=rise, run=run, spiral=spiral, **best)
 
 
 def apply_openings(b, pl, openings, info):
-    """Ouvre la maison : porte(s) d'entrée ouvertes au niveau du sol intérieur, fenêtres sans vitre sur deux niveaux."""
+    """Ouvre le bâtiment : porte(s) d'entrée au niveau du sol intérieur, fenêtres sans vitre sur les niveaux aménagés."""
     l0 = pl["l0"]
     steps = []
     for lo in pl["locs"]:
         o = openings[lo["i"]]
-        if lo["floor"] <= 1 and o["type"] in VISIT:
+        if lo["floor"] < pl["nlev"] and o["type"] in VISIT:
             if lo["door"] and not (-0.8 <= lo["z0"] - l0 <= 0.45):
                 continue
             o["type"] = VISIT[o["type"]]
@@ -216,6 +307,8 @@ def _flat(mb, mat, poly, z, up=True, col=WHITE, tile=None, holes=()):
 
 
 def build(b, pl, mb, inst, rng):
+    if pl["kind"] != "maison":
+        return build_rdc(b, pl, mb, inst, rng)
     c, a, q, L, W = pl["c"], pl["a"], pl["q"], pl["L"], pl["W"]
     s, d, end, xc, band, y_b = pl["s"], pl["d"], pl["end"], pl["xc"], pl["band"], pl["y_b"]
     l0, l1, ctop = pl["l0"], pl["l1"], pl["ctop"]
@@ -244,60 +337,57 @@ def build(b, pl, mb, inst, rng):
     for g in ([upper] if upper.geom_type == "Polygon" else list(upper.geoms)):
         _flat(mb, dec["floor1"], g, l1 + 0.002, up=True, col=dec["fcol1"])
         _flat(mb, "Enduit", g, l1 - SLAB, up=False, col=COL_PLAFOND)
-    _flat(mb, "Enduit", ip, ctop, up=False, col=COL_PLAFOND)
+    if pl["spiral"]:
+        # 2e étage (grenier ou chambre) desservi par un escalier en colimaçon : 3/4 de tour de marches,
+        # le quart restant (côté pièce) sert de palier en haut et d'accès en bas
+        l2 = pl["lv"][2]
+        sx, sy, dx_, dy_ = pl["spiral"]                              # centre, direction de la pièce
+        lx, ly = sx + dx_ * SPIRAL / 4, sy + dy_ * SPIRAL / 4        # centre du palier (quart de l'emprise)
+        sq = rect_world(sx - SPIRAL / 2, sx + SPIRAL / 2, sy - SPIRAL / 2, sy + SPIRAL / 2)
+        landing = rect_world(lx - SPIRAL / 4, lx + SPIRAL / 4, ly - SPIRAL / 4, ly + SPIRAL / 4)
+        sh = sq.difference(landing).intersection(ip.buffer(0.01))
+        up2 = ip.difference(sh)
+        for g in _polys(up2):
+            _flat(mb, "Enduit", g, ctop, up=False, col=COL_PLAFOND)
+            _flat(mb, dec["floor2"], g, l2 + 0.002, up=True, col=dec["fcol2"])
+        _flat(mb, "Enduit", ip, pl["top"], up=False, col=COL_PLAFOND)
+        delta = math.atan2(dy_, dx_)
+        spiral_stair(mb, Wp(sx, sy), l1, l2, yaw_a + delta + math.pi / 4)
+        # garde-corps du palier au-dessus des premières marches
+        ang_first = delta + math.pi / 4                              # direction (locale) des premières marches
+        ex, ey = math.cos(ang_first), math.sin(ang_first)
+        p0 = Wp(sx, sy)
+        p1 = Wp(sx + ex * SPIRAL / 2, sy + ey * SPIRAL / 2)
+        tube(mb, "BoisBrut", [(p0[0], p0[1], l2 + 0.95), (p1[0], p1[1], l2 + 0.95)], 0.025, segs=6)
+        for t_ in np.linspace(0.1, 1, 5):
+            pp = p0 + (p1 - p0) * t_
+            tube(mb, "Fer", [(pp[0], pp[1], l2), (pp[0], pp[1], l2 + 0.95)], 0.012, segs=5, col=(60, 55, 50, 255))
+    else:
+        _flat(mb, "Enduit", ip, ctop, up=False, col=COL_PLAFOND)
     # chants de la trémie (côté pièce et côté arrivée)
     ye = y_b
     Wbox("Enduit", (xr[0] + xr[1]) / 2, ye - s * 0.005, l1 - SLAB / 2, xr[1] - xr[0], 0.01, SLAB, col=COL_PLAFOND, faces=("-y", "+y"))
     xa = end + d * pl["run"]
     Wbox("Enduit", xa + d * 0.005, (band[0] + band[1]) / 2, l1 - SLAB / 2, 0.01, STAIR_W, SLAB, col=COL_PLAFOND, faces=("-x", "+x"))
     # poutres apparentes (selon le petit axe, tous les 70 cm)
-    for zc, is_upper_slab in ((l1 - SLAB, True), (ctop, False)) if dec["beams"] else ():
+    slabs = [(l1 - SLAB, "volee"), (ctop, "colimacon" if pl["spiral"] else None)] + ([(pl["top"], None)] if pl["spiral"] else [])
+    for zc, cut in slabs if dec["beams"] else ():
         nb = int((L - 0.4) / 0.7)
         for k in range(nb + 1):
             x = -L / 2 + 0.2 + k * (L - 0.4) / max(nb, 1)
             y0, y1 = -W / 2 + 0.02, W / 2 - 0.02
-            if is_upper_slab and hole_x[0] - 0.1 < x < hole_x[1] + 0.1:
+            if cut == "volee" and hole_x[0] - 0.1 < x < hole_x[1] + 0.1:
                 y0, y1 = (y0, y_b - 0.05) if s > 0 else (y_b + 0.05, y1)
+            if cut == "colimacon" and abs(x - pl["spiral"][0]) < SPIRAL / 2 + 0.1:
+                sy_ = pl["spiral"][1]
+                y0, y1 = (y0, sy_ - SPIRAL / 2 - 0.05) if sy_ > 0 else (sy_ + SPIRAL / 2 + 0.05, y1)
             Wbox("BoisBrut", x, (y0 + y1) / 2, zc - 0.09, 0.14, y1 - y0, 0.18, col=dec["beams"], uv=1.0)
 
     # ---------- faces intérieures des murs extérieurs (percées des ouvertures)
-    cs = np.array(ip.exterior.coords)
-    if Polygon(cs).exterior.is_ccw is False:
-        cs = cs[::-1]
-    openings_w = pl["openings_world"]
-    for fl, zb, zt, col in ((0, l0, l1 - SLAB, dec["wall0"]), (1, l1, ctop, dec["wall1"])):
-        for i in range(len(cs) - 1):
-            p0, p1 = cs[i], cs[i + 1]
-            dv = p1 - p0
-            Le = float(np.linalg.norm(dv))
-            if Le < 0.05:
-                continue
-            u = dv / Le
-            cuts = []
-            for (Pin, ou, w, z0, z1) in openings_w:
-                if abs(float(ou @ u)) < 0.95:
-                    continue
-                t = float((Pin - p0) @ u)
-                dist = abs(float((Pin - p0) @ np.array([-u[1], u[0]])))
-                if dist > 0.2 or t < -0.1 or t > Le + 0.1:
-                    continue
-                zz0, zz1 = max(z0, zb + 0.001), min(z1, zt - 0.001)
-                if zz1 <= zz0:
-                    continue
-                t0, t1 = max(0.02, t - w / 2), min(Le - 0.02, t + w / 2)
-                if t1 - t0 < 0.1:
-                    continue
-                cuts.append(sbox(Le - t1, zz0 if zz0 > zb + 0.02 else zb - 0.01, Le - t0, zz1))
-            face = sbox(0.0, zb, Le, zt)
-            if cuts:
-                face = face.difference(unary_union(cuts))
-            origin = np.array([p1[0], p1[1], 0.0])
-            e1 = np.array([-u[0], -u[1], 0.0])
-            for g in _polys(face):
-                if g.area < 0.005:
-                    continue
-                planar_polygon(mb, "Enduit", np.array(g.exterior.coords)[:-1], [np.array(h.coords)[:-1] for h in g.interiors],
-                               origin, e1, np.array([0, 0, 1.0]), lambda v2, P: np.stack([v2[:, 0] / 3.0, -v2[:, 1] / 3.0], -1), col)
+    bands = [(l0, l1 - SLAB, dec["wall0"]), (l1, ctop, dec["wall1"])]
+    if pl["nlev"] == 3:
+        bands.append((pl["lv"][2], pl["top"], dec["wall2"]))
+    _inner_walls(mb, ip, pl["openings_world"], bands)
 
     # ---------- escalier (marches pleines, girons en terre cuite, main courante)
     n, rise, tr = pl["n"], pl["rise"], TREAD
@@ -391,9 +481,431 @@ def build(b, pl, mb, inst, rng):
 
     # ---------- mobilier
     furnish(pl, inst, rng, Wp, yaw_a)
-    b["visit_plan"] = dict(theme=dec["theme"], c=[float(c[0]), float(c[1])], a=[float(a[0]), float(a[1])], L=float(L), W=float(W), s=int(s), d=int(d),
+    b["visit_plan"] = dict(theme=dec["theme"], kind="maison", levels=int(pl["nlev"]), entree=_entree(pl), lv=[float(z) for z in pl["lv"]],
+                           spiral=[float(v) for v in pl["spiral"]] if pl["spiral"] else None, top=float(pl["top"]), c=[float(c[0]), float(c[1])], a=[float(a[0]), float(a[1])], L=float(L), W=float(W), s=int(s), d=int(d),
                            end=float(end), xc=float(xc), run=float(pl["run"]), l0=float(l0), l1=float(l1), ctop=float(ctop),
                            band=[float(band[0]), float(band[1])])
+
+
+# ------------------------------------------------------------------ plain-pied, commerces, mairie (un seul niveau)
+SHOP_TYPE = {  # enseigne -> aménagement
+    "boulangerie": "boulangerie", "boucherie": "boucherie", "glaces": "glacier",
+    "cafe1": "cafe", "cafe2": "cafe", "bar": "cafe", "pizzeria": "restaurant", "cave": "cave",
+    "epicerie": "epicerie", "produits": "epicerie", "vins": "cave",
+    "pharmacie": "pharmacie", "beaute": "pharmacie", "savons": "boutique_savons", "coiffure": "coiffeur",
+    "galerie": "galerie", "atelier": "galerie", "musee": "galerie", "santons": "boutique_santons", "poterie": "boutique_poterie",
+    "boutique": "boutique_santons", "poste": "accueil", "tourisme": "accueil", "mediatheque": "accueil", "hotel": "accueil",
+    "hotel2": "accueil", "chambres": "accueil",
+}
+for _k in range(1, 9):
+    SHOP_TYPE[f"restaurant{_k}"] = "restaurant"
+
+
+def build_rdc(b, pl, mb, inst, rng):
+    """Maison de plain-pied, commerce ou mairie : un seul niveau aménagé."""
+    c, a, q, L, W = pl["c"], pl["a"], pl["q"], pl["L"], pl["W"]
+    l0, top = pl["l0"], pl["top"]
+    ip = pl["ip"]
+    yaw_a = math.atan2(a[1], a[0])
+    dec = pl["decor"] = pick_decor(rng, b["style"])
+    if pl["kind"] == "commerce":
+        dec["floor0"] = str(rng.choice(["CarreauxCiment", "Tomettes", "Dallage"], p=[0.5, 0.35, 0.15]))
+        dec["fcol0"] = CIMENT_COLS[rng.integers(len(CIMENT_COLS))] + (255,) if dec["floor0"] == "CarreauxCiment" else WHITE
+        dec["theme"] = "mairie" if b.get("mairie") else SHOP_TYPE.get(b.get("shop"), "boutique_santons")
+
+    def Wp(x, y):
+        return c + x * a + y * q
+
+    _flat(mb, dec["floor0"], ip, l0 + 0.002, up=True, col=dec["fcol0"])
+    _flat(mb, "Enduit", ip, top, up=False, col=COL_PLAFOND)
+    if dec["beams"]:
+        from shapely.geometry import LineString
+        nb = int((L - 0.4) / 0.7)
+        inner = pl["ip_local"].buffer(-0.02)
+        for k in range(nb + 1):
+            x = -L / 2 + 0.2 + k * (L - 0.4) / max(nb, 1)
+            seg = LineString([(x, -W / 2 - 1), (x, W / 2 + 1)]).intersection(inner)
+            for piece in getattr(seg, "geoms", [seg]):
+                if piece.is_empty or piece.geom_type != "LineString" or piece.length < 0.3:
+                    continue
+                (x0_, y0_), (x1_, y1_) = piece.coords[0], piece.coords[-1]
+                P = Wp(x, (y0_ + y1_) / 2)
+                box(mb, "BoisBrut", (P[0], P[1], top - 0.09), (0.14, abs(y1_ - y0_), 0.18), yaw=yaw_a, col=dec["beams"], uv_scale=1.0)
+    _inner_walls(mb, ip, pl["openings_world"], [(l0, top, dec["wall0"])])
+    # cloisons
+    parts = []
+    if pl["kind"] == "plainpied":
+        for xp in pl["cuts"]:
+            parts.append((xp, pl["door_y"]))
+    elif pl.get("back"):
+        parts.append((pl["back"]["x"], pl["back"]["door_y"]))
+    for xp, dy in parts:
+        _partition(mb, Wp, yaw_a, (xp, -W / 2), (xp, W / 2), l0, top, [(dy, 0.85, 2.05)], dec["wall0"], along_y=True)
+    _entry_steps(mb, pl, l0)
+    furnish_rdc(b, pl, inst, rng, Wp, yaw_a)
+    b["visit_plan"] = dict(theme=dec["theme"], kind=pl["kind"], c=[float(c[0]), float(c[1])], a=[float(a[0]), float(a[1])], L=float(L),
+                           W=float(W), l0=float(l0), lv=[float(l0)], top=float(top), entree=_entree(pl))
+
+
+def _entree(pl):
+    """Porte d'entrée vue de l'intérieur : point (repère local) et direction vers l'intérieur."""
+    m = pl["main"]
+    L, W = pl["L"], pl["W"]
+    mid = (m["span"][0] + m["span"][1]) / 2
+    return {"+y": [mid, W / 2, 0.0, -1.0], "-y": [mid, -W / 2, 0.0, 1.0], "+x": [L / 2, mid, -1.0, 0.0], "-x": [-L / 2, mid, 1.0, 0.0]}[m["side"]]
+
+
+def _entry_steps(mb, pl, l0):
+    """Marches en pierre devant une porte plus haute que la rue."""
+    for Pout, out, u, w, zg in pl.get("steps", []):
+        hgt = l0 - zg
+        ns = max(1, int(math.ceil(hgt / 0.17)))
+        rs = hgt / ns
+        yaw_e = math.atan2(u[1], u[0])
+        for k in range(ns):
+            top = l0 - k * rs
+            dep = 0.32 * (k + 1)
+            C = Pout + out * (dep / 2)
+            box(mb, "PierreTaille", (C[0], C[1], (top + zg - 0.25) / 2), (w + 0.3, dep, top - zg + 0.25), yaw=yaw_e, uv_scale=3.0,
+                faces=("+z", "-y", "+y", "-x", "+x"))
+
+
+def furnish_rdc(b, pl, inst, rng, Wp, yaw_a):
+    L, W, l0 = pl["L"], pl["W"], pl["l0"]
+    theme = pl["decor"]["theme"]
+    ALL = ("+y", "-y", "+x", "-x")
+    paint = PAINT[rng.integers(len(PAINT))]
+    fabric = FABRIC[rng.integers(len(FABRIC))]
+    fabric2 = FABRIC[rng.integers(len(FABRIC))]
+    linen = LINEN[rng.integers(len(LINEN))]
+    looted = pl["kind"] == "commerce" and theme != "mairie" and rng.random() < 0.5
+    wreck = theme == "saccagee" or looted
+
+    def put(name, cx, cy, z, yaw, col=(255, 255, 255)):
+        if wreck and SIZE.get(name, (0, 0, 9))[2] < 1.3 and name not in ("Int_Tapis", "Int_Cadre", "Int_Miroir") and rng.random() < 0.5:
+            cx, cy, yaw = cx + rng.normal(0, 0.15), cy + rng.normal(0, 0.15), yaw + rng.normal(0, 0.5)
+        P = Wp(cx, cy)
+        inst[name].append((P[0], P[1], z, yaw_a + yaw, 1.0, 1.0, 1.0, *col))
+
+    blocks, tall = [], []
+    for lo in pl["locs"]:
+        if lo["floor"] != 0 or lo["side"] is None:
+            continue
+        a0, a1 = lo["span"]
+        if lo["door"] or "Porte" in lo["type"] or "Remise" in lo["type"] or "Vitrine" in lo["type"]:
+            blocks.append(_front_rect(lo["side"], a0 - 0.25, a1 + 0.25, 1.2, L, W))
+        else:
+            tall.append(_front_rect(lo["side"], a0 - 0.1, a1 + 0.1, 0.4, L, W))
+    # passages des portes de cloison
+    xs = pl.get("cuts") or ([pl["back"]["x"]] if pl.get("back") else [])
+    dys = [pl["door_y"]] * len(xs) if pl["kind"] == "plainpied" else ([pl["back"]["door_y"]] if pl.get("back") else [])
+    for xp, dy in zip(xs, dys):
+        blocks.append((xp - 0.9, xp + 0.9, dy - 0.55, dy + 0.55))
+        blocks.append((xp - PART, xp + PART, -W / 2, W / 2))
+    P = Placer(blocks, tall, None if pl.get("rect", True) else pl["ip_local"].buffer(-0.02))
+
+    def wall(room, sides, name, col=(255, 255, 255), pref=0.5):
+        for sd in sides:
+            got = P.wall(room, sd, name, pref=pref)
+            if got:
+                put(name, got[0], got[1], l0, got[2], col)
+                return got
+        return None
+
+    def centre(room, name, yaw=0.0, col=(255, 255, 255)):
+        cx0, cy0 = (room[0] + room[1]) / 2, (room[2] + room[3]) / 2
+        for dx in (0.0, -0.4, 0.4, -0.8, 0.8):
+            for dy in (0.0, -0.3, 0.3):
+                if P.at(name, cx0 + dx, cy0 + dy, yaw, pad=0.35):
+                    put(name, cx0 + dx, cy0 + dy, l0, yaw, col)
+                    return cx0 + dx, cy0 + dy
+        return None
+
+    def hang(room, n, names=("Int_Cadre",)):
+        Pw = Placer(blocks + tall, [])
+        for k in range(n):
+            nm = names[k % len(names)]
+            sd = ALL[int(rng.integers(4))]
+            got = Pw.wall(room, sd, nm, pref=float(rng.uniform(0.2, 0.8)))
+            if got:
+                put(nm, got[0], got[1], l0, got[2])
+
+    full = (-L / 2, L / 2, -W / 2, W / 2)
+    if pl["kind"] == "plainpied":
+        d, start, cuts = pl["d"], pl["start"], pl["cuts"]
+        edges = [start] + cuts + [-start]
+        rooms = []
+        for k in range(3):
+            x0, x1 = sorted((edges[k], edges[k + 1]))
+            rooms.append((x0 + PART, x1 - PART, -W / 2, W / 2))
+        living, bedroom, bath = rooms
+        # séjour-cuisine : coin cuisine contre un long mur, table, canapé, cheminée ou poêle selon l'ambiance
+        rustic = theme in ("salle_commune", "grand_mere", "atelier")
+        if theme == "refuge":
+            wall(living, ALL, "Int_Rechaud")
+            for k in range(3):
+                wall(living, ALL, "Int_Jerrican", pref=float(rng.random()))
+            wall(living, ALL, "Int_Conserves", pref=float(rng.random()))
+            for k in range(2):
+                wall(living, ALL, "Int_Matelas", pref=float(rng.random()))
+        else:
+            wall(living, ("+y", "-y"), "Int_EvierPierre" if rustic else "Int_PlanTravail", paint, pref=0.8)
+            wall(living, ("-y", "+y", "+x", "-x"), "Int_Buffet", paint)
+            centre(living, "Int_TableManger" if theme == "bourgeoise" else "Int_TableCuisine", 0.0, fabric)
+            wall(living, ("+x", "-x", "-y", "+y"), "Int_Poele" if rustic else "Int_Cheminee")
+            wall(living, ("-y", "+y"), "Int_Canape", linen)
+            wall(living, ALL, "Int_Fauteuil", linen, pref=float(rng.random()))
+            if theme in ("grand_mere", "bourgeoise", "salle_commune"):
+                wall(living, ALL, "Int_Horloge", paint)
+            if theme == "bourgeoise":
+                wall(living, ALL, "Int_Piano")
+            wall(living, ALL, "Int_Plante", pref=float(rng.random()))
+            for k in range(4):
+                c_ = P.at("Int_Chaise", rng.uniform(living[0] + 0.5, living[1] - 0.5), rng.uniform(-W / 4, W / 4), 0.0)
+                if c_:
+                    put("Int_Chaise", (c_[0] + c_[1]) / 2, (c_[2] + c_[3]) / 2, l0, float(rng.choice([0.0, math.pi])))
+            hang(living, 2)
+        # chambre
+        if theme == "refuge":
+            for k in range(2):
+                wall(bedroom, ALL, "Int_Matelas", pref=float(rng.random()))
+            wall(bedroom, ALL, "Int_EtagereBocaux")
+        else:
+            bed = "Int_LitsEnfants" if theme == "famille" and W >= 3.0 else ("Int_LitDouble" if W >= 3.2 else "Int_LitSimple")
+            wall(bedroom, ("+x", "-x", "+y", "-y"), bed, fabric)
+            wall(bedroom, ("+y", "-y"), "Int_Armoire")
+            wall(bedroom, ("-y", "+y"), "Int_Commode")
+            wall(bedroom, ALL, "Int_Chevet")
+            hang(bedroom, 1, ("Int_Cadre", "Int_Miroir"))
+        # salle de bain
+        wall(bath, ALL, "Int_Baignoire")
+        wall(bath, ALL, "Int_WC")
+        got = wall(bath, ALL, "Int_Lavabo", paint)
+        if got:
+            put("Int_Miroir", got[0] - math.sin(got[2]) * 0.21, got[1] + math.cos(got[2]) * 0.21, l0 - 0.35, got[2])
+        if wreck or theme == "refuge" or rng.random() < 0.35:
+            for k in range(int(rng.integers(1, 4))):
+                wall(full, ALL, "Int_Carton", pref=float(rng.random()))
+        if theme == "saccagee":
+            for k in range(2):
+                put(("Z_Sol_sang_1", "Z_Sol_sang_flaque", "Z_Sol_sang_trainee")[int(rng.integers(3))], rng.uniform(-L / 3, L / 3),
+                    rng.uniform(-W / 4, W / 4), l0 + 0.005, float(rng.uniform(0, 6.28)))
+        return
+
+    # ---------------- commerces et mairie : salle de vente (côté entrée) + arrière-boutique éventuelle
+    back = pl.get("back")
+    if back:
+        xp, sgn = back["x"], back["sgn"]
+        front = tuple(sorted((xp + sgn * PART, sgn * L / 2))) + (-W / 2, W / 2)
+        rear = tuple(sorted((xp - sgn * PART, -sgn * L / 2))) + (-W / 2, W / 2)
+    else:
+        front, rear = full, None
+    # côté opposé à l'entrée : là où va le comptoir
+    ent = pl["main"]["side"]
+    opp = {"+x": "-x", "-x": "+x", "+y": "-y", "-y": "+y"}[ent]
+    lat = ("+y", "-y") if ent in ("+x", "-x") else ("+x", "-x")
+    far_sides = (opp,) + lat
+    if theme in ("boulangerie", "boucherie", "glacier"):
+        comptoir = {"boulangerie": "Int_ComptoirPain", "boucherie": "Int_ComptoirViande", "glacier": "Int_ComptoirGlaces"}[theme]
+        got = P.wall(front, opp, comptoir, pref=0.5, gap=0.9)
+        if got:
+            put(comptoir, got[0], got[1], l0, got[2], paint)
+        for sd in far_sides:
+            wall(front, (sd,), "Int_EtagerePain" if theme == "boulangerie" else "Int_EtagereBocaux", pref=float(rng.random()))
+        if theme == "glacier":
+            for k in range(2):
+                centre(front, "Table_Cafe")
+        if rear:
+            if theme == "boulangerie":
+                wall(rear, ALL, "Int_FourPain")
+                wall(rear, ALL, "Int_Petrin")
+            for k in range(3):
+                wall(rear, ALL, "Int_Carton", pref=float(rng.random()))
+    elif theme in ("cafe", "restaurant"):
+        got = P.wall(front, opp, "Int_ComptoirBar", pref=0.5, gap=0.9) if theme == "cafe" or rng.random() < 0.5 else None
+        if got:
+            put("Int_ComptoirBar", got[0], got[1], l0, got[2])
+            ox, oy = -math.sin(got[2]), math.cos(got[2])        # vers le mur
+            tx, ty = math.cos(got[2]), math.sin(got[2])
+            for k in (-1, 0, 1):
+                sx_, sy_ = got[0] - ox * 0.7 + tx * k * 0.7, got[1] - oy * 0.7 + ty * k * 0.7
+                if P.at("Int_Tabouret", sx_, sy_, 0.0):
+                    put("Int_Tabouret", sx_, sy_, l0, 0.0)
+            wall(front, (opp,), "Int_CasierBouteilles", pref=0.1)
+        # tables de bistrot (ou tables de restaurant avec nappe)
+        n_t = 0
+        for k in range(8):
+            x_ = rng.uniform(front[0] + 0.9, front[1] - 0.9)
+            y_ = rng.uniform(front[2] + 0.9, front[3] - 0.9)
+            tname = "Table_Cafe" if theme == "cafe" else "Int_TableCuisine"
+            if P.at(tname, x_, y_, 0.0, pad=0.55):
+                put(tname, x_, y_, l0, 0.0, fabric)
+                n_t += 1
+                if theme == "restaurant":
+                    seats = [(x_, y_ + 0.62, 0.0), (x_, y_ - 0.62, math.pi)]
+                else:
+                    seats = [(x_ + 0.5 * math.cos(g_), y_ + 0.5 * math.sin(g_), g_ + math.pi / 2) for g_ in (0.0, math.pi / 2, math.pi, -math.pi / 2)]
+                for cx_, cy_, yw_ in seats:
+                    chair = "Chaise_Bistrot" if theme == "cafe" else "Int_Chaise"
+                    if wreck and rng.random() < 0.3:
+                        chair = "Int_ChaiseRenversee"
+                    put(chair, cx_, cy_, l0, yw_)
+        hang(front, 2)
+        if rear:
+            wall(rear, ALL, "Int_PlanTravail", paint)
+            wall(rear, ALL, "Int_Frigo")
+            wall(rear, ALL, "Int_EtagereBocaux")
+            wall(rear, ALL, "Int_CasierBouteilles")
+    elif theme in ("epicerie", "cave"):
+        wall(front, (opp,) + lat, "Int_Caisse", paint, pref=0.8)
+        if theme == "epicerie":
+            for k in range(3):
+                centre(front, "Int_Gondole", 0.0 if ent in ("+y", "-y") else math.pi / 2)
+            for sd in lat:
+                wall(front, (sd,), "Int_EtagereBocaux", pref=float(rng.random()))
+            wall(front, ALL, "Int_Cagettes", pref=float(rng.random()))
+        else:
+            for sd in far_sides:
+                wall(front, (sd,), "Int_CasierBouteilles", pref=0.3)
+                wall(front, (sd,), "Int_CasierBouteilles", pref=0.7)
+            for k in range(2):
+                wall(front, ALL, "Int_Tonneau", pref=float(rng.random()))
+        if rear:
+            for k in range(4):
+                wall(rear, ALL, "Int_Carton", pref=float(rng.random()))
+            wall(rear, ALL, "Int_EtagereOutils")
+    elif theme == "pharmacie":
+        got = P.wall(front, opp, "Int_ComptoirPharmacie", pref=0.5, gap=0.9)
+        if got:
+            put("Int_ComptoirPharmacie", got[0], got[1], l0, got[2])
+        for sd in far_sides:
+            wall(front, (sd,), "Int_RayonPharmacie", pref=0.3)
+            wall(front, (sd,), "Int_RayonPharmacie", pref=0.75)
+        centre(front, "Int_PresentoirSavons")
+        if rear:
+            wall(rear, ALL, "Int_ArmoireArchives")
+            for k in range(3):
+                wall(rear, ALL, "Int_Carton", pref=float(rng.random()))
+    elif theme == "coiffeur":
+        for k in range(3):
+            got = wall(front, lat, "Int_FauteuilCoiffeur", pref=0.25 + 0.25 * k)
+            if got:
+                put("Int_Miroir", got[0] - math.sin(got[2]) * 0.3, got[1] + math.cos(got[2]) * 0.3, l0 - 0.2, got[2])
+        wall(front, (opp,), "Int_Caisse", paint)
+        wall(front, ALL, "Int_BancAttente", pref=float(rng.random()))
+        wall(front, ALL, "Int_Plante", pref=float(rng.random()))
+    elif theme == "galerie":
+        for k in range(2):
+            centre(front, "Int_PresentoirPoterie" if k else "Int_PresentoirLivres")
+        hang(front, 6)
+        wall(front, (opp,), "Int_Bureau")
+    elif theme.startswith("boutique"):
+        fill = {"boutique_savons": "Int_PresentoirSavons", "boutique_poterie": "Int_PresentoirPoterie"}.get(theme, "Int_PresentoirSantons")
+        for k in range(2):
+            centre(front, fill)
+        for sd in far_sides:
+            wall(front, (sd,), "Int_EtagereBocaux", pref=float(rng.random()))
+        wall(front, (opp,) + lat, "Int_Caisse", paint)
+        hang(front, 2)
+    elif theme == "accueil":
+        wall(front, (opp,) + lat, "Int_Bureau")
+        wall(front, ALL, "Int_BancAttente", pref=float(rng.random()))
+        wall(front, ALL, "Int_Bibliotheque", pref=float(rng.random()))
+        centre(front, "Int_PresentoirLivres")
+        wall(front, ALL, "Int_Plante", pref=float(rng.random()))
+        hang(front, 3)
+    elif theme == "mairie":
+        # accueil de la mairie / salle du conseil et des mariages
+        wall(front, (opp,), "Int_Drapeaux", pref=0.5)
+        centre(front, "Int_TableManger", 0.0 if ent in ("+y", "-y") else math.pi / 2)
+        for k in range(8):
+            x_ = rng.uniform(front[0] + 0.6, front[1] - 0.6)
+            y_ = rng.uniform(front[2] + 0.6, front[3] - 0.6)
+            if P.at("Int_Chaise", x_, y_, 0.0, pad=0.1):
+                put("Int_Chaise", x_, y_, l0, float(rng.choice([0.0, math.pi])))
+        wall(front, lat, "Int_BancAttente")
+        wall(front, lat, "Int_ArmoireArchives")
+        wall(front, ALL, "Int_Bureau", pref=float(rng.random()))
+        hang(front, 3)
+        if rear:
+            wall(rear, ALL, "Int_ArmoireArchives")
+            wall(rear, ALL, "Int_ArmoireArchives")
+            wall(rear, ALL, "Int_Bureau")
+    if looted:
+        for k in range(int(rng.integers(2, 5))):
+            wall(full, ALL, "Int_Carton", pref=float(rng.random()))
+        got = P.at("Int_ChaiseRenversee", rng.uniform(-L / 4, L / 4), rng.uniform(-W / 5, W / 5), 0.3)
+        if got:
+            put("Int_ChaiseRenversee", (got[0] + got[1]) / 2, (got[2] + got[3]) / 2, l0, float(rng.uniform(0, 6.28)))
+        if rng.random() < 0.5:
+            put("Z_Sol_sang_trainee", rng.uniform(-L / 4, L / 4), rng.uniform(-W / 5, W / 5), l0 + 0.005, float(rng.uniform(0, 6.28)))
+
+
+def spiral_stair(mb, C, z0, z1, yaw0):
+    """Escalier en colimaçon : noyau central, marches rayonnantes en pierre, main courante en fer.
+    La première marche part dans la direction yaw0 ; on arrive en haut après 3/4 de tour."""
+    h = z1 - z0
+    n = int(math.ceil(h / 0.19))
+    rise = h / n
+    R = SPIRAL / 2 - 0.08
+    turn = math.radians(270)
+    tube(mb, "PierreTaille", [(C[0], C[1], z0), (C[0], C[1], z1 + 0.9)], 0.09, segs=10, u_tile=3, v_tile=3)
+    rail = []
+    for i in range(n):
+        ang = yaw0 + turn * (i + 0.5) / n
+        rc = (R + 0.09) / 2
+        P = (C[0] + math.cos(ang) * rc, C[1] + math.sin(ang) * rc, z0 + (i + 1) * rise - 0.03)
+        # marche : pavé tourné, plus large vers l'extérieur (approché par deux pavés)
+        box(mb, "PierreTaille", P, (R - 0.05, 0.3, 0.06), yaw=ang, uv_scale=3.0)
+        Po = (C[0] + math.cos(ang) * (R * 0.78), C[1] + math.sin(ang) * (R * 0.78), P[2])
+        box(mb, "PierreTaille", Po, (R * 0.45, 0.42, 0.06), yaw=ang, uv_scale=3.0)
+        # contremarche
+        box(mb, "PierreTaille", (P[0], P[1], P[2] - rise / 2), (R - 0.05, 0.05, rise), yaw=ang, uv_scale=3.0)
+        a_r = yaw0 + turn * i / n
+        rail.append((C[0] + math.cos(a_r) * (R + 0.02), C[1] + math.sin(a_r) * (R + 0.02), z0 + i * rise + 0.95))
+        if i % 2 == 0:
+            tube(mb, "Fer", [(rail[-1][0], rail[-1][1], z0 + (i + 1) * rise), rail[-1]], 0.012, segs=5, col=(60, 55, 50, 255))
+    tube(mb, "Fer", rail, 0.02, segs=6, col=(60, 55, 50, 255))
+
+
+def _inner_walls(mb, ip, openings_w, bands):
+    """Faces intérieures des murs extérieurs, percées des ouvertures ; bands = [(z bas, z haut, couleur)]."""
+    cs = np.array(ip.exterior.coords)
+    if Polygon(cs).exterior.is_ccw is False:
+        cs = cs[::-1]
+    for zb, zt, col in bands:
+        for i in range(len(cs) - 1):
+            p0, p1 = cs[i], cs[i + 1]
+            dv = p1 - p0
+            Le = float(np.linalg.norm(dv))
+            if Le < 0.05:
+                continue
+            u = dv / Le
+            cuts = []
+            for (Pin, ou, w, z0, z1) in openings_w:
+                if abs(float(ou @ u)) < 0.95:
+                    continue
+                t = float((Pin - p0) @ u)
+                dist = abs(float((Pin - p0) @ np.array([-u[1], u[0]])))
+                if dist > 0.2 or t < -0.1 or t > Le + 0.1:
+                    continue
+                zz0, zz1 = max(z0, zb + 0.001), min(z1, zt - 0.001)
+                if zz1 <= zz0:
+                    continue
+                t0, t1 = max(0.02, t - w / 2), min(Le - 0.02, t + w / 2)
+                if t1 - t0 < 0.1:
+                    continue
+                cuts.append(sbox(Le - t1, zz0 if zz0 > zb + 0.02 else zb - 0.01, Le - t0, zz1))
+            face = sbox(0.0, zb, Le, zt)
+            if cuts:
+                face = face.difference(unary_union(cuts))
+            origin = np.array([p1[0], p1[1], 0.0])
+            e1 = np.array([-u[0], -u[1], 0.0])
+            for g in _polys(face):
+                if g.area < 0.005:
+                    continue
+                planar_polygon(mb, "Enduit", np.array(g.exterior.coords)[:-1], [np.array(h.coords)[:-1] for h in g.interiors],
+                               origin, e1, np.array([0, 0, 1.0]), lambda v2, P: np.stack([v2[:, 0] / 3.0, -v2[:, 1] / 3.0], -1), col)
 
 
 def _polys(g):
@@ -445,9 +957,10 @@ def _partition(mb, Wp, yaw_a, p0, p1, zb, zt, doors, col, along_y=False):
 class Placer:
     """Placement de meubles dos au mur dans des pièces rectangulaires (repère local), sans chevauchement."""
 
-    def __init__(self, blocks, tall_blocks):
+    def __init__(self, blocks, tall_blocks, inside=None):
         self.blocks = list(blocks)          # rectangles interdits (x0, x1, y0, y1)
         self.tall = list(tall_blocks)       # interdits seulement aux meubles hauts (devant les fenêtres)
+        self.inside = inside                # contour de la pièce (repère local), pour les plans irréguliers
 
     @staticmethod
     def hit(r, o, m=0.0):
@@ -455,6 +968,8 @@ class Placer:
 
     def free(self, r, h):
         if any(self.hit(r, o) for o in self.blocks):
+            return False
+        if self.inside is not None and not self.inside.contains(sbox(r[0], r[2], r[1], r[3])):
             return False
         if h > 1.0 and any(self.hit(r, o) for o in self.tall):
             return False
@@ -533,8 +1048,10 @@ def pick_decor(rng, style):
     w1 = WALL_COLS[rng.integers(len(WALL_COLS))] if rng.random() < 0.5 else w0
     beams = None if rng.random() < 0.15 else BEAM_COLS[rng.integers(len(BEAM_COLS))] + (255,)
     frise = [(60, 90, 140), (40, 110, 110), (170, 110, 40), (120, 60, 50), (70, 110, 70)][rng.integers(5)] + (255,)
-    return dict(theme=theme, floor0=str(f0), floor1=str(f1), fcol0=fcol(f0), fcol1=fcol(f1), wall0=w0 + (255,), wall1=w1 + (255,),
-                beams=beams, frise=frise)
+    f2 = rng.choice(["Parquet", "Tomettes"], p=[0.6, 0.4])
+    return dict(theme=theme, floor0=str(f0), floor1=str(f1), floor2=str(f2), fcol0=fcol(f0), fcol1=fcol(f1), fcol2=fcol(f2),
+                wall0=w0 + (255,), wall1=w1 + (255,), wall2=w1 + (255,), beams=beams, frise=frise,
+                kitchen_near_stairs=bool(rng.random() < 0.35))
 
 
 def furnish(pl, inst, rng, Wp, yaw_a):
@@ -632,6 +1149,14 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     room_s = (sx_[0], sx_[1], -W / 2, W / 2)
     room_all = (-L / 2, L / 2, -W / 2, W / 2)
     pref_far = 1.0 if d > 0 else 0.0
+    if pl["decor"].get("kitchen_near_stairs") and theme not in ("atelier", "salle_commune"):
+        # variante : cuisine du côté de l'escalier, séjour au fond (vers les fenêtres du pignon)
+        kx = sorted((end, end + d * 3.3))
+        room_k = (kx[0], kx[1], -W / 2, W / 2)
+        sx_ = sorted((end + d * 3.3, far))
+        room_s = (sx_[0], sx_[1], -W / 2, W / 2)
+        pref_far = 0.0 if d > 0 else 1.0
+        side_far, side_end = side_end, side_far
 
     def kitchen(room, rustic=False):
         if rustic:
@@ -745,6 +1270,8 @@ def furnish(pl, inst, rng, Wp, yaw_a):
                     float(rng.uniform(0, 6.28)))
 
     # ================= étage : salle de bain + chambre (ou bureau, chambre d'enfants, dortoir...)
+    side_end = "-x" if d > 0 else "+x"
+    side_far = "+x" if d > 0 else "-x"
     blocks, tall = blocks_for(1)
     hole = (min(end, end + d * run) - 0.2, max(end, end + d * run) + 0.2, band[0] - 0.05, band[1] + 0.05)
     blocks.append(hole)
@@ -771,6 +1298,9 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     wall(P, room_b, (side_band,), "Int_Commode", l1, pref=0.2 if d > 0 else 0.8)
     rx = sorted((xc, far))
     room_r = (rx[0] + PART / 2 + 0.02, rx[1], -W / 2, W / 2)
+    if pl.get("spiral"):
+        spx, spy = pl["spiral"][:2]
+        P.blocks.append((spx - SPIRAL / 2 - 0.5, spx + SPIRAL / 2 + 0.5, spy - SPIRAL / 2 - 0.5, spy + SPIRAL / 2 + 0.5))
     upper = {"classique": "parents", "saccagee": "parents", "salle_commune": "parents", "bourgeoise": "parents", "grand_mere": "grand_mere",
              "famille": "enfants", "atelier": "bureau", "refuge": "dortoir"}[theme]
     if upper == "enfants" and W < 3.0:
@@ -820,6 +1350,34 @@ def furnish(pl, inst, rng, Wp, yaw_a):
         wall(P, room_r, ALL, "Int_Conserves", l1, pref=float(rng.random()))
     if abandoned:
         wall(P, room_r, ((side_other, side_band)[int(rng.integers(2))],), "Int_Carton", l1, pref=float(rng.random()))
+
+    # ================= 2e étage (colimaçon) : grenier encombré, ou chambre d'amis mansardée
+    if pl.get("spiral"):
+        l2 = pl["lv"][2]
+        blocks, tall = blocks_for(2)
+        spx, spy = pl["spiral"][:2]
+        blocks.append((spx - SPIRAL / 2 - 0.6, spx + SPIRAL / 2 + 0.6, spy - SPIRAL / 2 - 0.6, spy + SPIRAL / 2 + 0.6))
+        P = Placer(blocks, tall)
+        if theme in ("refuge",):
+            for k in range(3):
+                wall(P, room_all, ALL, "Int_Matelas", l2, pref=float(rng.random()))
+            wall(P, room_all, ALL, "Int_Jerrican", l2, pref=float(rng.random()))
+        elif rng.random() < 0.6:
+            # grenier : malles, cartons, vieux meubles, tonneau, chaise renversée
+            for nm in ("Int_Malle", "Int_Malle", "Int_Armoire", "Int_Commode", "Int_Fauteuil", "Int_Tonneau", "Int_Bibliotheque"):
+                if rng.random() < 0.75:
+                    wall(P, room_all, (ALL[int(rng.integers(4))], ALL[int(rng.integers(4))]), nm, l2, pref=float(rng.random()))
+            for k in range(int(rng.integers(3, 7))):
+                wall(P, room_all, (ALL[int(rng.integers(4))],), "Int_Carton", l2, pref=float(rng.random()))
+            got = P.at("Int_ChaiseRenversee", rng.uniform(-L / 4, L / 4), rng.uniform(-W / 5, W / 5), float(rng.uniform(0, 6.28)))
+            if got:
+                put("Int_ChaiseRenversee", (got[0] + got[1]) / 2, (got[2] + got[3]) / 2, l2, float(rng.uniform(0, 6.28)))
+        else:
+            wall(P, room_all, (side_far, side_end, side_other), "Int_LitSimple", l2, fabric2)
+            wall(P, room_all, (side_other, side_band), "Int_Commode", l2)
+            wall(P, room_all, (side_band, side_other), "Int_Bureau", l2)
+            wall(P, room_all, ALL, "Int_Malle", l2, paint, pref=float(rng.random()))
+            hang(room_all, 2, l2, 2)
 
 
 def _front_rect(side, a0, a1, depth, L, W):

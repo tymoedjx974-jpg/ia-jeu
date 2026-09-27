@@ -4,7 +4,7 @@ sys.path.insert(0, ".")
 from common import *
 from geomlib import MB, planar_polygon, triangulate, tube, box, revolve, disk, rect_sign, nrm, WHITE
 from materials import TILE
-from modules import OPENINGS, DOOR_LEAF, LEAVES, LEAF_HINGE_Y
+from modules import OPENINGS, DOOR_LEAF, LEAVES
 import interiors
 from shapely.geometry.polygon import orient
 from shapely.strtree import STRtree
@@ -284,7 +284,7 @@ for b in blds:
 VISIT_CANDS = interiors.candidates(blds, CENTER)
 VISITED = []
 MOVING_DOORS = []   # portes mobiles des maisons visitables
-MAX_VISIT = 140
+MAX_VISIT = 220
 
 
 # ------------------------------------------------------------------ analyse des façades
@@ -509,7 +509,7 @@ def gen_building(b, mb, inst):
                 mb.quad(wall, a1 + e2 * z0, a0 + e2 * z0, a0 + e2 * z0 + inward * D, a1 + e2 * z0 + inward * D, [(0, 0), (o["s1"] / tw - o["s0"] / tw, 0), (o["s1"] / tw - o["s0"] / tw, D / tw), (0, D / tw)], col)
                 # fond sombre derrière les vitres (pas d'intérieur modélisé)
                 back = inward * 0.6
-                if not pl:
+                if not pl or not o.get("visit"):
                     mb.quad("Verre", a1 + e2 * z0 + back, a0 + e2 * z0 + back, a0 + e2 * z1 + back, a1 + e2 * z1 + back, [(0, 0), (1, 0), (1, 1), (0, 1)], WHITE, n=-inward)
                 # instance du module
                 yaw = math.atan2(u[1], u[0])
@@ -519,8 +519,8 @@ def gen_building(b, mb, inst):
                 inst[o["type"]].append((pos[0], pos[1], pos[2], yaw, sc, 1.0, 1.0, *colr))
                 if o["type"] in DOOR_LEAF:
                     # vantail mobile (acteur porte dans Unreal) : charnière dans le repère du module, mise à l'échelle de l'ouverture
-                    lw_, _ = LEAVES[DOOR_LEAF[o["type"]]]
-                    hx, hy = sc * (-lw_ / 2 + 0.07), LEAF_HINGE_Y
+                    _, hx0, hy = LEAVES[DOOR_LEAF[o["type"]]]
+                    hx = sc * hx0
                     cy_, sy_ = math.cos(yaw), math.sin(yaw)
                     MOVING_DOORS.append(dict(x=float(pos[0] + hx * cy_ - hy * sy_), y=float(pos[1] + hx * sy_ + hy * cy_), z=float(pos[2]), yaw=float(yaw),
                                       sx=float(sc), leaf=DOOR_LEAF[o["type"]], house=b["id"], color=[int(c_) for c_ in colr]))
@@ -954,8 +954,30 @@ def landmark(b, mb, inst):
     b["zref"], b["base"], b["eave"], b["planes"] = zref, base, eave, planes
     wall = "PierreTaille"
     tw = TILE[wall]
+    # église visitable : portail et hautes fenêtres réellement percés
+    holes_of = collections.defaultdict(list)
+    church_open = []
+    if st != "belfry":
+        short = sorted(info, key=lambda e: e["L"])[:2]
+        fac = max(short, key=lambda e: (1 if e["street"] else 0, -np.linalg.norm((e["p0"] + e["p1"]) / 2 - np.array([-19.0, 21.0]))))
+        fi = next(i for i, e in enumerate(info) if e is fac)
+        gdoor = float(fac["g_out"].max())
+        Lf = fac["L"]
+        arch = [(Lf / 2 + 0.9 * math.cos(t_), gdoor + 3.2 + 0.9 * math.sin(t_)) for t_ in np.linspace(0, math.pi, 9)]
+        holes_of[fi].append([(Lf / 2 - 0.9, gdoor), (Lf / 2 + 0.9, gdoor)] + arch[1:-1] + [])
+        holes_of[fi][-1] = [(Lf / 2 - 0.9, gdoor), (Lf / 2 + 0.9, gdoor), (Lf / 2 + 0.9, gdoor + 3.2)] + arch[1:-1] + [(Lf / 2 - 0.9, gdoor + 3.2)]
+        church_open.append((fi, Lf / 2, 1.8, gdoor, gdoor + 3.2))
+        for e in sorted(info, key=lambda e: -e["L"])[:2]:
+            if e["party"]:
+                continue
+            ei = next(i for i, e2 in enumerate(info) if e2 is e)
+            nb = int(e["L"] / 5.0)
+            for k in range(nb):
+                sc_ = e["L"] * (k + 0.5) / nb
+                holes_of[ei].append([(sc_ - 0.275, zref + 4.1), (sc_ + 0.275, zref + 4.1), (sc_ + 0.275, zref + 5.9), (sc_ - 0.275, zref + 5.9)])
+                church_open.append((ei, sc_, 0.55, zref + 4.1, zref + 5.9))
     # murs pleins
-    for e in info:
+    for ei_, e in enumerate(info):
         p0, p1, L, u = e["p0"], e["p1"], e["L"], e["u"]
         ts = [0.0, 1.0]
         for i in range(len(planes)):
@@ -970,7 +992,7 @@ def landmark(b, mb, inst):
         ts = sorted(set(ts))
         top = [(tt * L, zroof(planes, *(p0 + tt * (p1 - p0))) - 0.03) for tt in ts]
         outer = [(0.0, base), (L, base)] + top[::-1]
-        planar_polygon(mb, wall, outer, [], np.array([p0[0], p0[1], 0.0]), np.array([u[0], u[1], 0.0]), np.array([0, 0, 1.0]),
+        planar_polygon(mb, wall, outer, holes_of.get(ei_, []), np.array([p0[0], p0[1], 0.0]), np.array([u[0], u[1], 0.0]), np.array([0, 0, 1.0]),
                        lambda v2, P, per=e["perim"]: np.stack([(per + v2[:, 0]) / tw, -v2[:, 1] / tw], -1), WHITE)
     if st == "belfry":
         # corniche + campanile en fer forgé + cloche + horloge
@@ -1019,7 +1041,12 @@ def landmark(b, mb, inst):
     # portail : vantaux + arc en pierre + marches
     yaw = math.atan2(fac["u"][1], fac["u"][0])
     dc = np.array([mid[0], mid[1], gdoor])
-    box(mb, "BoisPeint", dc + out3 * 0.06 + np.array([0, 0, 1.6]), (1.8, 0.08, 3.2), yaw=yaw, col=(96, 66, 44, 255), uv_scale=1)
+    # portail à deux vantaux mobiles (acteurs porte dans Unreal), charnières de part et d'autre de l'ouverture
+    for sgn_, leaf_ in ((-1, "Vantail_EgliseG"), (1, "Vantail_EgliseD")):
+        hp = mid + fac["u"] * sgn_ * 0.9
+        MOVING_DOORS.append(dict(x=float(hp[0]), y=float(hp[1]), z=float(gdoor), yaw=float(yaw), sx=1.0, leaf=leaf_, house=b["id"],
+                                 color=[96, 66, 44], open_sign=1 if sgn_ < 0 else -1))
+    church_interior(b, mb, inst, info, fac, gdoor, church_open, eave)
     arc_pts = [dc + out3 * 0.12 + u3 * (1.15 * math.cos(a)) + np.array([0, 0, 3.2 + 1.15 * math.sin(a)]) for a in np.linspace(0, math.pi, 13)]
     tube(mb, "PierreTaille", arc_pts, 0.16, segs=6, u_tile=3, v_tile=3)
     for sd in (-1, 1):
@@ -1052,6 +1079,128 @@ def landmark(b, mb, inst):
     tw_ = 4.2
     tc = corner + inward_u * (tw_ / 2 + 0.1) + inward_n * (tw_ / 2 + 0.1)
     tower(mb, tc, math.atan2(fac["u"][1], fac["u"][0]), tw_, base, eave + 10.0)
+
+
+def church_interior(b, mb, inst, info, fac, gdoor, openings, eave):
+    """Intérieur de l'église : murs épais (tableaux des ouvertures), sol dallé, voûte en berceau, nef avec bancs, autel."""
+    from shapely.geometry import box as sbox_
+    from shapely import affinity
+    T = 0.9
+    p = b["poly"]
+    l0 = gdoor + 0.02
+    # emprise du clocher (carré de 4,2 m dans l'angle de la façade) : murs pleins de l'intérieur
+    corner = fac["p0"] if np.linalg.norm(fac["p0"] - np.array([-19.0, 21.0])) < np.linalg.norm(fac["p1"] - np.array([-19.0, 21.0])) else fac["p1"]
+    inward_u = (fac["u"] if corner is fac["p0"] else -fac["u"])
+    tc = corner + inward_u * 2.2 + (-fac["out"]) * 2.2
+    tw_poly = affinity.rotate(sbox_(tc[0] - 2.1 - T, tc[1] - 2.1 - T, tc[0] + 2.1 + T, tc[1] + 2.1 + T), math.degrees(math.atan2(fac["u"][1], fac["u"][0])),
+                              origin=(tc[0], tc[1]))
+    ip = p.buffer(-T, join_style=2).difference(tw_poly)
+    if ip.geom_type != "Polygon":
+        ip = max(getattr(ip, "geoms", [ip]), key=lambda g: g.area)
+    ip = ip.simplify(0.05)
+    c, a, L, W = ombr(ip)
+    q = np.array([-a[1], a[0]])
+    zs = min(eave - 1.6, l0 + 6.6)                     # naissance de la voûte
+    hv = min(W / 2, eave - 0.5 - zs)
+    # tableaux (épaisseur des murs) du portail et des fenêtres, vitres des fenêtres
+    ow = []
+    for ei, sc_, w, z0, z1 in openings:
+        e = info[ei]
+        P0 = e["p0"] + e["u"] * sc_
+        inward = -e["out"]
+        a0, a1 = P0 - e["u"] * w / 2, P0 + e["u"] * w / 2
+        for (pa, za, zb_) in ((a0, z0, z1), (a1, z1, z0)):
+            A = np.array([pa[0], pa[1], za])
+            B_ = np.array([pa[0], pa[1], zb_])
+            In = np.array([inward[0], inward[1], 0.0]) * T
+            mb.quad("PierreTaille", A, B_, B_ + In, A + In, [(0, 0), (0, (zb_ - za) / 3), (T / 3, (zb_ - za) / 3), (T / 3, 0)], WHITE)
+        In = np.array([inward[0], inward[1], 0.0]) * T
+        top_a, top_b = np.array([a0[0], a0[1], z1]), np.array([a1[0], a1[1], z1])
+        mb.quad("PierreTaille", top_a, top_b, top_b + In, top_a + In, [(0, 0), (w / 3, 0), (w / 3, T / 3), (0, T / 3)], WHITE)
+        bot_a, bot_b = np.array([a1[0], a1[1], z0]), np.array([a0[0], a0[1], z0])
+        mb.quad("PierreTaille", bot_a, bot_b, bot_b + In, bot_a + In, [(0, 0), (w / 3, 0), (w / 3, T / 3), (0, T / 3)], WHITE)
+        if w < 1.0:
+            g = P0 + inward * (T * 0.4)
+            box(mb, "Verre", (g[0], g[1], (z0 + z1) / 2), (w, 0.02, z1 - z0), yaw=math.atan2(e["u"][1], e["u"][0]))
+        ow.append((P0 + inward * T, e["u"], w, z0 - (0.05 if w > 1 else 0), z1))
+    interiors._flat(mb, "Dallage", ip, l0, up=True)
+    interiors._inner_walls(mb, ip, ow, [(l0, zs, (238, 230, 214, 255))])
+    # voûte en berceau (surbaissée si le toit est bas), lunettes aux deux extrémités
+    nseg = 14
+
+    def V(x, t):
+        P_ = c + a * x + q * (math.cos(t) * W / 2)
+        return np.array([P_[0], P_[1], zs + math.sin(t) * hv])
+    for i in range(nseg):
+        t0, t1 = math.pi * i / nseg, math.pi * (i + 1) / nseg
+        quad = [V(-L / 2, t0), V(-L / 2, t1), V(L / 2, t1), V(L / 2, t0)]
+        want = -np.append(q * math.cos((t0 + t1) / 2), math.sin((t0 + t1) / 2))        # vers l'axe de la nef
+        got = np.cross(quad[1] - quad[0], quad[2] - quad[0])
+        if got @ want < 0:
+            quad = quad[::-1]
+        mb.quad("Enduit", *quad, [(0, 0), (0, 1), (L / 3, 1), (L / 3, 0)], (240, 234, 222, 255))
+    for sx in (-1, 1):
+        # lunette : demi-ellipse fermant la voûte au-dessus des murs d'extrémité, tournée vers l'intérieur
+        origin = c + a * sx * L / 2
+        e1 = -sx * q
+        prof = [(-sx * math.cos(t) * W / 2, zs + math.sin(t) * hv) for t in np.linspace(0, math.pi, nseg + 1)]
+        planar_polygon(mb, "Enduit", prof, [], np.array([origin[0], origin[1], 0.0]), np.array([e1[0], e1[1], 0.0]), np.array([0, 0, 1.0]),
+                       lambda v2, P: np.stack([v2[:, 0] / 3, -v2[:, 1] / 3], -1), (240, 234, 222, 255))
+    # doubleaux (arcs de pierre) tous les 4 m
+    for k in range(1, int(L / 4.0)):
+        x = -L / 2 + k * L / int(L / 4.0)
+        pts = [tuple(c + a * x + q * (math.cos(t) * (W / 2 - 0.05))) + (zs + math.sin(t) * (hv - 0.05),) for t in np.linspace(0, math.pi, 15)]
+        tube(mb, "PierreTaille", pts, 0.16, segs=6, u_tile=3, v_tile=3)
+    # mobilier : l'autel à l'opposé de la façade, bancs de part et d'autre de l'allée centrale
+    mid = (fac["p0"] + fac["p1"]) / 2
+    sf = 1.0 if (mid - c) @ a > 0 else -1.0
+    to_altar = -sf * a
+    yaw_face = math.atan2(to_altar[0], -to_altar[1])         # la façade des meubles (-Y local) regarde l'autel
+    inside = ip.buffer(-0.1)
+
+    def put(name, P_, yaw_, sx_=1.0, col=(255, 255, 255)):
+        inst[name].append((float(P_[0]), float(P_[1]), l0, float(yaw_), sx_, 1.0, 1.0, *col))
+
+    def fits(P_, w_, d_, yaw_):
+        r = affinity.rotate(sbox_(P_[0] - w_ / 2, P_[1] - d_ / 2, P_[0] + w_ / 2, P_[1] + d_ / 2), math.degrees(yaw_), origin=(P_[0], P_[1]))
+        return inside.contains(r)
+
+    xa = -sf * (L / 2 - 1.3)
+    alt = c + a * xa
+    if fits(alt, 3.4, 2.2, yaw_face):
+        put("Int_Autel", alt, yaw_face + math.pi)
+    for sy in (-1, 1):
+        put("Int_Chandelier", c + a * (xa + sf * 1.6) + q * sy * 1.3, 0.0)
+        st_ = c + a * (xa + sf * 0.4) + q * sy * (W / 2 - 0.5)
+        if fits(st_, 0.55, 0.55, 0.0):
+            put("Int_Statue", st_, yaw_face)
+    pu = c + a * (xa + sf * 2.2) + q * (W / 2 - 1.2)
+    if fits(pu, 0.55, 0.45, yaw_face):
+        put("Int_Pupitre", pu, yaw_face + math.pi)
+    aisle = 0.8
+    pew_w = min(3.0, W / 2 - aisle - 0.25)
+    x = xa + sf * 3.4
+    rows = 0
+    while abs(x) < L / 2 - 2.6 and pew_w > 1.2:
+        for sy in (-1, 1):
+            P_ = c + a * x + q * sy * (aisle + pew_w / 2)
+            if fits(P_, pew_w, 0.8, yaw_face):
+                put("Int_BancEglise", P_, yaw_face, pew_w / 3.0)
+        rows += 1
+        x += sf * 1.05
+    # confessionnal et bénitier
+    cf = c + a * (xa + sf * (L * 0.55)) + q * -(W / 2 - 0.45)
+    if fits(cf, 1.8, 0.9, 0.0):
+        put("Int_Confessionnal", cf, math.atan2(a[1], a[0]))
+    bn = c + a * (sf * (L / 2 - 1.2)) + q * 1.2
+    if fits(bn, 0.6, 0.6, 0.0):
+        put("Int_Benitier", bn, 0.0)
+    ein = mid - fac["out"] * 0.9 - c
+    b["visit_plan"] = dict(theme="eglise", kind="eglise", c=[float(c[0]), float(c[1])], a=[float(a[0]), float(a[1])], L=float(L), W=float(W),
+                           l0=float(l0), lv=[float(l0)], rows=rows,
+                           entree=[float(ein @ a), float(ein @ q), float(-fac["out"] @ a), float(-fac["out"] @ q)])
+    b["zref"] = l0
+    VISITED.append(b)
 
 
 def tower(mb, c, yaw, w, base, top):

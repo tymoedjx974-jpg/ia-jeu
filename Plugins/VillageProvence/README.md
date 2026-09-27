@@ -24,7 +24,7 @@ Un village provençal complet de **4 × 4 km**, construit sur le **plan réel de
 | **Ambiance** | Soleil de fin d'après-midi, ciel et atmosphère physiques, nuages volumétriques, brume, Lumen. Sons en boucle : **chant des cigales**, **fontaines** et **vent**. |
 | **Vent et passage** | Arbres, herbes, lavande, vigne et buissons bougent avec le mistral et ses rafales, et s'écartent au passage du joueur et des personnages IA. |
 | **Zombies** | Village abandonné : voitures, barricades, inscriptions, sang, camp de survivants ; 1 235 points d'apparition ; volume de navigation. |
-| **Intérieurs** | 87 maisons visitables, 8 ambiances différentes (bourgeoise, atelier, refuge de survivants, grand-mère…), portes qui s'ouvrent. |
+| **Intérieurs** | 135 bâtiments visitables : 105 maisons (à étage, de plain-pied, sur 3 niveaux avec colimaçon), 28 commerces, la mairie et l'église ; 8 ambiances ; portes qui s'ouvrent. |
 | **Parkour** | Planches entre les toits, échelles, échafaudages, caisses, balcons praticables. |
 
 Tout est généré : aucune texture, aucun modèle ni aucun son n'a été copié d'Internet. Les textures (pierre, enduit à la chaux, tuiles canal, calade…) ont été calculées pour ce projet.
@@ -99,15 +99,24 @@ if (AVPPointsApparition* Points = AVPPointsApparition::Get(this))
 
 Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav Mesh Bounds Volume** de 1,6 × 1,6 km est aussi créé autour du village, pour les IA qui se déplacent avec le navmesh. Appuie sur **P** dans l'éditeur pour voir le navmesh. Il couvre les rues, les places, les maisons visitables et les toits praticables.
 
-## 5. Maisons visitables
+## 5. Bâtiments visitables
 
 ![Quatre intérieurs : maison bourgeoise, atelier, refuge de survivants, maison de grand-mère](Docs/interieurs_varies.jpg)
 
-87 maisons du village s'ouvrent. On entre par la porte (elle s'ouvre toute seule quand le joueur approche), ou par une fenêtre en parkour : les fenêtres des deux premiers niveaux sont ouvertes, sans vitre.
+135 bâtiments du village s'ouvrent. On entre par la porte (elle s'ouvre toute seule quand le joueur approche), ou par une fenêtre en parkour : les fenêtres des niveaux aménagés sont ouvertes, sans vitre.
 
-**Plan** : rez-de-chaussée (deux pièces), escalier droit avec main courante, étage avec salle de bain (baignoire, lavabo et miroir, WC) et une chambre.
+| Type | Nombre | Plan |
+| --- | --- | --- |
+| Maison à étage | 58 | rez-de-chaussée en deux pièces, escalier droit le long d'un mur, étage avec salle de bain et chambre ; la cuisine est tantôt au fond, tantôt du côté de l'escalier |
+| Maison sur 3 niveaux | 6 | comme la maison à étage, plus un **escalier en colimaçon** dans la chambre qui monte à un **grenier** encombré (malles, cartons, vieux meubles) ou à une chambre d'amis |
+| Maison de plain-pied | 41 | mas et villas : trois pièces en enfilade séparées par des cloisons (séjour-cuisine, chambre, salle de bain) |
+| Commerce | 28 | rez-de-chaussée ouvert, porte vitrée mobile, souvent une arrière-boutique ; aménagement selon l'enseigne (voir plus bas) |
+| Mairie | 1 | salle du conseil et des mariages : drapeaux, grande table, chaises, armoires d'archives |
+| Église | 1 | portail à deux battants, nef voûtée avec arcs de pierre, 19 rangées de bancs, autel et retable, chandeliers, statues, lutrin, confessionnal, bénitier, vitraux |
 
-**Huit ambiances**, tirées au hasard pour chaque maison (les villas penchent vers la maison bourgeoise, les mas vers la salle commune et l'atelier) :
+**Commerces** : boulangerie (comptoir-vitrine, étagères à pain, four et pétrin dans l'arrière-boutique), café (comptoir en zinc, tabourets, tables de bistrot), restaurant (tables nappées), glacier, épicerie (rayonnages, cagettes de fruits, caisse), cave à vins (casiers, tonneaux), pharmacie (rayons blancs, comptoir), coiffeur (fauteuils et miroirs), galeries et boutiques de santons, poteries et savons (présentoirs), accueil (office de tourisme, poste, hôtel). La moitié des commerces ont été pillés (marchandises renversées, cartons, traces de sang).
+
+**Huit ambiances pour les maisons**, tirées au hasard (les villas penchent vers la maison bourgeoise, les mas vers la salle commune et l'atelier) :
 
 | Ambiance | Rez-de-chaussée | Étage |
 | --- | --- | --- |
@@ -128,7 +137,7 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 ![Porte fermée et ouverte](Docs/porte_mobile.jpg)
 
-Chaque maison visitable a une vraie porte (acteur **AVPPorte**, dossier `VillageProvence/Portes`) :
+Chaque bâtiment visitable a une vraie porte (acteur **AVPPorte**, dossier `VillageProvence/Portes`) : battant en bois des maisons, porte vitrée des commerces, portail à deux battants de l'église.
 
 - elle s'ouvre vers l'intérieur quand le joueur s'approche (**Ouverture Auto**), avec un grincement ; elle ne se referme pas toute seule sauf si **Fermeture Auto** est cochée ;
 - pour ouvrir ou fermer avec une touche : dans le Blueprint du personnage, sur la touche **E**, appelle **Basculer Porte Proche** (Qui = Self) ;

@@ -346,7 +346,7 @@ for dr in B.get("doors", []):
     loc = to_ue_points([(dr["x"], dr["y"], dr["z"])])[0].round(1).tolist()
     ouverte = dr.get("theme") in ("saccagee",) or (dr.get("theme") not in ("refuge", "bourgeoise") and _rng_doors.random() < 0.15)
     manifest["doors"].append(dict(loc=loc, yaw=round(float(-np.degrees(dr["yaw"])), 2), mesh=f"Mod_{dr['leaf']}", scale=round(dr["sx"], 3),
-                                  open_angle=-100.0, color=dr["color"], open=bool(ouverte), house=dr["house"]))
+                                  open_angle=-100.0 * dr.get("open_sign", 1), color=dr["color"], open=bool(ouverte), house=dr["house"]))
 manifest["visitable_houses"] = [dict(id=v["id"], loc=to_ue_points([(v["x"], v["y"], v["z"])])[0].round(1).tolist(), style=v["style"],
                                      theme=(v.get("plan") or {}).get("theme", ""))
                                 for v in B.get("visit", [])]

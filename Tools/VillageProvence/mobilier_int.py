@@ -672,6 +672,307 @@ def lits_enfants():
     return mb
 
 
+# ------------------------------------------------------------------ commerces, mairie, église
+def _pains(mb, x0, x1, y, z, rng, n=None):
+    """Baguettes, boules et pains sur une surface."""
+    n = n or int((x1 - x0) / 0.12)
+    for k in range(n):
+        x = x0 + (k + 0.5) * (x1 - x0) / n
+        if rng.random() < 0.6:
+            tube(mb, "Toile", [(x, y - 0.25, z + 0.03), (x + 0.02, y + 0.25, z + 0.03)], 0.028, segs=6, col=(196, 140, 70, 255))
+        else:
+            revolve(mb, "Toile", [(0, 0), (0.07, 0.0), (0.075, 0.03), (0.05, 0.07), (0, 0.08)], (x, y, z), segs=10, col=(180, 120, 60, 255))
+
+
+def comptoir_vitrine(w=2.2, d=0.7, h=1.0, fill="pain"):
+    """Comptoir-vitrine (boulangerie, pâtisserie, boucherie, glacier) : caisson peint, vitre inclinée, marchandises."""
+    mb = MB()
+    rng = np.random.default_rng(len(fill))
+    box(mb, "BoisPeint", (0, 0.05, 0.45), (w, d - 0.1, 0.9))
+    box(mb, "Porcelaine", (0, 0.05, 0.91), (w, d - 0.1, 0.02))
+    box(mb, "Verre", (0, -d / 2 + 0.12, 1.08), (w - 0.04, 0.01, 0.32), pitch=math.radians(-25))
+    box(mb, "Verre", (0, 0.05, h + 0.2), (w - 0.04, d - 0.2, 0.01))
+    if fill == "pain":
+        _pains(mb, -w / 2 + 0.1, w / 2 - 0.1, 0.05, 0.92, rng)
+    elif fill == "viande":
+        for k in range(int(w / 0.25)):
+            box(mb, "Toile", (-w / 2 + 0.15 + k * 0.25, 0.05, 0.95), (0.2, 0.3, 0.06), col=(150 + 10 * (k % 3), 50, 50, 255))
+    else:  # glaces : bacs colorés
+        for k in range(int(w / 0.3)):
+            box(mb, "Toile", (-w / 2 + 0.18 + k * 0.3, 0.05, 0.95), (0.26, 0.4, 0.07),
+                col=((240, 200, 210), (250, 240, 200), (160, 110, 80), (200, 230, 170), (250, 180, 120))[k % 5] + (255,))
+    # caisse enregistreuse
+    box(mb, "Carrosserie", (w / 2 - 0.25, 0.2, 1.08), (0.35, 0.3, 0.18), col=(40, 40, 42, 255))
+    return mb
+
+
+def etagere_pain(w=1.4, d=0.4, h=1.9):
+    """Étagère murale à pains : paniers en osier, baguettes debout."""
+    mb = MB()
+    rng = np.random.default_rng(9)
+    box(mb, "BoisBrut", (0, d / 2 - 0.01, h / 2), (w, 0.02, h))
+    for sx in (-1, 1):
+        box(mb, "BoisBrut", (sx * (w / 2 - 0.02), 0, h / 2), (0.04, d, h))
+    for z in (0.5, 0.95, 1.4):
+        box(mb, "BoisBrut", (0, 0, z), (w - 0.04, d, 0.025), pitch=math.radians(-8))
+        _pains(mb, -w / 2 + 0.08, w / 2 - 0.08, 0.0, z + 0.02, rng)
+    for k in range(8):
+        tube(mb, "Toile", [(-w / 2 + 0.15 + k * 0.15, -0.05, 0.05), (-w / 2 + 0.17 + k * 0.15, 0.05, 0.45)], 0.025, segs=6, col=(200, 145, 75, 255))
+    return mb
+
+
+def four_pain():
+    """Four à pain en briques et pierre, gueule en arc, pelle en bois."""
+    mb = MB()
+    box(mb, "PierreTaille", (0, 0.1, 0.45), (1.6, 1.1, 0.9), uv_scale=3.0)
+    revolve(mb, "Brique", [(0.75, 0), (0.72, 0.25), (0.6, 0.5), (0.35, 0.7), (0.0, 0.78)], (0, 0.15, 0.9), segs=14)
+    box(mb, "Fer", (0, -0.46, 1.12), (0.5, 0.02, 0.32), col=(25, 25, 25, 255))
+    box(mb, "Brique", (0, -0.45, 1.33), (0.7, 0.06, 0.12), uv_scale=1.0)
+    tube(mb, "BoisBrut", [(0.55, -0.5, 0.02), (0.62, -0.52, 1.7)], 0.02, segs=6)
+    box(mb, "BoisBrut", (0.55, -0.5, 0.12), (0.28, 0.02, 0.35))
+    return mb
+
+
+def comptoir_bar(w=2.6, d=0.7, h=1.1):
+    """Comptoir de café en zinc : façade en bois, tireuse à bière, percolateur, verres."""
+    mb = MB()
+    box(mb, "BoisBrut", (0, 0.05, (h - 0.05) / 2), (w, d - 0.1, h - 0.05), col=(130, 90, 60, 255))
+    for k in range(int(w / 0.5)):
+        box(mb, "BoisBrut", (-w / 2 + 0.25 + k * 0.5, -d / 2 + 0.04, 0.55), (0.42, 0.02, 0.7), col=(110, 75, 50, 255))
+    box(mb, "Fer", (0, 0.0, h - 0.02), (w + 0.06, d + 0.06, 0.04), col=(175, 178, 182, 255))
+    tube(mb, "Fer", [(-w / 2, -d / 2 - 0.06, 0.2), (w / 2, -d / 2 - 0.06, 0.2)], 0.018, segs=8, col=(200, 170, 90, 255))
+    for x in (-0.6, -0.45):
+        tube(mb, "Fer", [(x, 0.1, h), (x, 0.1, h + 0.35), (x, 0.0, h + 0.35)], 0.02, segs=6, col=(210, 210, 215, 255))
+    box(mb, "Carrosserie", (0.6, 0.12, h + 0.2), (0.6, 0.45, 0.4), col=(150, 30, 28, 255))
+    for k in range(6):
+        revolve(mb, "Verre", [(0, 0), (0.03, 0), (0.035, 0.12), (0, 0.12)], (-0.1 + k * 0.08, -0.15, h), segs=8)
+    return mb
+
+
+def tabouret():
+    mb = MB()
+    for a in range(3):
+        ang = a * 2 * math.pi / 3
+        tube(mb, "Fer", [(0.15 * math.cos(ang), 0.15 * math.sin(ang), 0), (0.05 * math.cos(ang), 0.05 * math.sin(ang), 0.72)], 0.012, segs=5,
+             col=(40, 40, 40, 255))
+    revolve(mb, "Toile", [(0, 0), (0.18, 0), (0.18, 0.05), (0, 0.06)], (0, 0, 0.72), segs=14, col=(140, 40, 35, 255))
+    return mb
+
+
+def gondole(w=1.8, d=0.8, h=1.6):
+    """Rayonnage d'épicerie à double face : conserves, paquets, bouteilles."""
+    mb = MB()
+    rng = np.random.default_rng(21)
+    box(mb, "BoisPeint", (0, 0, h / 2), (w, 0.06, h), col=(210, 210, 205, 255))
+    for sy in (-1, 1):
+        for z in (0.12, 0.5, 0.88, 1.26):
+            box(mb, "BoisPeint", (0, sy * d / 4, z), (w, d / 2 - 0.04, 0.02), col=(200, 200, 195, 255))
+            x = -w / 2 + 0.08
+            while x < w / 2 - 0.1:
+                kind = rng.integers(3)
+                if kind == 0:
+                    revolve(mb, "Fer", [(0, 0), (0.04, 0), (0.04, 0.11), (0, 0.11)], (x, sy * d / 4, z + 0.01), segs=8, col=(190, 190, 195, 255))
+                    revolve(mb, "Toile", [(0.041, 0.02), (0.041, 0.09)], (x, sy * d / 4, z + 0.01), segs=8,
+                            col=((200, 50, 40), (230, 190, 60), (60, 120, 60), (60, 90, 160))[int(rng.integers(4))] + (255,))
+                    x += 0.09
+                elif kind == 1:
+                    hh = rng.uniform(0.18, 0.3)
+                    box(mb, "Toile", (x + 0.05, sy * d / 4, z + 0.01 + hh / 2), (0.1, 0.22, hh),
+                        col=((220, 190, 60), (200, 70, 50), (240, 240, 230), (90, 140, 200))[int(rng.integers(4))] + (255,))
+                    x += 0.12
+                else:
+                    revolve(mb, "Verre", [(0, 0), (0.035, 0), (0.035, 0.2), (0.012, 0.28), (0, 0.28)], (x, sy * d / 4, z + 0.01), segs=8)
+                    x += 0.08
+    return mb
+
+
+def cagettes():
+    """Étal de fruits et légumes : cagettes inclinées sur tréteaux."""
+    mb = MB()
+    rng = np.random.default_rng(5)
+    legs(mb, 1.2, 0.6, 0.6, r=0.02)
+    for k in range(3):
+        x = -0.4 + k * 0.4
+        box(mb, "BoisBrut", (x, 0, 0.7), (0.38, 0.55, 0.14), pitch=math.radians(-15), col=(200, 170, 120, 255))
+        col = ((220, 60, 40), (240, 170, 40), (120, 170, 60))[k]
+        for j in range(12):
+            revolve(mb, "Toile", [(0, 0), (0.04, 0.0), (0.045, 0.04), (0, 0.08)],
+                    (x + rng.uniform(-0.14, 0.14), rng.uniform(-0.2, 0.2), 0.76 - 0.0), segs=8, col=col + (255,))
+    return mb
+
+
+def caisse_comptoir(w=1.4, d=0.6, h=1.0):
+    mb = MB()
+    box(mb, "BoisPeint", (0, 0.03, h / 2), (w, d - 0.06, h))
+    box(mb, "BoisBrut", (0, 0, h + 0.02), (w + 0.04, d, 0.04))
+    box(mb, "BoisPeint", (0.35, 0.1, h + 0.13), (0.35, 0.3, 0.18), col=(40, 40, 42, 255))
+    box(mb, "Toile", (-0.3, 0.0, h + 0.1), (0.3, 0.2, 0.14), col=(230, 220, 190, 255))
+    return mb
+
+
+def rayon_pharmacie(w=1.6, d=0.4, h=2.1):
+    """Rayonnage mural blanc à tiroirs et boîtes de médicaments."""
+    mb = MB()
+    rng = np.random.default_rng(33)
+    box(mb, "BoisPeint", (0, 0.02, h / 2), (w, d - 0.04, h), col=(238, 238, 234, 255), faces=("+y", "-x", "+x", "+z"))
+    box(mb, "BoisPeint", (0, -d / 2 + 0.2, 0.4), (w, 0.4, 0.8), col=(236, 236, 232, 255))
+    for k in range(int(w / 0.2)):
+        for z in (0.2, 0.45, 0.7):
+            box(mb, "BoisPeint", (-w / 2 + 0.1 + k * 0.2, -d / 2 - 0.005, z), (0.17, 0.01, 0.2), col=(225, 228, 225, 255))
+    for z in (1.0, 1.35, 1.7):
+        box(mb, "BoisPeint", (0, 0, z), (w - 0.02, d - 0.04, 0.02), col=(245, 245, 242, 255))
+        x = -w / 2 + 0.07
+        while x < w / 2 - 0.07:
+            ww = rng.uniform(0.05, 0.1)
+            box(mb, "Toile", (x + ww / 2, -0.02, z + 0.08), (ww, 0.14, 0.15),
+                col=((250, 250, 250), (90, 160, 90), (70, 120, 190), (230, 90, 70), (240, 200, 80))[int(rng.integers(5))] + (255,))
+            x += ww + 0.01
+    return mb
+
+
+def comptoir_pharmacie(w=2.0, d=0.6, h=1.0):
+    mb = MB()
+    box(mb, "BoisPeint", (0, 0.03, h / 2), (w, d - 0.06, h), col=(240, 240, 236, 255))
+    box(mb, "Porcelaine", (0, 0, h + 0.015), (w + 0.04, d, 0.03))
+    box(mb, "BoisPeint", (0, -d / 2 + 0.01, 0.55), (w - 0.3, 0.01, 0.12), col=(40, 150, 80, 255))
+    box(mb, "BoisPeint", (0.5, 0.1, h + 0.2), (0.4, 0.05, 0.3), col=(30, 30, 32, 255), pitch=math.radians(-10))
+    return mb
+
+
+def fauteuil_coiffeur():
+    mb = MB()
+    revolve(mb, "Fer", [(0, 0), (0.28, 0), (0.28, 0.03), (0.05, 0.08), (0.05, 0.4), (0, 0.4)], (0, 0, 0), segs=14, col=(190, 190, 195, 255))
+    box(mb, "Toile", (0, 0, 0.47), (0.55, 0.55, 0.14), col=(40, 30, 30, 255))
+    box(mb, "Toile", (0, 0.24, 0.85), (0.55, 0.1, 0.7), col=(40, 30, 30, 255), pitch=math.radians(-8))
+    for sx in (-1, 1):
+        box(mb, "Toile", (sx * 0.3, 0.02, 0.66), (0.08, 0.5, 0.08), col=(40, 30, 30, 255))
+    return mb
+
+
+def presentoir(fill="santons"):
+    """Table de présentation : santons, poteries, savons ou livres."""
+    mb = MB()
+    rng = np.random.default_rng(len(fill) * 7)
+    legs(mb, 1.4, 0.8, 0.78, r=0.025)
+    box(mb, "BoisBrut", (0, 0, 0.8), (1.4, 0.8, 0.04))
+    box(mb, "TissuProvence", (0, 0, 0.823), (1.3, 0.7, 0.006), uv_scale=0.5)
+    for k in range(18):
+        x, y = rng.uniform(-0.6, 0.6), rng.uniform(-0.3, 0.3)
+        if fill == "santons":
+            revolve(mb, "Toile", [(0, 0), (0.035, 0), (0.03, 0.08), (0.02, 0.1), (0.025, 0.13), (0, 0.14)], (x, y, 0.826), segs=8,
+                    col=((180, 60, 50), (60, 90, 150), (220, 190, 120), (90, 120, 70))[k % 4] + (255,))
+        elif fill == "poterie":
+            revolve(mb, "TerreCuite", [(0, 0), (0.06, 0), (0.09, 0.08), (0.05, 0.16), (0.06, 0.2), (0, 0.2)], (x, y, 0.826), segs=10)
+        elif fill == "savons":
+            box(mb, "Toile", (x, y, 0.85), (0.09, 0.06, 0.05), col=((150, 110, 190), (240, 220, 160), (200, 230, 170), (240, 190, 170))[k % 4] + (255,))
+        else:
+            box(mb, "Toile", (x, y, 0.84), (0.16, 0.22, 0.03), col=((150, 40, 40), (40, 60, 110), (170, 140, 60))[k % 3] + (255,))
+    return mb
+
+
+def banc_attente(w=1.6):
+    mb = MB()
+    legs(mb, w, 0.42, 0.44, r=0.025, mat="Fer")
+    box(mb, "BoisBrut", (0, 0, 0.46), (w, 0.42, 0.04))
+    box(mb, "BoisBrut", (0, 0.2, 0.75), (w, 0.03, 0.35))
+    return mb
+
+
+def drapeaux():
+    """Drapeaux français et européen sur hampes (salle de la mairie)."""
+    mb = MB()
+    for x, cols in ((-0.2, ((0, 35, 149), (255, 255, 255), (237, 41, 57))), (0.2, ((0, 51, 153), (0, 51, 153), (0, 51, 153)))):
+        tube(mb, "Bronze", [(x, 0, 0), (x, 0, 2.2)], 0.015, segs=6)
+        revolve(mb, "Bronze", [(0, 0), (0.15, 0), (0.15, 0.04), (0, 0.04)], (x, 0, 0), segs=10)
+        for k, c in enumerate(cols):
+            box(mb, "Toile", (x + 0.06, 0.02 + 0.03 * k, 1.6 - 0.28 * k), (0.04, 0.03, 0.28), col=c + (255,))
+    return mb
+
+
+def armoire_archives():
+    mb = MB()
+    box(mb, "BoisPeint", (0, 0, 1.0), (1.0, 0.5, 2.0), col=(120, 128, 120, 255))
+    for z in (0.35, 0.8, 1.25, 1.7):
+        box(mb, "BoisPeint", (0, -0.255, z), (0.9, 0.01, 0.38), col=(110, 118, 110, 255))
+        box(mb, "Fer", (0, -0.27, z + 0.1), (0.12, 0.02, 0.03), col=(200, 200, 200, 255))
+    return mb
+
+
+def banc_eglise(w=3.0):
+    """Banc d'église en chêne : assise, dossier, agenouilloir, joues sculptées."""
+    mb = MB()
+    for sx in (-1, 1):
+        box(mb, "BoisVernis", (sx * (w / 2 - 0.03), 0.0, 0.5), (0.06, 0.6, 1.0))
+    box(mb, "BoisVernis", (0, -0.05, 0.45), (w - 0.06, 0.4, 0.04))
+    box(mb, "BoisVernis", (0, 0.2, 0.75), (w - 0.06, 0.04, 0.5), pitch=math.radians(-8))
+    box(mb, "BoisVernis", (0, 0.36, 0.85), (w - 0.06, 0.18, 0.03))                 # tablette du banc suivant
+    box(mb, "BoisVernis", (0, 0.4, 0.12), (w - 0.06, 0.16, 0.05))                  # agenouilloir
+    return mb
+
+
+def autel():
+    """Autel en pierre sur deux marches, nappe, croix, chandeliers, retable peint."""
+    mb = MB()
+    box(mb, "PierreTaille", (0, 0.2, 0.08), (3.4, 2.2, 0.16), uv_scale=3.0)
+    box(mb, "PierreTaille", (0, 0.4, 0.24), (3.0, 1.8, 0.16), uv_scale=3.0)
+    box(mb, "PierreTaille", (0, 0.5, 0.8), (2.0, 0.9, 0.96), uv_scale=3.0)
+    box(mb, "Toile", (0, 0.5, 1.29), (2.1, 0.95, 0.02), col=(245, 242, 234, 255))
+    box(mb, "Toile", (0, 0.03, 1.1), (2.1, 0.01, 0.4), col=(245, 242, 234, 255))
+    box(mb, "Bronze", (0, 0.75, 1.75), (0.05, 0.05, 0.9))
+    box(mb, "Bronze", (0, 0.75, 1.95), (0.45, 0.05, 0.05))
+    for x in (-0.7, -0.4, 0.4, 0.7):
+        revolve(mb, "Bronze", [(0, 0), (0.07, 0), (0.02, 0.05), (0.015, 0.35), (0.04, 0.37), (0, 0.37)], (x, 0.7, 1.3), segs=8)
+        revolve(mb, "Porcelaine", [(0, 0), (0.018, 0), (0.018, 0.2), (0, 0.2)], (x, 0.7, 1.67), segs=6)
+    # retable : panneaux dorés et toile peinte
+    box(mb, "Bronze", (0, 1.05, 2.4), (2.4, 0.08, 2.4))
+    for zc, hh, col in ((2.9, 0.9, (90, 120, 180)), (2.3, 0.4, (200, 160, 110)), (1.95, 0.35, (140, 50, 45))):
+        box(mb, "Toile", (0, 1.0, zc), (1.4, 0.01, hh), col=col + (255,))
+    return mb
+
+
+def chandelier_sol():
+    mb = MB()
+    revolve(mb, "Bronze", [(0, 0), (0.16, 0), (0.04, 0.1), (0.03, 1.2), (0.09, 1.25), (0.02, 1.28), (0, 1.28)], (0, 0, 0), segs=10)
+    revolve(mb, "Porcelaine", [(0, 0), (0.025, 0), (0.025, 0.3), (0, 0.3)], (0, 0, 1.28), segs=8)
+    return mb
+
+
+def benitier():
+    mb = MB()
+    revolve(mb, "PierreTaille", [(0, 0), (0.18, 0), (0.12, 0.1), (0.08, 0.75), (0.28, 0.85), (0.3, 0.98), (0.0, 0.93)], (0, 0, 0), segs=16,
+            u_tile=3, v_tile=3)
+    return mb
+
+
+def pupitre():
+    mb = MB()
+    revolve(mb, "BoisVernis", [(0, 0), (0.22, 0), (0.05, 0.08), (0.05, 1.05), (0, 1.05)], (0, 0, 0), segs=10)
+    box(mb, "BoisVernis", (0, 0, 1.12), (0.55, 0.4, 0.03), pitch=math.radians(-25))
+    box(mb, "Toile", (0, -0.02, 1.15), (0.4, 0.3, 0.03), col=(120, 30, 30, 255), pitch=math.radians(-25))
+    return mb
+
+
+def statue():
+    """Statue de saint sur piédestal (plâtre peint)."""
+    mb = MB()
+    box(mb, "PierreTaille", (0, 0, 0.5), (0.55, 0.55, 1.0), uv_scale=3.0)
+    revolve(mb, "Toile", [(0, 0), (0.2, 0), (0.18, 0.5), (0.14, 0.9), (0.1, 1.0), (0.0, 1.02)], (0, 0, 1.0), segs=12, col=(90, 120, 190, 255))
+    revolve(mb, "Toile", [(0, 0), (0.08, 0.02), (0.09, 0.1), (0.07, 0.18), (0, 0.2)], (0, 0, 2.0), segs=10, col=(230, 200, 170, 255))
+    tube(mb, "Bronze", [(0, 0, 2.28), (0.0, 0.0, 2.3)], 0.12, segs=14)
+    return mb
+
+
+def confessionnal():
+    mb = MB()
+    box(mb, "BoisVernis", (0, 0.05, 1.2), (1.8, 0.8, 2.4), faces=("+y", "-x", "+x", "+z"))
+    box(mb, "BoisVernis", (0, -0.35, 2.3), (1.8, 0.1, 0.2))
+    for x in (-0.6, 0.0, 0.6):
+        box(mb, "BoisVernis", (x, -0.33, 1.15), (0.08, 0.14, 2.3))
+    for x in (-0.3, 0.3):
+        box(mb, "TissuProvence", (x, -0.3, 1.2), (0.5, 0.02, 1.9), col=(120, 30, 40, 255), uv_scale=0.5)
+    return mb
+
+
 FURNITURE = {
     "Int_TableCuisine": table_cuisine,
     "Int_Chaise": chaise_paillee,
@@ -719,6 +1020,33 @@ FURNITURE = {
     "Int_Malle": malle,
     "Int_Lampadaire": lampadaire,
     "Int_LitsEnfants": lits_enfants,
+    "Int_ComptoirPain": lambda: comptoir_vitrine(fill="pain"),
+    "Int_ComptoirViande": lambda: comptoir_vitrine(fill="viande"),
+    "Int_ComptoirGlaces": lambda: comptoir_vitrine(fill="glaces"),
+    "Int_EtagerePain": etagere_pain,
+    "Int_FourPain": four_pain,
+    "Int_ComptoirBar": comptoir_bar,
+    "Int_Tabouret": tabouret,
+    "Int_Gondole": gondole,
+    "Int_Cagettes": cagettes,
+    "Int_Caisse": caisse_comptoir,
+    "Int_RayonPharmacie": rayon_pharmacie,
+    "Int_ComptoirPharmacie": comptoir_pharmacie,
+    "Int_FauteuilCoiffeur": fauteuil_coiffeur,
+    "Int_PresentoirSantons": lambda: presentoir("santons"),
+    "Int_PresentoirPoterie": lambda: presentoir("poterie"),
+    "Int_PresentoirSavons": lambda: presentoir("savons"),
+    "Int_PresentoirLivres": lambda: presentoir("livres"),
+    "Int_BancAttente": banc_attente,
+    "Int_Drapeaux": drapeaux,
+    "Int_ArmoireArchives": armoire_archives,
+    "Int_BancEglise": banc_eglise,
+    "Int_Autel": autel,
+    "Int_Chandelier": chandelier_sol,
+    "Int_Benitier": benitier,
+    "Int_Pupitre": pupitre,
+    "Int_Statue": statue,
+    "Int_Confessionnal": confessionnal,
 }
 
 # encombrement au sol (largeur X, profondeur Y, hauteur) : sert au placement et à la collision (boîte)
@@ -739,6 +1067,17 @@ SIZE = {
     "Int_Jerrican": (0.35, 0.18, 0.52), "Int_Conserves": (0.8, 0.36, 0.42), "Int_Rechaud": (0.8, 0.42, 0.62),
     "Int_Cadre": (0.68, 0.06, 0.0), "Int_Miroir": (0.58, 0.04, 0.0), "Int_Plante": (0.5, 0.5, 1.0),
     "Int_Malle": (0.9, 0.52, 0.5), "Int_Lampadaire": (0.44, 0.44, 1.65), "Int_LitsEnfants": (2.3, 2.0, 0.9),
+    "Int_ComptoirPain": (2.2, 0.72, 1.2), "Int_ComptoirViande": (2.2, 0.72, 1.2), "Int_ComptoirGlaces": (2.2, 0.72, 1.2),
+    "Int_EtagerePain": (1.4, 0.5, 1.9), "Int_FourPain": (1.6, 1.46, 1.7), "Int_ComptoirBar": (2.7, 0.8, 1.15),
+    "Int_Tabouret": (0.4, 0.4, 0.78), "Int_Gondole": (1.8, 0.82, 1.6), "Int_Cagettes": (1.25, 0.65, 0.85),
+    "Int_Caisse": (1.45, 0.62, 1.05), "Int_RayonPharmacie": (1.6, 0.42, 2.1), "Int_ComptoirPharmacie": (2.05, 0.62, 1.05),
+    "Int_FauteuilCoiffeur": (0.62, 0.6, 1.2), "Int_PresentoirSantons": (1.4, 0.8, 0.9), "Int_PresentoirPoterie": (1.4, 0.8, 1.0),
+    "Int_PresentoirSavons": (1.4, 0.8, 0.9), "Int_PresentoirLivres": (1.4, 0.8, 0.9), "Int_BancAttente": (1.6, 0.45, 0.92),
+    "Int_Drapeaux": (0.7, 0.3, 2.2), "Int_ArmoireArchives": (1.0, 0.52, 2.0), "Int_BancEglise": (3.0, 0.8, 1.0),
+    "Int_Autel": (3.4, 2.2, 1.3), "Int_Chandelier": (0.34, 0.34, 1.6), "Int_Benitier": (0.6, 0.6, 1.0),
+    "Int_Pupitre": (0.55, 0.45, 1.25), "Int_Statue": (0.55, 0.55, 2.4), "Int_Confessionnal": (1.8, 0.9, 2.4),
+    # modules de terrasse réutilisés à l'intérieur des cafés
+    "Table_Cafe": (0.7, 0.7, 0.75), "Chaise_Bistrot": (0.45, 0.45, 0.9),
 }
 
 

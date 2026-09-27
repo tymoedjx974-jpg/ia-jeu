@@ -400,7 +400,7 @@ for i, m in enumerate(metas):
             continue
         _, A2, B2, za, zb, L, dv = best
         mid = (A2 + B2) / 2
-        if any(np.hypot(*(mid - q_)) < 5.0 for q_ in done_pts):
+        if any(np.hypot(*(mid - q_)) < 14.0 for q_ in done_pts) or planks + ramps >= 30:
             continue
         seg = LineString([tuple(A2), tuple(B2)])
         if near_building(seg.interpolate(0.5, normalized=True).buffer(0.2), 0.05, skip=(i, j)):
@@ -443,7 +443,7 @@ for mi, m in sorted(enumerate(metas), key=lambda im: Polygon(im[1]["poly"]).cent
                 free_s.append((cur, a0))
             cur = max(cur, a1 + 0.3)
         # échafaudage de façade (vieux village) : devant les fenêtres, mais jamais devant une porte
-        if m["style"] == "core" and e["street"] and e["L"] >= 3.2 and scaff < 14:
+        if m["style"] == "core" and e["street"] and e["L"] >= 3.2 and scaff < 6:
             sc = e["L"] / 2
             Pc = p0 + u * sc
             gc = gz(*(Pc + out * 0.8))
@@ -452,7 +452,7 @@ for mi, m in sorted(enumerate(metas), key=lambda im: Polygon(im[1]["poly"]).cent
                        and o["s1"] > sc - 1.6 and o["s0"] < sc + 1.6]
             fp = footprint(*(Pc + out * 0.8), math.atan2(u[1], u[0]), 2.7, 1.0)
             if 5.0 <= hc <= 11.5 and not doors_e and free(fp, 0.2) and not near_building(fp, 0.02, skip=(mi,)) \
-                    and not any(np.hypot(*(Pc + out - q_)) < 18.0 for q_ in lad_pts):
+                    and not any(np.hypot(*(Pc + out - q_)) < 32.0 for q_ in lad_pts):
                 # le dernier plancher arrive 1,2 m sous la gouttière : on se hisse sur le toit
                 put("Z_Echafaudage", Pc[0], Pc[1], gc, math.atan2(u[1], u[0]), s=(1.0, 1.0, (hc - 1.2) / 6.0))
                 occupied.append(fp)
@@ -469,10 +469,10 @@ for mi, m in sorted(enumerate(metas), key=lambda im: Polygon(im[1]["poly"]).cent
         hgt = m["eave"] - g
         yaw = math.atan2(u[1], u[0])
         spot = P + out * 1.0
-        if any(np.hypot(*(spot - q_)) < 18.0 for q_ in lad_pts) or near_door(P[0], P[1], 1.2):
+        if any(np.hypot(*(spot - q_)) < 32.0 for q_ in lad_pts) or near_door(P[0], P[1], 1.2):
             continue
         placed = False
-        if 2.3 <= hgt <= 4.4 and a1 - a0 > 1.6 and starts < 70:
+        if 2.3 <= hgt <= 4.4 and a1 - a0 > 1.6 and starts < 25:
             # départ : caisse + pile de palettes, ou benne, contre le mur d'une construction basse
             fp = footprint(*(P + out * 0.7), yaw, 2.4, 1.1)
             if near_building(fp, 0.02, skip=(mi,)) or not free(fp, 0.3):
@@ -492,7 +492,7 @@ for mi, m in sorted(enumerate(metas), key=lambda im: Polygon(im[1]["poly"]).cent
             starts += 1
             placed = True
             route.append(dict(kind="depart", x=float(P[0]), y=float(P[1])))
-        elif 6.4 <= hgt <= 8.8 and scaff < 14 and e["street"] and a1 - a0 > 2.8 and m["style"] == "core":
+        elif 6.4 <= hgt <= 8.8 and scaff < 6 and e["street"] and a1 - a0 > 2.8 and m["style"] == "core":
             fp = footprint(*(P + out * 0.8), yaw, 2.7, 1.0)
             if not free(fp, 0.2) or near_building(fp, 0.02, skip=(mi,)):
                 continue
@@ -501,7 +501,7 @@ for mi, m in sorted(enumerate(metas), key=lambda im: Polygon(im[1]["poly"]).cent
             scaff += 1
             placed = True
             route.append(dict(kind="echafaudage", x=float(P[0]), y=float(P[1])))
-        elif 4.4 < hgt <= 9.8 and ladders < 90:
+        elif 4.4 < hgt <= 9.8 and ladders < 30:
             top = m["eave"] - 0.32
             put("Z_Echelle6", P[0], P[1], g, yaw, s=(1.0, 1.0, (top - g) / 6.0))
             ladders += 1

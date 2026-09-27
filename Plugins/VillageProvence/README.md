@@ -121,10 +121,10 @@ La position de chaque maison est dans `VP_PointsApparition → Maisons Visitable
 
 Ajoute le composant **TM Parkour** du plugin TMMouvements à ton personnage (voir son README). Il sert à se hisser, franchir des obstacles et monter aux échelles. Le village offre des parcours de toit en toit :
 
-- **72 passages entre les toits** : planches posées au-dessus des ruelles, ou inclinées quand les deux toits ne sont pas à la même hauteur.
-- **90 échelles** fixées aux façades, jusqu'au bord du toit.
-- **13 échafaudages** sur les façades du vieux village, avec échelle intérieure et planchers tous les deux mètres.
-- **68 départs** : caisses, piles de palettes et bennes contre des remises ou des garages bas, pour grimper sur leur toit.
+- **30 passages entre les toits** : planches posées au-dessus des ruelles, ou inclinées quand les deux toits ne sont pas à la même hauteur.
+- **30 échelles** fixées aux façades, jusqu'au bord du toit.
+- **6 échafaudages** sur les façades du vieux village, avec échelle intérieure et planchers tous les deux mètres.
+- **25 départs** : caisses, piles de palettes et bennes contre des remises ou des garages bas, pour grimper sur leur toit.
 - **Balcons** en fer forgé praticables, voitures et sacs de sable à franchir en courant.
 
 Tous les toits en tuiles ont des collisions exactes et une pente douce (15 à 18°) : on y court sans glisser.

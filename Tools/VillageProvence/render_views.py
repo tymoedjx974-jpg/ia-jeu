@@ -17,6 +17,7 @@ def _z(x, y, h):
 # nom : ((x, y, hauteur au-dessus du sol), (x, y, hauteur de la cible), focale)
 _V = {
     "vue_generale": ((-620, 330, 90), (-10, 20, 8), 30),
+    "aerien_village": ((250, -310, 210), (-15, 20, 5), 30),
     "place": ((-8.5, 16.0, 1.65), (6, 6, 2.5), 20),
     "eglise": ((-4.0, 36.0, 1.65), (-40, 58, 6), 20),
     "lavande": ((-1050, 945, 1.6), (-15, 15, 16), 55),

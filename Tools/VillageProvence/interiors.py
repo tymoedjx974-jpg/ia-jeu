@@ -19,9 +19,9 @@ from modules import VISIT
 
 T_WALL = 0.45       # épaisseur des murs extérieurs
 SLAB = 0.24         # épaisseur des planchers
-STAIR_W = 0.95
-TREAD = 0.235
-RISE_MAX = 0.2
+STAIR_W = 1.05      # largeur de l'escalier droit
+TREAD = 0.25        # giron
+RISE_MAX = 0.19     # hauteur de marche maximale
 PART = 0.1          # épaisseur des cloisons
 COL_PLAFOND = (247, 244, 238, 255)
 DOOR_TYPES = ("Porte", "Porte_Simple", "Remise", "Vitrine", "Vitrine_SansStore")
@@ -71,7 +71,7 @@ def candidates(blds, center, max_n=340, spacing=9.0):
 
 
 # ------------------------------------------------------------------ plan
-SPIRAL = 1.8       # emprise de l'escalier en colimaçon (carré, m)
+SPIRAL = 2.2       # emprise de l'escalier en colimaçon (carré, m)
 
 
 def plan(b, info, openings, gz):
@@ -352,7 +352,7 @@ def build(b, pl, mb, inst, rng):
             _flat(mb, dec["floor2"], g, l2 + 0.002, up=True, col=dec["fcol2"])
         _flat(mb, dec["wall_mat"], ip, pl["top"], up=False, col=COL_PLAFOND)
         delta = math.atan2(dy_, dx_)
-        spiral_stair(mb, Wp(sx, sy), l1, l2, yaw_a + delta + math.pi / 4)
+        b.setdefault("stair_ramps", []).extend(spiral_stair(mb, Wp(sx, sy), l1, l2, yaw_a + delta + math.pi / 4, modern=dec["theme"] == "moderne"))
         # garde-corps du palier au-dessus des premières marches
         ang_first = delta + math.pi / 4                              # direction (locale) des premières marches
         ex, ey = math.cos(ang_first), math.sin(ang_first)
@@ -389,24 +389,66 @@ def build(b, pl, mb, inst, rng):
         bands.append((pl["lv"][2], pl["top"], dec["wall2"]))
     _inner_walls(mb, ip, pl["openings_world"], bands, dec["wall_mat"])
 
-    # ---------- escalier (marches pleines, girons en terre cuite, main courante)
+    # ---------- escalier droit : marches maçonnées, girons avec nez de marche, limon, balustrade côté vide, main courante murale
     n, rise, tr = pl["n"], pl["rise"], TREAD
     ym = (band[0] + band[1]) / 2
+    modern = dec["theme"] == "moderne"
+    tread_mat, tread_col = ("BoisVernis", WHITE) if modern else ("TerreCuite", WHITE)
+    body_mat = dec["wall_mat"]
     for i in range(n):
         x0 = end + d * i * tr
         xm = x0 + d * tr / 2
         top = l0 + (i + 1) * rise
-        Wbox("Enduit", xm, ym, (l0 + top) / 2, tr, STAIR_W, top - l0 - 0.03, col=(236, 232, 224, 255))
-        Wbox("TerreCuite", xm - d * 0.015, ym, top - 0.015, tr + 0.03, STAIR_W, 0.03, uv=0.3)
-    yr = y_b - s * 0.04
+        Wbox(body_mat, xm, ym, (l0 + top) / 2, tr, STAIR_W, top - l0 - 0.04, col=dec["wall0"])
+        Wbox(tread_mat, xm - d * 0.02, ym, top - 0.02, tr + 0.04, STAIR_W, 0.04, col=tread_col, uv=0.5 if modern else 0.3)
+        if not modern:
+            Wbox("BoisBrut", x0 - d * 0.02 + d * 0.025, ym, top - 0.02, 0.05, STAIR_W + 0.005, 0.045, col=(120, 90, 65, 255))
+    # limon côté vide : bandeau incliné qui suit les nez de marche
+    y_open = y_b - s * 0.02
+    P0, P1 = Wp(end, y_open), Wp(end + d * n * tr, y_open)
+    lim_mat, lim_col = ("MetalBrosse", WHITE) if modern else ("BoisBrut", (120, 90, 65, 255))
+    for k in range(n):
+        t0, t1 = k / n, (k + 1) / n
+        A = P0 + (P1 - P0) * t0
+        B_ = P0 + (P1 - P0) * t1
+        za, zb_ = l0 + rise * (k + 0.5) - 0.12, l0 + rise * (k + 1.5) - 0.12
+        tube(mb, lim_mat, [(A[0], A[1], za), (B_[0], B_[1], zb_)], 0.035, segs=4, col=lim_col)
+    # garde-corps côté vide
+    yr = y_b - s * 0.05
     rail = []
-    for i in range(0, n + 1, 3):
-        x = end + d * min(i, n - 0.5) * tr
-        zt = l0 + min(i + 1, n) * rise
+    for i in range(n):
+        x = end + d * (i + 0.5) * tr
+        zt = l0 + (i + 1) * rise
         P = Wp(x, yr)
-        tube(mb, "Fer", [(P[0], P[1], zt), (P[0], P[1], zt + 0.9)], 0.014, segs=6, col=(60, 55, 50, 255))
         rail.append((P[0], P[1], zt + 0.9))
-    tube(mb, "BoisBrut", rail, 0.025, segs=6)
+        if not modern:
+            tube(mb, "Fer", [(P[0], P[1], zt), (P[0], P[1], zt + 0.9)], 0.011, segs=5, col=(55, 50, 45, 255))
+    if modern:
+        # garde-corps à câbles tendus en inox : poteaux toutes les 4 marches, 4 câbles parallèles à la pente
+        for i in list(range(0, n, 4)) + [n - 1]:
+            x = end + d * (i + 0.5) * tr
+            P = Wp(x, yr)
+            zt = l0 + (i + 1) * rise
+            tube(mb, "MetalBrosse", [(P[0], P[1], zt), (P[0], P[1], zt + 0.9)], 0.018, segs=8)
+        for hk in (0.2, 0.4, 0.6, 0.8):
+            tube(mb, "MetalBrosse", [(r_[0], r_[1], r_[2] - 0.9 + hk) for r_ in (rail[0], rail[-1])], 0.005, segs=4)
+        tube(mb, "MetalBrosse", [rail[0], rail[-1]], 0.022, segs=8)
+    else:
+        tube(mb, "BoisBrut", rail, 0.028, segs=8, col=(120, 90, 65, 255))
+    # main courante contre le mur (fixée par des consoles)
+    yw = s * (W / 2 - 0.06)
+    wr = []
+    for i in range(0, n + 1, 1):
+        P = Wp(end + d * i * tr, yw)
+        wr.append((P[0], P[1], l0 + i * rise + 0.9))
+        if i % 4 == 2:
+            Pw_ = Wp(end + d * i * tr, s * (W / 2 - 0.005))
+            tube(mb, "Fer", [(Pw_[0], Pw_[1], l0 + i * rise + 0.86), (P[0], P[1], l0 + i * rise + 0.88)], 0.008, segs=5, col=(55, 50, 45, 255))
+    tube(mb, "MetalBrosse" if modern else "BoisBrut", wr, 0.022, segs=8, col=WHITE if modern else (120, 90, 65, 255))
+    # rampe de collision invisible (Unreal) : le joueur monte en douceur au lieu de buter sur chaque marche
+    Rb, Rt = Wp(end, ym), Wp(end + d * n * tr, ym)
+    b.setdefault("stair_ramps", []).append(([float(Rb[0]), float(Rb[1]), float(l0 - rise * 0.5)],
+                                           [float(Rt[0]), float(Rt[1]), float(l1 - rise * 0.5)], float(STAIR_W)))
 
     # ---------- cloisons de l'étage (salle de bain) avec encadrement de porte
     x_lo, x_hi = sorted((end, xc))
@@ -889,31 +931,76 @@ def furnish_rdc(b, pl, inst, rng, Wp, yaw_a):
             put("Z_Sol_sang_trainee", rng.uniform(-L / 4, L / 4), rng.uniform(-W / 5, W / 5), l0 + 0.005, float(rng.uniform(0, 6.28)))
 
 
-def spiral_stair(mb, C, z0, z1, yaw0):
-    """Escalier en colimaçon : noyau central, marches rayonnantes en pierre, main courante en fer.
-    La première marche part dans la direction yaw0 ; on arrive en haut après 3/4 de tour."""
+def _wedge(mb, mat, C, r0, r1, a0, a1, zb, zt, col=WHITE, segs=4):
+    """Marche en éventail : secteur de couronne (r0-r1, a0-a1) en prisme de zb à zt."""
+    angs = np.linspace(a0, a1, segs + 1)
+    inner = [(C[0] + r0 * math.cos(t), C[1] + r0 * math.sin(t)) for t in angs]
+    outer = [(C[0] + r1 * math.cos(t), C[1] + r1 * math.sin(t)) for t in angs]
+    for k in range(segs):
+        for z, up in ((zt, True), (zb, False)):
+            q_ = [np.array([*inner[k], z]), np.array([*outer[k], z]), np.array([*outer[k + 1], z]), np.array([*inner[k + 1], z])]
+            if not up:
+                q_ = q_[::-1]
+            nz = np.cross(q_[1] - q_[0], q_[2] - q_[0])
+            if (nz[2] > 0) != up:
+                q_ = q_[::-1]
+            mb.quad(mat, *q_, [(0, 0), (1, 0), (1, 1), (0, 1)], col)
+        # face extérieure
+        o0, o1 = outer[k], outer[k + 1]
+        q_ = [np.array([*o0, zb]), np.array([*o1, zb]), np.array([*o1, zt]), np.array([*o0, zt])]
+        mid = (np.array(o0) + np.array(o1)) / 2 - np.array(C[:2])
+        nrm_ = np.cross(q_[1] - q_[0], q_[3] - q_[0])
+        if nrm_[:2] @ mid < 0:
+            q_ = q_[::-1]
+        mb.quad(mat, *q_, [(0, 0), (1, 0), (1, 1), (0, 1)], col)
+    # nez de marche (face avant, côté a0) et face arrière
+    for t, sgn in ((a0, -1), (a1, 1)):
+        i0 = (C[0] + r0 * math.cos(t), C[1] + r0 * math.sin(t))
+        o0 = (C[0] + r1 * math.cos(t), C[1] + r1 * math.sin(t))
+        q_ = [np.array([*i0, zb]), np.array([*o0, zb]), np.array([*o0, zt]), np.array([*i0, zt])]
+        want = np.array([-math.sin(t), math.cos(t)]) * sgn
+        nrm_ = np.cross(q_[1] - q_[0], q_[3] - q_[0])
+        if nrm_[:2] @ want < 0:
+            q_ = q_[::-1]
+        mb.quad(mat, *q_, [(0, 0), (1, 0), (1, 1), (0, 1)], col)
+
+
+def spiral_stair(mb, C, z0, z1, yaw0, modern=False):
+    """Escalier en colimaçon : noyau central, marches en éventail pleines (pierre, ou bois pour une maison moderne),
+    garde-corps à barreaux et main courante sur le bord extérieur. Première marche dans la direction yaw0, 3/4 de tour.
+    Renvoie les segments de rampe de collision (pour Unreal)."""
     h = z1 - z0
     n = int(math.ceil(h / 0.19))
     rise = h / n
-    R = SPIRAL / 2 - 0.08
+    R = SPIRAL / 2 - 0.06
+    r0 = 0.1
     turn = math.radians(270)
-    tube(mb, "PierreTaille", [(C[0], C[1], z0), (C[0], C[1], z1 + 0.9)], 0.09, segs=10, u_tile=3, v_tile=3)
+    mat = "BoisVernis" if modern else "PierreTaille"
+    tube(mb, "MetalBrosse" if modern else "PierreTaille", [(C[0], C[1], z0), (C[0], C[1], z1 + 1.0)], r0, segs=12, u_tile=3, v_tile=3)
     rail = []
     for i in range(n):
-        ang = yaw0 + turn * (i + 0.5) / n
-        rc = (R + 0.09) / 2
-        P = (C[0] + math.cos(ang) * rc, C[1] + math.sin(ang) * rc, z0 + (i + 1) * rise - 0.03)
-        # marche : pavé tourné, plus large vers l'extérieur (approché par deux pavés)
-        box(mb, "PierreTaille", P, (R - 0.05, 0.3, 0.06), yaw=ang, uv_scale=3.0)
-        Po = (C[0] + math.cos(ang) * (R * 0.78), C[1] + math.sin(ang) * (R * 0.78), P[2])
-        box(mb, "PierreTaille", Po, (R * 0.45, 0.42, 0.06), yaw=ang, uv_scale=3.0)
-        # contremarche
-        box(mb, "PierreTaille", (P[0], P[1], P[2] - rise / 2), (R - 0.05, 0.05, rise), yaw=ang, uv_scale=3.0)
-        a_r = yaw0 + turn * i / n
-        rail.append((C[0] + math.cos(a_r) * (R + 0.02), C[1] + math.sin(a_r) * (R + 0.02), z0 + i * rise + 0.95))
-        if i % 2 == 0:
-            tube(mb, "Fer", [(rail[-1][0], rail[-1][1], z0 + (i + 1) * rise), rail[-1]], 0.012, segs=5, col=(60, 55, 50, 255))
-    tube(mb, "Fer", rail, 0.02, segs=6, col=(60, 55, 50, 255))
+        a0 = yaw0 + turn * i / n
+        a1 = yaw0 + turn * (i + 1) / n
+        zt = z0 + (i + 1) * rise
+        # marche pleine : dalle de 6 cm et contremarche (le dessous reste ouvert sous les marches hautes)
+        _wedge(mb, mat, C, r0, R, a0 - 0.02, a1, zt - 0.06, zt, segs=3)
+        _wedge(mb, mat, C, r0, R, a0 - 0.02, a0 + 0.04, zt - rise, zt - 0.06, segs=1)
+        ar = (a0 + a1) / 2
+        P = (C[0] + math.cos(ar) * (R - 0.03), C[1] + math.sin(ar) * (R - 0.03))
+        rail.append((P[0], P[1], zt + 0.9))
+        tube(mb, "MetalBrosse" if modern else "Fer", [(P[0], P[1], zt), (P[0], P[1], zt + 0.9)], 0.01, segs=5, col=WHITE if modern else (60, 55, 50, 255))
+    tube(mb, "MetalBrosse" if modern else "Fer", rail, 0.02, segs=8, col=WHITE if modern else (60, 55, 50, 255))
+    # rampes de collision : 6 segments sur la ligne de foulée (aux 2/3 du rayon), sous les nez de marche
+    segs = []
+    rw = (r0 + R) * 0.62
+    k_seg = 6
+    for k in range(k_seg):
+        t0, t1 = k / k_seg, (k + 1) / k_seg
+        a_s, a_e = yaw0 + turn * t0, yaw0 + turn * t1
+        P0 = [C[0] + math.cos(a_s) * rw, C[1] + math.sin(a_s) * rw, z0 + h * t0 - rise * 0.5]
+        P1 = [C[0] + math.cos(a_e) * rw, C[1] + math.sin(a_e) * rw, z0 + h * t1 - rise * 0.5]
+        segs.append(([float(v) for v in P0], [float(v) for v in P1], float(R - r0 - 0.1)))
+    return segs
 
 
 def _inner_walls(mb, ip, openings_w, bands, mat="Enduit"):

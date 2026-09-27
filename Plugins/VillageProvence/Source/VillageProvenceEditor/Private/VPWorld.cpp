@@ -4,6 +4,7 @@
 #include "AssetImportTask.h"
 #include "AssetToolsModule.h"
 #include "Components/AudioComponent.h"
+#include "Components/BoxComponent.h"
 #include "Components/DirectionalLightComponent.h"
 #include "Components/ExponentialHeightFogComponent.h"
 #include "Components/HierarchicalInstancedStaticMeshComponent.h"
@@ -581,6 +582,63 @@ void FVPBuilder::SetupDoors()
 		Porte->SonFermeture = SonFermeture;
 		Porte->DefinirEtat(Porte->bOuverteAuDepart);
 		Tag(Porte, FString::Printf(TEXT("VP_Porte_%d"), Index++), TEXT("VillageProvence/Portes"), true);
+	}
+}
+
+void FVPBuilder::SetupStairRamps()
+{
+	// rampes invisibles posées sur les escaliers des bâtiments visitables : seuls les personnages (canal Pawn) les touchent,
+	// ils montent en douceur au lieu de buter sur chaque marche ; le navmesh y passe aussi (zombies qui montent à l'étage)
+	const TArray<TSharedPtr<FJsonValue>>* Ramps = nullptr;
+	if (!Manifest->TryGetArrayField(TEXT("stair_ramps"), Ramps))
+	{
+		return;
+	}
+	TMap<FString, AActor*> PerHouse;
+	int32 Index = 0;
+	for (const TSharedPtr<FJsonValue>& V : *Ramps)
+	{
+		const TSharedPtr<FJsonObject> R = V->AsObject();
+		const FVector A = JsonVector(R->GetField<EJson::Array>(TEXT("a")));
+		const FVector B = JsonVector(R->GetField<EJson::Array>(TEXT("b")));
+		const float Width = (float)R->GetNumberField(TEXT("width"));
+		const FString House = R->GetStringField(TEXT("house"));
+		AActor* Owner = PerHouse.FindRef(House);
+		if (!Owner)
+		{
+			Owner = World->SpawnActor<AActor>(AActor::StaticClass(), FTransform(A));
+			if (!Owner)
+			{
+				++Warnings;
+				continue;
+			}
+			USceneComponent* Root = NewObject<USceneComponent>(Owner, TEXT("Racine"), RF_Transactional);
+			Root->SetMobility(EComponentMobility::Static);
+			Owner->SetRootComponent(Root);
+			Owner->AddInstanceComponent(Root);
+			Root->RegisterComponent();
+			Owner->SetActorLocation(A);
+			Tag(Owner, FString::Printf(TEXT("VP_Escalier_%d"), PerHouse.Num()), TEXT("VillageProvence/Escaliers"), true);
+			PerHouse.Add(House, Owner);
+		}
+		const FVector Dir = B - A;
+		const float Thickness = 6.f;
+		UBoxComponent* Box = NewObject<UBoxComponent>(Owner, *FString::Printf(TEXT("Rampe_%d"), Index++), RF_Transactional);
+		Box->SetMobility(EComponentMobility::Static);
+		Box->SetupAttachment(Owner->GetRootComponent());
+		Box->SetBoxExtent(FVector(Dir.Size() * 0.5f, Width * 0.5f, Thickness * 0.5f));
+		const FRotator Rot = Dir.Rotation();
+		Box->SetWorldLocationAndRotation((A + B) * 0.5f - Rot.RotateVector(FVector::UpVector) * Thickness * 0.5f, Rot);
+		Box->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
+		Box->SetCollisionObjectType(ECC_WorldStatic);
+		Box->SetCollisionResponseToAllChannels(ECR_Ignore);
+		Box->SetCollisionResponseToChannel(ECC_Pawn, ECR_Block);
+		Box->SetCanEverAffectNavigation(true);
+		Box->SetHiddenInGame(true);
+		Box->ShapeColor = FColor(80, 200, 255);
+		Box->ComponentTags.AddUnique(FName(TEXT("VP_RampeEscalier")));
+		Owner->AddInstanceComponent(Box);
+		Box->RegisterComponent();
 	}
 }
 

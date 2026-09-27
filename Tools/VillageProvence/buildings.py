@@ -1369,7 +1369,8 @@ if __name__ == "__main__":
     themes = {b["id"]: (b.get("visit_plan") or {}).get("theme", "") for b in VISITED}
     for dr in MOVING_DOORS:
         dr["theme"] = themes.get(dr["house"], "")
-    out = dict(doors=MOVING_DOORS, visit=[dict(id=b["id"], x=b["poly"].centroid.x, y=b["poly"].centroid.y, z=b["zref"], style=b["style"], plan=b.get("visit_plan"))
+    ramps = [dict(house=b["id"], a=r_[0], b=r_[1], width=r_[2]) for b in VISITED for r_ in b.get("stair_ramps", [])]
+    out = dict(doors=MOVING_DOORS, ramps=ramps, visit=[dict(id=b["id"], x=b["poly"].centroid.x, y=b["poly"].centroid.y, z=b["zref"], style=b["style"], plan=b.get("visit_plan"))
                       for b in VISITED],
                meta=[b["meta"] for b in blds if "meta" in b],
                chunks={k: v.arrays() for k, v in chunks.items()}, specials={k: (v[0].arrays(), v[1]) for k, v in specials.items()},

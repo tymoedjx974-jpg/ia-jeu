@@ -347,12 +347,15 @@ for dr in B.get("doors", []):
     ouverte = dr.get("theme") in ("saccagee",) or (dr.get("theme") not in ("refuge", "bourgeoise") and _rng_doors.random() < 0.15)
     manifest["doors"].append(dict(loc=loc, yaw=round(float(-np.degrees(dr["yaw"])), 2), mesh=f"Mod_{dr['leaf']}", scale=round(dr["sx"], 3),
                                   open_angle=-100.0 * dr.get("open_sign", 1), color=dr["color"], open=bool(ouverte), house=dr["house"]))
+# rampes de collision invisibles posées sur les escaliers (montée fluide pour le joueur, navmesh continu pour les IA)
+manifest["stair_ramps"] = [dict(house=r["house"], a=to_ue_points([r["a"]])[0].round(1).tolist(), b=to_ue_points([r["b"]])[0].round(1).tolist(),
+                                width=round(r["width"] * 100.0, 1)) for r in B.get("ramps", [])]
 manifest["visitable_houses"] = [dict(id=v["id"], loc=to_ue_points([(v["x"], v["y"], v["z"])])[0].round(1).tolist(), style=v["style"],
                                      theme=(v.get("plan") or {}).get("theme", ""))
                                 for v in B.get("visit", [])]
 manifest["parkour"] = [dict(kind=r["kind"], loc=to_ue_points([(r["x"], r["y"], r.get("z", 0.0))])[0].round(1).tolist()) for r in Z["route"]]
-print("zombies : %d points d'apparition, %d maisons visitables (%d portes), %d éléments de parcours"
-      % (len(manifest["zombie_spawns"]), len(manifest["visitable_houses"]), len(manifest["doors"]), len(manifest["parkour"])))
+print("zombies : %d points d'apparition, %d maisons visitables (%d portes, %d rampes d'escalier), %d éléments de parcours"
+      % (len(manifest["zombie_spawns"]), len(manifest["visitable_houses"]), len(manifest["doors"]), len(manifest["stair_ramps"]), len(manifest["parkour"])))
 print("export terminé en %.0fs" % (time.time() - T0))
 with open(os.path.join(OUT, "Village.json"), "w", encoding="utf-8") as f:
     json.dump(manifest, f, ensure_ascii=False, indent=1)

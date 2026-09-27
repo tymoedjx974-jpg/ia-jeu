@@ -63,6 +63,10 @@ Les autres commandes du même menu :
 
 ## 4. Un village envahi par les zombies
 
+| | |
+| --- | --- |
+| ![Rue envahie](Docs/rue_envahie.jpg) | ![Camp de survivants devant la mairie](Docs/camp_survivants.jpg) |
+
 Le village garde son style provençal, mais il a été abandonné dans l'urgence :
 
 - **Rues** : 300 voitures abandonnées (citadines, berlines, fourgonnettes, épaves brûlées), dont certaines en travers de la route. Un barrage de police bloque la route principale à l'entrée du village. Il y a aussi des sacs-poubelle, des poubelles renversées, des palettes, des caisses, des pneus, des gravats et des terrasses de café renversées.
@@ -97,6 +101,10 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 ## 5. Maisons visitables
 
+| | |
+| --- | --- |
+| ![Pièce à vivre : cuisine, séjour, cheminée, escalier](Docs/interieur_rdc.jpg) | ![Chambre à l'étage](Docs/interieur_chambre.jpg) |
+
 34 maisons du village s'ouvrent : la porte d'entrée est ouverte, et les fenêtres des deux premiers niveaux sont ouvertes, sans vitre. On peut entrer par la porte, ou par une fenêtre en parkour.
 
 - **Rez-de-chaussée, pièce à vivre** : séjour avec cheminée en pierre, canapé, fauteuil, table basse, bibliothèque et tapis provençal. Côté cuisine : plan de travail peint avec évier en grès et cuisinière, crédence en faïence, réfrigérateur, vaisselier, table avec nappe provençale et chaises paillées, suspension.
@@ -108,6 +116,8 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 La position de chaque maison est dans `VP_PointsApparition → Maisons Visitables`. Tu peux y cacher du butin ou des zombies. Les intérieurs ne sont éclairés que par les fenêtres : ils sont sombres, et une lampe torche fait son effet.
 
 ## 6. Parkour
+
+![Passages entre les toits, rampe et échafaudage](Docs/toits_parkour.jpg)
 
 Ajoute le composant **TM Parkour** du plugin TMMouvements à ton personnage (voir son README). Il sert à se hisser, franchir des obstacles et monter aux échelles. Le village offre des parcours de toit en toit :
 

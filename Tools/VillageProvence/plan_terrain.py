@@ -294,6 +294,8 @@ roads = [r for r in roads if not (r["cls"] in ("service", "residential", "living
                                    and r["line"].intersection(ring_all).length > 0.6 * r["line"].length
                                    and r["line"].distance(mas_zone) > 25)]
 _cut("residential", ring_all)
+# haies de cyprès brise-vent : retirées des champs (on veut quelques cyprès, pas des murs), gardées autour des mas
+V["hedges"] = [h for h in V["hedges"] if h.intersection(ring_all).length < 0.5 * h.length or h.distance(mas_zone) < 20]
 print("ceinture : %d maisons gardées sur %d, %d dessertes retirées" % (len(mas), len(_in_ring), _n_roads - len(roads)))
 water = unary_union(V["ponds"] + V["pools"])
 

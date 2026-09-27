@@ -622,7 +622,7 @@ def furnish_rdc(b, pl, inst, rng, Wp, yaw_a):
         return None
 
     def hang(room, n, names=("Int_Cadre",)):
-        Pw = Placer(blocks + tall, [])
+        Pw = Placer(blocks + tall, [], None if pl.get("rect", True) else pl["ip_local"].buffer(-0.02))
         for k in range(n):
             nm = names[k % len(names)]
             sd = ALL[int(rng.integers(4))]
@@ -700,137 +700,176 @@ def furnish_rdc(b, pl, inst, rng, Wp, yaw_a):
         rear = tuple(sorted((xp - sgn * PART, -sgn * L / 2))) + (-W / 2, W / 2)
     else:
         front, rear = full, None
-    # côté opposé à l'entrée : là où va le comptoir
     ent = pl["main"]["side"]
     opp = {"+x": "-x", "-x": "+x", "+y": "-y", "-y": "+y"}[ent]
     lat = ("+y", "-y") if ent in ("+x", "-x") else ("+x", "-x")
     far_sides = (opp,) + lat
-    if theme in ("boulangerie", "boucherie", "glacier"):
-        comptoir = {"boulangerie": "Int_ComptoirPain", "boucherie": "Int_ComptoirViande", "glacier": "Int_ComptoirGlaces"}[theme]
-        got = P.wall(front, opp, comptoir, pref=0.5, gap=0.9)
-        if got:
-            put(comptoir, got[0], got[1], l0, got[2], paint)
+    across = 0.0 if ent in ("+y", "-y") else math.pi / 2          # meubles d'îlot parallèles à la façade d'entrée
+    shape = pl["ip_local"]
+    area_f = shape.intersection(sbox(front[0], front[2], front[1], front[3])).area
+
+    def fill_wall(room, sides, name, n, col=(255, 255, 255), gap=0.03):
+        got_n = 0
+        for pref in (0.5, 0.15, 0.85, 0.3, 0.7, 0.05, 0.95, 0.4, 0.6, 0.22, 0.78):
+            for sd in sides:
+                if got_n >= n:
+                    return got_n
+                got = P.wall(room, sd, name, pref=pref, gap=gap)
+                if got:
+                    put(name, got[0], got[1], l0, got[2], col)
+                    got_n += 1
+        return got_n
+
+    def fill_floor(room, name, n, yaw=0.0, pad=0.45, col=(255, 255, 255), after=None):
+        w_, d_, _ = SIZE[name]
+        if abs(math.sin(yaw)) > 0.7:
+            w_, d_ = d_, w_
+        sx_, sy_ = w_ + 2 * pad, d_ + 2 * pad
+        xs_ = np.arange(room[0] + sx_ / 2, room[1] - sx_ / 2 + 1e-6, sx_)
+        ys_ = np.arange(room[2] + sy_ / 2, room[3] - sy_ / 2 + 1e-6, sy_)
+        spots = [(x_, y_) for x_ in xs_ for y_ in ys_]
+        got_n = 0
+        for x_, y_ in spots:
+            if got_n >= n:
+                break
+            if P.at(name, x_, y_, yaw, pad=pad * 0.8):
+                put(name, x_, y_, l0, yaw, col)
+                got_n += 1
+                if after:
+                    after(x_, y_)
+        return got_n
+
+    def counter(name, col=(255, 255, 255)):
         for sd in far_sides:
-            wall(front, (sd,), "Int_EtagerePain" if theme == "boulangerie" else "Int_EtagereBocaux", pref=float(rng.random()))
+            got = P.wall(front, sd, name, pref=0.5, gap=0.9)
+            if got:
+                put(name, got[0], got[1], l0, got[2], col)
+                return got
+        return None
+
+    n_wall = max(2, int(area_f / 7))
+    if theme in ("boulangerie", "boucherie", "glacier"):
+        counter({"boulangerie": "Int_ComptoirPain", "boucherie": "Int_ComptoirViande", "glacier": "Int_ComptoirGlaces"}[theme], paint)
+        fill_wall(front, far_sides, "Int_EtagerePain" if theme == "boulangerie" else "Int_EtagereBocaux", n_wall)
         if theme == "glacier":
-            for k in range(2):
-                centre(front, "Table_Cafe")
+            fill_floor(front, "Table_Cafe", int(area_f / 9), pad=0.6,
+                       after=lambda x_, y_: [put("Chaise_Bistrot", x_ + 0.5 * math.cos(g_), y_ + 0.5 * math.sin(g_), l0, g_ + math.pi / 2)
+                                             for g_ in (0.0, math.pi)])
         if rear:
             if theme == "boulangerie":
-                wall(rear, ALL, "Int_FourPain")
-                wall(rear, ALL, "Int_Petrin")
-            for k in range(3):
-                wall(rear, ALL, "Int_Carton", pref=float(rng.random()))
+                fill_wall(rear, ALL, "Int_FourPain", 1)
+                fill_wall(rear, ALL, "Int_Petrin", 1)
+            fill_wall(rear, ALL, "Int_Carton", 3)
     elif theme in ("cafe", "restaurant"):
-        got = P.wall(front, opp, "Int_ComptoirBar", pref=0.5, gap=0.9) if theme == "cafe" or rng.random() < 0.5 else None
-        if got:
-            put("Int_ComptoirBar", got[0], got[1], l0, got[2])
-            ox, oy = -math.sin(got[2]), math.cos(got[2])        # vers le mur
-            tx, ty = math.cos(got[2]), math.sin(got[2])
-            for k in (-1, 0, 1):
-                sx_, sy_ = got[0] - ox * 0.7 + tx * k * 0.7, got[1] - oy * 0.7 + ty * k * 0.7
-                if P.at("Int_Tabouret", sx_, sy_, 0.0):
-                    put("Int_Tabouret", sx_, sy_, l0, 0.0)
-            wall(front, (opp,), "Int_CasierBouteilles", pref=0.1)
-        # tables de bistrot (ou tables de restaurant avec nappe)
-        n_t = 0
-        for k in range(8):
-            x_ = rng.uniform(front[0] + 0.9, front[1] - 0.9)
-            y_ = rng.uniform(front[2] + 0.9, front[3] - 0.9)
-            tname = "Table_Cafe" if theme == "cafe" else "Int_TableCuisine"
-            if P.at(tname, x_, y_, 0.0, pad=0.55):
-                put(tname, x_, y_, l0, 0.0, fabric)
-                n_t += 1
-                if theme == "restaurant":
-                    seats = [(x_, y_ + 0.62, 0.0), (x_, y_ - 0.62, math.pi)]
-                else:
-                    seats = [(x_ + 0.5 * math.cos(g_), y_ + 0.5 * math.sin(g_), g_ + math.pi / 2) for g_ in (0.0, math.pi / 2, math.pi, -math.pi / 2)]
-                for cx_, cy_, yw_ in seats:
-                    chair = "Chaise_Bistrot" if theme == "cafe" else "Int_Chaise"
-                    if wreck and rng.random() < 0.3:
-                        chair = "Int_ChaiseRenversee"
-                    put(chair, cx_, cy_, l0, yw_)
-        hang(front, 2)
-        if rear:
-            wall(rear, ALL, "Int_PlanTravail", paint)
-            wall(rear, ALL, "Int_Frigo")
-            wall(rear, ALL, "Int_EtagereBocaux")
-            wall(rear, ALL, "Int_CasierBouteilles")
-    elif theme in ("epicerie", "cave"):
-        wall(front, (opp,) + lat, "Int_Caisse", paint, pref=0.8)
-        if theme == "epicerie":
-            for k in range(3):
-                centre(front, "Int_Gondole", 0.0 if ent in ("+y", "-y") else math.pi / 2)
-            for sd in lat:
-                wall(front, (sd,), "Int_EtagereBocaux", pref=float(rng.random()))
-            wall(front, ALL, "Int_Cagettes", pref=float(rng.random()))
-        else:
-            for sd in far_sides:
-                wall(front, (sd,), "Int_CasierBouteilles", pref=0.3)
-                wall(front, (sd,), "Int_CasierBouteilles", pref=0.7)
-            for k in range(2):
-                wall(front, ALL, "Int_Tonneau", pref=float(rng.random()))
-        if rear:
-            for k in range(4):
-                wall(rear, ALL, "Int_Carton", pref=float(rng.random()))
-            wall(rear, ALL, "Int_EtagereOutils")
-    elif theme == "pharmacie":
-        got = P.wall(front, opp, "Int_ComptoirPharmacie", pref=0.5, gap=0.9)
-        if got:
-            put("Int_ComptoirPharmacie", got[0], got[1], l0, got[2])
-        for sd in far_sides:
-            wall(front, (sd,), "Int_RayonPharmacie", pref=0.3)
-            wall(front, (sd,), "Int_RayonPharmacie", pref=0.75)
-        centre(front, "Int_PresentoirSavons")
-        if rear:
-            wall(rear, ALL, "Int_ArmoireArchives")
-            for k in range(3):
-                wall(rear, ALL, "Int_Carton", pref=float(rng.random()))
-    elif theme == "coiffeur":
-        for k in range(3):
-            got = wall(front, lat, "Int_FauteuilCoiffeur", pref=0.25 + 0.25 * k)
+        if theme == "cafe" or rng.random() < 0.5:
+            got = counter("Int_ComptoirBar")
             if got:
+                ox, oy = -math.sin(got[2]), math.cos(got[2])
+                tx, ty = math.cos(got[2]), math.sin(got[2])
+                for k in (-1, 0, 1):
+                    sx_, sy_ = got[0] - ox * 0.75 + tx * k * 0.7, got[1] - oy * 0.75 + ty * k * 0.7
+                    if P.at("Int_Tabouret", sx_, sy_, 0.0):
+                        put("Int_Tabouret", sx_, sy_, l0, 0.0)
+            fill_wall(front, far_sides, "Int_CasierBouteilles", 1)
+
+        def seats(x_, y_):
+            if theme == "restaurant":
+                sl = [(x_, y_ + 0.62, 0.0), (x_, y_ - 0.62, math.pi)]
+            else:
+                sl = [(x_ + 0.5 * math.cos(g_), y_ + 0.5 * math.sin(g_), g_ + math.pi / 2) for g_ in (0.0, math.pi / 2, math.pi, -math.pi / 2)]
+            for cx_, cy_, yw_ in sl:
+                chair = "Chaise_Bistrot" if theme == "cafe" else "Int_Chaise"
+                if wreck and rng.random() < 0.3:
+                    chair = "Int_ChaiseRenversee"
+                put(chair, cx_, cy_, l0, yw_)
+        fill_floor(front, "Table_Cafe" if theme == "cafe" else "Int_TableCuisine", max(2, int(area_f / 6)),
+                   pad=0.55 if theme == "cafe" else 0.7, col=fabric, after=seats)
+        fill_wall(front, lat, "Int_Plante", 1)
+        hang(front, max(2, int(area_f / 8)))
+        if rear:
+            fill_wall(rear, ALL, "Int_PlanTravail", 1, paint)
+            fill_wall(rear, ALL, "Int_Frigo", 1)
+            fill_wall(rear, ALL, "Int_EtagereBocaux", 2)
+            fill_wall(rear, ALL, "Int_CasierBouteilles", 1)
+    elif theme in ("epicerie", "cave"):
+        counter("Int_Caisse", paint)
+        if theme == "epicerie":
+            fill_wall(front, far_sides, "Int_EtagereBocaux", n_wall)
+            fill_floor(front, "Int_Gondole", max(1, int(area_f / 8)), yaw=across, pad=0.6)
+            fill_wall(front, ALL, "Int_Cagettes", 2)
+        else:
+            fill_wall(front, far_sides, "Int_CasierBouteilles", n_wall)
+            fill_floor(front, "Int_Tonneau", max(1, int(area_f / 10)), yaw=across, pad=0.5)
+        if rear:
+            fill_wall(rear, ALL, "Int_Carton", 4)
+            fill_wall(rear, ALL, "Int_EtagereOutils", 1)
+    elif theme == "pharmacie":
+        counter("Int_ComptoirPharmacie")
+        fill_wall(front, far_sides, "Int_RayonPharmacie", n_wall)
+        fill_floor(front, "Int_PresentoirSavons", max(1, int(area_f / 14)), yaw=across, pad=0.7)
+        if rear:
+            fill_wall(rear, ALL, "Int_ArmoireArchives", 2)
+            fill_wall(rear, ALL, "Int_Carton", 3)
+    elif theme == "coiffeur":
+        for k in range(max(2, int(area_f / 6))):
+            got = P.wall(front, lat[k % 2], "Int_FauteuilCoiffeur", pref=0.2 + 0.2 * (k // 2))
+            if got:
+                put("Int_FauteuilCoiffeur", got[0], got[1], l0, got[2])
                 put("Int_Miroir", got[0] - math.sin(got[2]) * 0.3, got[1] + math.cos(got[2]) * 0.3, l0 - 0.2, got[2])
-        wall(front, (opp,), "Int_Caisse", paint)
-        wall(front, ALL, "Int_BancAttente", pref=float(rng.random()))
-        wall(front, ALL, "Int_Plante", pref=float(rng.random()))
+        counter("Int_Caisse", paint)
+        fill_wall(front, ALL, "Int_BancAttente", 1)
+        fill_wall(front, ALL, "Int_Plante", 2)
     elif theme == "galerie":
-        for k in range(2):
-            centre(front, "Int_PresentoirPoterie" if k else "Int_PresentoirLivres")
-        hang(front, 6)
-        wall(front, (opp,), "Int_Bureau")
+        fill_floor(front, "Int_PresentoirPoterie", max(1, int(area_f / 16)), yaw=across, pad=0.9)
+        fill_floor(front, "Int_PresentoirLivres", max(1, int(area_f / 24)), yaw=across, pad=0.9)
+        fill_wall(front, ALL, "Int_Statue", max(1, int(area_f / 25)))
+        hang(front, max(4, int(area_f / 3)))
+        counter("Int_Bureau")
     elif theme.startswith("boutique"):
         fill = {"boutique_savons": "Int_PresentoirSavons", "boutique_poterie": "Int_PresentoirPoterie"}.get(theme, "Int_PresentoirSantons")
-        for k in range(2):
-            centre(front, fill)
-        for sd in far_sides:
-            wall(front, (sd,), "Int_EtagereBocaux", pref=float(rng.random()))
-        wall(front, (opp,) + lat, "Int_Caisse", paint)
+        counter("Int_Caisse", paint)
+        fill_floor(front, fill, max(1, int(area_f / 9)), yaw=across, pad=0.6)
+        fill_wall(front, far_sides, "Int_EtagereBocaux", n_wall)
         hang(front, 2)
     elif theme == "accueil":
-        wall(front, (opp,) + lat, "Int_Bureau")
-        wall(front, ALL, "Int_BancAttente", pref=float(rng.random()))
-        wall(front, ALL, "Int_Bibliotheque", pref=float(rng.random()))
-        centre(front, "Int_PresentoirLivres")
-        wall(front, ALL, "Int_Plante", pref=float(rng.random()))
-        hang(front, 3)
-    elif theme == "mairie":
-        # accueil de la mairie / salle du conseil et des mariages
-        wall(front, (opp,), "Int_Drapeaux", pref=0.5)
-        centre(front, "Int_TableManger", 0.0 if ent in ("+y", "-y") else math.pi / 2)
-        for k in range(8):
-            x_ = rng.uniform(front[0] + 0.6, front[1] - 0.6)
-            y_ = rng.uniform(front[2] + 0.6, front[3] - 0.6)
-            if P.at("Int_Chaise", x_, y_, 0.0, pad=0.1):
-                put("Int_Chaise", x_, y_, l0, float(rng.choice([0.0, math.pi])))
-        wall(front, lat, "Int_BancAttente")
-        wall(front, lat, "Int_ArmoireArchives")
-        wall(front, ALL, "Int_Bureau", pref=float(rng.random()))
-        hang(front, 3)
+        counter("Int_Bureau")
+        fill_wall(front, ALL, "Int_BancAttente", max(1, int(area_f / 12)))
+        fill_wall(front, ALL, "Int_Bibliotheque", max(1, int(area_f / 10)))
+        fill_floor(front, "Int_PresentoirLivres", max(1, int(area_f / 20)), yaw=across, pad=0.8)
+        fill_wall(front, ALL, "Int_Plante", 2)
+        hang(front, max(3, int(area_f / 6)))
         if rear:
-            wall(rear, ALL, "Int_ArmoireArchives")
-            wall(rear, ALL, "Int_ArmoireArchives")
-            wall(rear, ALL, "Int_Bureau")
+            fill_wall(rear, ALL, "Int_ArmoireArchives", 2)
+    elif theme == "mairie":
+        # salle du conseil et des mariages : grande table et drapeaux, rangées de chaises tournées vers la table
+        spot = []
+        fill_floor(front, "Int_TableManger", 1, yaw=across, pad=0.9, after=lambda x_, y_: spot.append((x_, y_)))
+        if spot:
+            tx_, ty_ = spot[0]
+            nx_, ny_ = (0.0, 1.0) if abs(math.sin(across)) < 0.5 else (1.0, 0.0)      # perpendiculaire à la table
+            for k in (-1, 0, 1):
+                put("Int_Chaise", tx_ + nx_ * 0.62 + ny_ * k * 0.62, ty_ + ny_ * 0.62 + nx_ * k * 0.62, l0,
+                    across + (0.0 if abs(math.sin(across)) < 0.5 else 0.0))
+            yaw_pub = across + math.pi
+            n_ch = 0
+            for row in range(2, 16):
+                for k in range(-8, 9):
+                    if k == 0:
+                        continue                                          # allée centrale
+                    cx_ = tx_ - nx_ * (0.8 + 0.85 * row) + ny_ * k * 0.55
+                    cy_ = ty_ - ny_ * (0.8 + 0.85 * row) + nx_ * k * 0.55
+                    if P.at("Int_Chaise", cx_, cy_, yaw_pub, pad=0.03):
+                        put("Int_Chaise", cx_, cy_, l0, yaw_pub)
+                        n_ch += 1
+        fill_wall(front, far_sides, "Int_Drapeaux", 1)
+        fill_wall(front, lat, "Int_BancAttente", 2)
+        fill_wall(front, ALL, "Int_ArmoireArchives", 2)
+        fill_wall(front, ALL, "Int_Bureau", 1)
+        fill_wall(front, ALL, "Int_Plante", 2)
+        hang(front, max(3, int(area_f / 10)))
+        if rear:
+            fill_wall(rear, ALL, "Int_ArmoireArchives", 3)
+            fill_wall(rear, ALL, "Int_Bureau", 1)
     if looted:
         for k in range(int(rng.integers(2, 5))):
             wall(full, ALL, "Int_Carton", pref=float(rng.random()))

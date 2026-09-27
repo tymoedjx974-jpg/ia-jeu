@@ -1,5 +1,5 @@
 """Étape 2 : bâtiments provençaux (maisons de village, mas, villas, remises, église, beffroi, mairie, commerces)."""
-import sys, pickle, json, math, time, hashlib, collections
+import sys, os, pickle, json, math, time, hashlib, collections
 sys.path.insert(0, ".")
 from common import *
 from geomlib import MB, planar_polygon, triangulate, tube, box, revolve, disk, rect_sign, nrm, WHITE
@@ -958,15 +958,14 @@ def landmark(b, mb, inst):
     holes_of = collections.defaultdict(list)
     church_open = []
     if st != "belfry":
-        short = sorted(info, key=lambda e: e["L"])[:2]
-        fac = max(short, key=lambda e: (1 if e["street"] else 0, -np.linalg.norm((e["p0"] + e["p1"]) / 2 - np.array([-19.0, 21.0]))))
+        fac = church_facade(b, info)
         fi = next(i for i, e in enumerate(info) if e is fac)
-        gdoor = float(fac["g_out"].max())
+        gdoor = church_floor(b, fac)
         Lf = fac["L"]
-        arch = [(Lf / 2 + 0.9 * math.cos(t_), gdoor + 3.2 + 0.9 * math.sin(t_)) for t_ in np.linspace(0, math.pi, 9)]
-        holes_of[fi].append([(Lf / 2 - 0.9, gdoor), (Lf / 2 + 0.9, gdoor)] + arch[1:-1] + [])
-        holes_of[fi][-1] = [(Lf / 2 - 0.9, gdoor), (Lf / 2 + 0.9, gdoor), (Lf / 2 + 0.9, gdoor + 3.2)] + arch[1:-1] + [(Lf / 2 - 0.9, gdoor + 3.2)]
-        church_open.append((fi, Lf / 2, 1.8, gdoor, gdoor + 3.2))
+        sp = portal_s(fac)
+        arch = [(sp + 0.9 * math.cos(t_), gdoor + 3.2 + 0.9 * math.sin(t_)) for t_ in np.linspace(0, math.pi, 9)]
+        holes_of[fi].append([(sp - 0.9, gdoor), (sp + 0.9, gdoor), (sp + 0.9, gdoor + 3.2)] + arch[1:-1] + [(sp - 0.9, gdoor + 3.2)])
+        church_open.append((fi, sp, 1.8, gdoor, gdoor + 3.2))
         for e in sorted(info, key=lambda e: -e["L"])[:2]:
             if e["party"]:
                 continue
@@ -1032,12 +1031,12 @@ def landmark(b, mb, inst):
                     tube(mb, "TuilesCanal", pts3, 0.13, segs=6, arc=math.pi, arc0=-math.pi / 2, u_tile=2, v_tile=2)
     genoise(b, mb, info, planes)
     # façade = petit côté le plus proche d'une rue / place
-    short = sorted(info, key=lambda e: e["L"])[:2]
-    fac = max(short, key=lambda e: (1 if e["street"] else 0, -np.linalg.norm((e["p0"] + e["p1"]) / 2 - np.array([-19.0, 21.0]))))
-    mid = (fac["p0"] + fac["p1"]) / 2
+    fac = church_facade(b, info)
+    mid = fac["p0"] + fac["u"] * portal_s(fac)
     out3 = np.array([fac["out"][0], fac["out"][1], 0.0])
     u3 = np.array([fac["u"][0], fac["u"][1], 0.0])
-    gdoor = float(fac["g_out"].max())
+    gdoor = church_floor(b, fac)
+    g_front = float(gz(*(mid + fac["out"] * 1.5)))
     # portail : vantaux + arc en pierre + marches
     yaw = math.atan2(fac["u"][1], fac["u"][0])
     dc = np.array([mid[0], mid[1], gdoor])
@@ -1053,6 +1052,14 @@ def landmark(b, mb, inst):
         box(mb, "PierreTaille", dc + out3 * 0.12 + u3 * sd * 1.15 + np.array([0, 0, 1.6]), (0.32, 0.25, 3.2), yaw=yaw, uv_scale=3)
     for k in range(3):
         box(mb, "PierreTaille", dc + out3 * (0.5 + 0.35 * (2 - k)) + np.array([0, 0, -0.08 - 0.16 * k]), (3.4 + 0.5 * k, 0.4 + 0.35 * k * 0.0, 0.16), yaw=yaw, uv_scale=3)
+    # le sol de la nef est au-dessus de la rue (église sur la pente) : volée de marches devant le portail
+    extra = gdoor - 0.48 - g_front
+    if extra > 0.05:
+        ns = int(math.ceil(extra / 0.16))
+        for k in range(ns):
+            zt = gdoor - 0.48 - (k + 1) * 0.16
+            ctr = dc + out3 * (1.4 + 0.33 * k)
+            box(mb, "PierreTaille", (ctr[0], ctr[1], (zt + g_front - 0.3) / 2 + 0.08), (4.4, 0.34, zt - g_front + 0.3 + 0.16), yaw=yaw, uv_scale=3)
     # oculus
     oc_c = dc + out3 * 0.05 + np.array([0, 0, 6.0])
     disk(mb, "Verre", oc_c, 0.55, out3, (0, 0, 1), 20, WHITE)
@@ -1081,6 +1088,35 @@ def landmark(b, mb, inst):
     tower(mb, tc, math.atan2(fac["u"][1], fac["u"][0]), tw_, base, eave + 10.0)
 
 
+def church_facade(b, info):
+    """Façade de l'église : un vrai petit côté (perpendiculaire au grand axe, assez long), donnant sur la place de préférence."""
+    axis = b["ombr"][1]
+    cands = [e for e in info if abs(float(e["u"] @ axis)) < 0.5 and e["L"] >= 4.0 and not e["party"]]
+    if not cands:
+        cands = sorted(info, key=lambda e: -e["L"])[:4]
+    return max(cands, key=lambda e: (1 if e["street"] else 0, -np.linalg.norm((e["p0"] + e["p1"]) / 2 - np.array([-19.0, 21.0]))))
+
+
+def church_floor(b, fac):
+    """Niveau du sol de la nef : au-dessus du terrain en tout point de l'emprise (église sur la pente)."""
+    p = b["poly"]
+    x0, y0, x1, y1 = p.bounds
+    xs, ys = np.meshgrid(np.linspace(x0, x1, 12), np.linspace(y0, y1, 12))
+    pts = [(x, y) for x, y in zip(xs.ravel(), ys.ravel()) if p.contains(Point(x, y))]
+    g = max([float(gz(x, y)) for x, y in pts] + [float(fac["g_out"].max())])
+    return g + 0.08
+
+
+def portal_s(fac, tw_=4.2):
+    """Position du portail le long de la façade : au milieu de la partie que le clocher (dans l'angle) laisse libre."""
+    Lf = fac["L"]
+    near_p0 = np.linalg.norm(fac["p0"] - np.array([-19.0, 21.0])) < np.linalg.norm(fac["p1"] - np.array([-19.0, 21.0]))
+    free0 = tw_ + 0.4
+    if Lf - free0 < 2.6:
+        return Lf / 2
+    return (free0 + Lf) / 2 if near_p0 else (Lf - free0) / 2
+
+
 def church_interior(b, mb, inst, info, fac, gdoor, openings, eave):
     """Intérieur de l'église : murs épais (tableaux des ouvertures), sol dallé, voûte en berceau, nef avec bancs, autel."""
     from shapely.geometry import box as sbox_
@@ -1092,14 +1128,19 @@ def church_interior(b, mb, inst, info, fac, gdoor, openings, eave):
     corner = fac["p0"] if np.linalg.norm(fac["p0"] - np.array([-19.0, 21.0])) < np.linalg.norm(fac["p1"] - np.array([-19.0, 21.0])) else fac["p1"]
     inward_u = (fac["u"] if corner is fac["p0"] else -fac["u"])
     tc = corner + inward_u * 2.2 + (-fac["out"]) * 2.2
-    tw_poly = affinity.rotate(sbox_(tc[0] - 2.1 - T, tc[1] - 2.1 - T, tc[0] + 2.1 + T, tc[1] + 2.1 + T), math.degrees(math.atan2(fac["u"][1], fac["u"][0])),
+    tw_poly = affinity.rotate(sbox_(tc[0] - 2.2, tc[1] - 2.2, tc[0] + 2.2, tc[1] + 2.2), math.degrees(math.atan2(fac["u"][1], fac["u"][0])),
                               origin=(tc[0], tc[1]))
     ip = p.buffer(-T, join_style=2).difference(tw_poly)
     if ip.geom_type != "Polygon":
         ip = max(getattr(ip, "geoms", [ip]), key=lambda g: g.area)
     ip = ip.simplify(0.05)
-    c, a, L, W = ombr(ip)
+    # repère de la nef : axe a perpendiculaire à la façade (vers l'intérieur), q le long de la façade
+    a = -np.asarray(fac["out"], float)
     q = np.array([-a[1], a[0]])
+    P_ = np.array(ip.exterior.coords)
+    pa, pq = P_ @ a, P_ @ q
+    L, W = float(pa.max() - pa.min()), float(pq.max() - pq.min())
+    c = a * (pa.max() + pa.min()) / 2 + q * (pq.max() + pq.min()) / 2
     zs = min(eave - 1.6, l0 + 6.6)                     # naissance de la voûte
     hv = min(W / 2, eave - 0.5 - zs)
     # tableaux (épaisseur des murs) du portail et des fenêtres, vitres des fenêtres
@@ -1152,8 +1193,8 @@ def church_interior(b, mb, inst, info, fac, gdoor, openings, eave):
         pts = [tuple(c + a * x + q * (math.cos(t) * (W / 2 - 0.05))) + (zs + math.sin(t) * (hv - 0.05),) for t in np.linspace(0, math.pi, 15)]
         tube(mb, "PierreTaille", pts, 0.16, segs=6, u_tile=3, v_tile=3)
     # mobilier : l'autel à l'opposé de la façade, bancs de part et d'autre de l'allée centrale
-    mid = (fac["p0"] + fac["p1"]) / 2
-    sf = 1.0 if (mid - c) @ a > 0 else -1.0
+    mid = fac["p0"] + fac["u"] * portal_s(fac)
+    sf = -1.0                                           # la façade est du côté -a
     to_altar = -sf * a
     yaw_face = math.atan2(to_altar[0], -to_altar[1])         # la façade des meubles (-Y local) regarde l'autel
     inside = ip.buffer(-0.1)
@@ -1165,36 +1206,43 @@ def church_interior(b, mb, inst, info, fac, gdoor, openings, eave):
         r = affinity.rotate(sbox_(P_[0] - w_ / 2, P_[1] - d_ / 2, P_[0] + w_ / 2, P_[1] + d_ / 2), math.degrees(yaw_), origin=(P_[0], P_[1]))
         return inside.contains(r)
 
-    xa = -sf * (L / 2 - 1.3)
-    alt = c + a * xa
-    if fits(alt, 3.4, 2.2, yaw_face):
-        put("Int_Autel", alt, yaw_face + math.pi)
+    ya = float((mid - c) @ q)
+
+    def place_fit(name, x0, y0, w_, d_, yaw_, step=(-0.2, 0.0), n=20, yaw_put=None):
+        """Place le meuble au premier endroit libre en reculant pas à pas (murs biais, chapelles)."""
+        for k in range(n):
+            P_ = c + a * (x0 + step[0] * k) + q * (y0 + step[1] * k)
+            if fits(P_, w_, d_, yaw_):
+                put(name, P_, yaw_ if yaw_put is None else yaw_put)
+                return float(x0 + step[0] * k)
+        return None
+
+    xa = place_fit("Int_Autel", L / 2 - 1.3, ya, 3.4, 2.2, yaw_face, yaw_put=yaw_face + math.pi) or (L / 2 - 1.3)
     for sy in (-1, 1):
-        put("Int_Chandelier", c + a * (xa + sf * 1.6) + q * sy * 1.3, 0.0)
-        st_ = c + a * (xa + sf * 0.4) + q * sy * (W / 2 - 0.5)
-        if fits(st_, 0.55, 0.55, 0.0):
-            put("Int_Statue", st_, yaw_face)
-    pu = c + a * (xa + sf * 2.2) + q * (W / 2 - 1.2)
-    if fits(pu, 0.55, 0.45, yaw_face):
-        put("Int_Pupitre", pu, yaw_face + math.pi)
+        place_fit("Int_Chandelier", xa - 1.6, ya + sy * 1.3, 0.34, 0.34, 0.0, n=8)
+        place_fit("Int_Statue", xa + 0.4, ya + sy * 4.0, 0.55, 0.55, yaw_face, step=(-0.3, sy * 0.3), n=16)
+    place_fit("Int_Pupitre", xa - 2.2, ya + 2.2, 0.55, 0.45, yaw_face, n=10, yaw_put=yaw_face + math.pi)
+    xa = -sf * (xa if xa else L / 2 - 1.3)
     aisle = 0.8
-    pew_w = min(3.0, W / 2 - aisle - 0.25)
     x = xa + sf * 3.4
     rows = 0
-    while abs(x) < L / 2 - 2.6 and pew_w > 1.2:
+    while abs(x) < L / 2 - 2.6:
         for sy in (-1, 1):
-            P_ = c + a * x + q * sy * (aisle + pew_w / 2)
+            avail = (W / 2 - sy * ya) - aisle - 0.25
+            pew_w = min(3.0, avail)
+            if pew_w < 1.2:
+                continue
+            P_ = c + a * x + q * (ya + sy * (aisle + pew_w / 2))
             if fits(P_, pew_w, 0.8, yaw_face):
                 put("Int_BancEglise", P_, yaw_face, pew_w / 3.0)
         rows += 1
         x += sf * 1.05
-    # confessionnal et bénitier
-    cf = c + a * (xa + sf * (L * 0.55)) + q * -(W / 2 - 0.45)
-    if fits(cf, 1.8, 0.9, 0.0):
-        put("Int_Confessionnal", cf, math.atan2(a[1], a[0]))
-    bn = c + a * (sf * (L / 2 - 1.2)) + q * 1.2
-    if fits(bn, 0.6, 0.6, 0.0):
-        put("Int_Benitier", bn, 0.0)
+    # confessionnal contre un mur latéral, bénitier près du portail
+    for sy in (1, -1):
+        if place_fit("Int_Confessionnal", 0.0, sy * (W / 2 - 0.6), 1.8, 0.9, math.atan2(a[1], a[0]) + (0.0 if sy < 0 else math.pi),
+                     step=(0.5, -sy * 0.15), n=20) is not None:
+            break
+    place_fit("Int_Benitier", -L / 2 + 1.6, ya + 1.3, 0.6, 0.6, 0.0, step=(0.2, 0.1), n=15)
     ein = mid - fac["out"] * 0.9 - c
     b["visit_plan"] = dict(theme="eglise", kind="eglise", c=[float(c[0]), float(c[1])], a=[float(a[0]), float(a[1])], L=float(L), W=float(W),
                            l0=float(l0), lv=[float(l0)], rows=rows,

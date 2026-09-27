@@ -27,14 +27,24 @@ scene.load_instances(B["inst"], bbox)
 bl.setup_world(sun_elev=35, sun_azim=200, exposure=expo)
 bl.setup_render(1280, 720, samples=28)
 bpy.context.scene.cycles.max_bounces = 8
-if corner < 0 and pl.get("entree"):
+if corner in (-2, -3) and pl.get("spiral"):
+    sx, sy, dx, dy = pl["spiral"]
+    if corner == -2:        # colimaçon vu depuis la chambre
+        p0 = Wp(sx + dx * 3.0, sy + dy * 1.6)
+        p1 = Wp(sx, sy)
+        z_look = 1.3
+    else:                   # grenier vu depuis le palier
+        p0 = Wp(sx + dx * 0.5, sy + dy * 0.5)
+        p1 = Wp(sx + dx * 6.0, sy + dy * 2.0)
+        z_look = 0.6
+elif corner < 0 and pl.get("entree"):
     # depuis la porte d'entrée, vers l'intérieur
     ex, ey, dx, dy = pl["entree"]
     p0 = Wp(ex + dx * 0.9, ey + dy * 0.9)
     p1 = Wp(ex + dx * 6.0, ey + dy * 6.0)
 else:
-    sx, sy = [(-1, -1), (1, 1), (-1, 1), (1, -1)][corner]
+    sx, sy = [(-1, -1), (1, 1), (-1, 1), (1, -1)][max(corner, 0)]
     p0 = Wp(sx * (L / 2 - 0.45), sy * (W / 2 - 0.45))
     p1 = Wp(-sx * (L / 2 - 0.8), -sy * (W / 2 - 0.8))
-bl.camera((p0[0], p0[1], z + 1.65), (p1[0], p1[1], z + 0.8), lens=15)
+bl.camera((p0[0], p0[1], z + 1.65), (p1[0], p1[1], z + (z_look if corner in (-2, -3) else 0.8)), lens=15 if corner != -2 else 18)
 bl.render(out)

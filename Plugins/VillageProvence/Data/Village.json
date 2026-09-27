@@ -12010,7 +12010,7 @@
    "loc": [
     -3960.1,
     -5404.1,
-    2932.2
+    2893.8
    ],
    "yaw": 0.0,
    "folder": "VillageProvence/Monuments",
@@ -13855,19 +13855,6 @@
   {
    "mesh": "Mod_Chaise_Bistrot",
    "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
-    -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Chaise_Bistrot",
-   "color": [
     40,
     80,
     60
@@ -13902,7 +13889,7 @@
     0,
     0
    ],
-   "count": 4
+   "count": 15
   },
   {
    "mesh": "Mod_Drapeau_EU",
@@ -14136,7 +14123,7 @@
     -1,
     0
    ],
-   "count": 18
+   "count": 19
   },
   {
    "mesh": "Mod_Fenestron",
@@ -22612,7 +22599,7 @@
     -1,
     0
    ],
-   "count": 21
+   "count": 20
   },
   {
    "mesh": "Mod_Fenetre_MiClose",
@@ -24640,7 +24627,7 @@
     -1,
     0
    ],
-   "count": 16
+   "count": 17
   },
   {
    "mesh": "Mod_Fenetre_Nue",
@@ -27188,7 +27175,7 @@
     -1,
     0
    ],
-   "count": 138
+   "count": 135
   },
   {
    "mesh": "Mod_Fenetre_Ouverte",
@@ -30139,7 +30126,7 @@
     -1,
     0
    ],
-   "count": 76
+   "count": 77
   },
   {
    "mesh": "Mod_Fenetre_Persiennes",
@@ -31894,6 +31881,32 @@
     -1,
     -1
    ],
+   "count": 4
+  },
+  {
+   "mesh": "Mod_Int_ArmoireArchives",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    0
+   ],
+   "count": 2
+  },
+  {
+   "mesh": "Mod_Int_Autel",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    0
+   ],
    "count": 1
   },
   {
@@ -32050,7 +32063,7 @@
     -1,
     -2
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_BancAttente",
@@ -32063,7 +32076,7 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 8
   },
   {
    "mesh": "Mod_Int_BancAttente",
@@ -32076,7 +32089,7 @@
     0,
     -1
    ],
-   "count": 1
+   "count": 3
   },
   {
    "mesh": "Mod_Int_BancAttente",
@@ -32089,7 +32102,7 @@
     1,
     -1
    ],
-   "count": 1
+   "count": 8
   },
   {
    "mesh": "Mod_Int_BancEglise",
@@ -32102,7 +32115,7 @@
     -1,
     0
    ],
-   "count": 37
+   "count": 33
   },
   {
    "mesh": "Mod_Int_Benitier",
@@ -32154,7 +32167,7 @@
     -1,
     -2
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Bibliotheque",
@@ -32167,7 +32180,7 @@
     -1,
     -1
    ],
-   "count": 8
+   "count": 10
   },
   {
    "mesh": "Mod_Int_Bibliotheque",
@@ -32219,7 +32232,7 @@
     0,
     -1
    ],
-   "count": 17
+   "count": 20
   },
   {
    "mesh": "Mod_Int_Bibliotheque",
@@ -32245,7 +32258,7 @@
     1,
     -1
    ],
-   "count": 4
+   "count": 13
   },
   {
    "mesh": "Mod_Int_Buffet",
@@ -32750,9 +32763,22 @@
    ],
    "cell": [
     -1,
+    -2
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_Bureau",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
     -1
    ],
-   "count": 4
+   "count": 5
   },
   {
    "mesh": "Mod_Int_Bureau",
@@ -32778,7 +32804,7 @@
     0,
     -1
    ],
-   "count": 8
+   "count": 9
   },
   {
    "mesh": "Mod_Int_Bureau",
@@ -32791,7 +32817,7 @@
     0,
     0
    ],
-   "count": 3
+   "count": 4
   },
   {
    "mesh": "Mod_Int_Bureau",
@@ -32804,7 +32830,7 @@
     1,
     -1
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_Cadre",
@@ -32843,7 +32869,7 @@
     -1,
     -2
    ],
-   "count": 9
+   "count": 7
   },
   {
    "mesh": "Mod_Int_Cadre",
@@ -32856,7 +32882,7 @@
     -1,
     -1
    ],
-   "count": 58
+   "count": 53
   },
   {
    "mesh": "Mod_Int_Cadre",
@@ -32869,7 +32895,7 @@
     -1,
     0
    ],
-   "count": 39
+   "count": 44
   },
   {
    "mesh": "Mod_Int_Cadre",
@@ -32908,7 +32934,7 @@
     0,
     -1
    ],
-   "count": 125
+   "count": 131
   },
   {
    "mesh": "Mod_Int_Cadre",
@@ -32921,7 +32947,7 @@
     0,
     0
    ],
-   "count": 31
+   "count": 30
   },
   {
    "mesh": "Mod_Int_Cadre",
@@ -32934,7 +32960,7 @@
     1,
     -1
    ],
-   "count": 33
+   "count": 43
   },
   {
    "mesh": "Mod_Int_Cagettes",
@@ -32947,7 +32973,7 @@
     0,
     -1
    ],
-   "count": 2
+   "count": 4
   },
   {
    "mesh": "Mod_Int_Caisse",
@@ -32999,7 +33025,7 @@
     0,
     0
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_Caisse",
@@ -33324,7 +33350,7 @@
     -1,
     -2
    ],
-   "count": 6
+   "count": 4
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -33337,7 +33363,7 @@
     -1,
     -1
    ],
-   "count": 44
+   "count": 38
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -33350,7 +33376,7 @@
     -1,
     0
    ],
-   "count": 12
+   "count": 14
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -33389,7 +33415,7 @@
     0,
     -1
    ],
-   "count": 77
+   "count": 78
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -33402,7 +33428,7 @@
     0,
     0
    ],
-   "count": 25
+   "count": 20
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -33451,10 +33477,23 @@
     255
    ],
    "cell": [
+    -1,
+    -1
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_CasierBouteilles",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
     0,
     -1
    ],
-   "count": 4
+   "count": 5
   },
   {
    "mesh": "Mod_Int_CasierBouteilles",
@@ -33467,7 +33506,7 @@
     0,
     0
    ],
-   "count": 9
+   "count": 20
   },
   {
    "mesh": "Mod_Int_Chaise",
@@ -33532,7 +33571,7 @@
     -1,
     0
    ],
-   "count": 60
+   "count": 59
   },
   {
    "mesh": "Mod_Int_Chaise",
@@ -33571,7 +33610,7 @@
     0,
     -1
    ],
-   "count": 100
+   "count": 103
   },
   {
    "mesh": "Mod_Int_Chaise",
@@ -33584,7 +33623,7 @@
     0,
     0
    ],
-   "count": 28
+   "count": 45
   },
   {
    "mesh": "Mod_Int_Chaise",
@@ -33610,7 +33649,7 @@
     -1,
     -2
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_ChaiseRenversee",
@@ -33623,7 +33662,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 6
   },
   {
    "mesh": "Mod_Int_ChaiseRenversee",
@@ -33636,7 +33675,7 @@
     -1,
     0
    ],
-   "count": 3
+   "count": 4
   },
   {
    "mesh": "Mod_Int_ChaiseRenversee",
@@ -33675,7 +33714,7 @@
     0,
     0
    ],
-   "count": 7
+   "count": 12
   },
   {
    "mesh": "Mod_Int_ChaiseRenversee",
@@ -33688,7 +33727,7 @@
     1,
     -1
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Chandelier",
@@ -34166,8 +34205,34 @@
     255
    ],
    "cell": [
+    -1,
+    -1
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_ComptoirBar",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
     0,
     -1
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_ComptoirBar",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    0
    ],
    "count": 1
   },
@@ -34220,6 +34285,19 @@
    "cell": [
     0,
     -1
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_Confessionnal",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    0
    ],
    "count": 1
   },
@@ -34403,7 +34481,7 @@
     -1,
     -1
    ],
-   "count": 14
+   "count": 16
   },
   {
    "mesh": "Mod_Int_EtagereBocaux",
@@ -34442,7 +34520,7 @@
     0,
     -1
    ],
-   "count": 16
+   "count": 24
   },
   {
    "mesh": "Mod_Int_EtagereBocaux",
@@ -34520,7 +34598,20 @@
     0,
     -1
    ],
-   "count": 5
+   "count": 4
+  },
+  {
+   "mesh": "Mod_Int_EtagereOutils",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    0
+   ],
+   "count": 1
   },
   {
    "mesh": "Mod_Int_EvierPierre",
@@ -35131,7 +35222,7 @@
     0,
     -1
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Gondole",
@@ -35144,7 +35235,7 @@
     0,
     0
    ],
-   "count": 1
+   "count": 11
   },
   {
    "mesh": "Mod_Int_Horloge",
@@ -37848,7 +37939,7 @@
     -1,
     -2
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Int_Plante",
@@ -37861,7 +37952,7 @@
     -1,
     -1
    ],
-   "count": 10
+   "count": 14
   },
   {
    "mesh": "Mod_Int_Plante",
@@ -37874,7 +37965,7 @@
     -1,
     0
    ],
-   "count": 7
+   "count": 8
   },
   {
    "mesh": "Mod_Int_Plante",
@@ -37913,7 +38004,7 @@
     0,
     -1
    ],
-   "count": 32
+   "count": 36
   },
   {
    "mesh": "Mod_Int_Plante",
@@ -37926,7 +38017,7 @@
     0,
     0
    ],
-   "count": 5
+   "count": 8
   },
   {
    "mesh": "Mod_Int_Plante",
@@ -37939,7 +38030,7 @@
     1,
     -1
    ],
-   "count": 10
+   "count": 11
   },
   {
    "mesh": "Mod_Int_Poele",
@@ -38069,7 +38160,7 @@
     -1,
     -1
    ],
-   "count": 3
+   "count": 7
   },
   {
    "mesh": "Mod_Int_PresentoirLivres",
@@ -38082,7 +38173,7 @@
     0,
     -1
    ],
-   "count": 4
+   "count": 10
   },
   {
    "mesh": "Mod_Int_PresentoirLivres",
@@ -38095,7 +38186,33 @@
     1,
     -1
    ],
-   "count": 2
+   "count": 13
+  },
+  {
+   "mesh": "Mod_Int_PresentoirPoterie",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    -1
+   ],
+   "count": 9
+  },
+  {
+   "mesh": "Mod_Int_PresentoirPoterie",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    0
+   ],
+   "count": 1
   },
   {
    "mesh": "Mod_Int_PresentoirSantons",
@@ -38119,22 +38236,9 @@
    ],
    "cell": [
     -1,
-    -1
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Int_PresentoirSavons",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
     0
    ],
-   "count": 1
+   "count": 8
   },
   {
    "mesh": "Mod_Int_PresentoirSavons",
@@ -38147,7 +38251,7 @@
     0,
     -1
    ],
-   "count": 1
+   "count": 4
   },
   {
    "mesh": "Mod_Int_Pupitre",
@@ -38173,7 +38277,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Int_RayonPharmacie",
@@ -38186,7 +38290,7 @@
     -1,
     0
    ],
-   "count": 3
+   "count": 4
   },
   {
    "mesh": "Mod_Int_RayonPharmacie",
@@ -38199,7 +38303,7 @@
     0,
     -1
    ],
-   "count": 6
+   "count": 8
   },
   {
    "mesh": "Mod_Int_Rechaud",
@@ -38340,9 +38444,35 @@
    ],
    "cell": [
     -1,
+    -1
+   ],
+   "count": 2
+  },
+  {
+   "mesh": "Mod_Int_Statue",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
     0
    ],
-   "count": 1
+   "count": 6
+  },
+  {
+   "mesh": "Mod_Int_Statue",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    -1
+   ],
+   "count": 2
   },
   {
    "mesh": "Mod_Int_Suspension",
@@ -38810,7 +38940,7 @@
     0,
     -1
    ],
-   "count": 6
+   "count": 9
   },
   {
    "mesh": "Mod_Int_TableCuisine",
@@ -38823,7 +38953,7 @@
     0,
     -1
    ],
-   "count": 7
+   "count": 8
   },
   {
    "mesh": "Mod_Int_TableCuisine",
@@ -39080,8 +39210,34 @@
     255
    ],
    "cell": [
+    -1,
+    -1
+   ],
+   "count": 3
+  },
+  {
+   "mesh": "Mod_Int_Tabouret",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
     0,
     -1
+   ],
+   "count": 3
+  },
+  {
+   "mesh": "Mod_Int_Tabouret",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    0
    ],
    "count": 3
   },
@@ -39512,7 +39668,7 @@
     0,
     0
    ],
-   "count": 2
+   "count": 45
   },
   {
    "mesh": "Mod_Int_WC",
@@ -39681,7 +39837,7 @@
     -1,
     0
    ],
-   "count": 107
+   "count": 106
   },
   {
    "mesh": "Mod_Jardiniere",
@@ -41397,7 +41553,7 @@
     -1,
     0
    ],
-   "count": 8
+   "count": 9
   },
   {
    "mesh": "Mod_Porte",
@@ -43958,7 +44114,7 @@
     -1,
     0
    ],
-   "count": 6
+   "count": 5
   },
   {
    "mesh": "Mod_PorteFenetre_Balcon",
@@ -46766,7 +46922,7 @@
     -1,
     0
    ],
-   "count": 18
+   "count": 19
   },
   {
    "mesh": "Mod_Porte_Simple",
@@ -48365,7 +48521,7 @@
     -1,
     0
    ],
-   "count": 64
+   "count": 65
   },
   {
    "mesh": "Mod_Pot_Geranium",
@@ -48625,7 +48781,7 @@
     -1,
     0
    ],
-   "count": 37
+   "count": 38
   },
   {
    "mesh": "Mod_Pot_Rose",
@@ -49917,19 +50073,6 @@
   {
    "mesh": "Mod_Table_Cafe",
    "color": [
-    90,
-    120,
-    150
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Table_Cafe",
-   "color": [
     255,
     255,
     255
@@ -49938,7 +50081,7 @@
     -1,
     -1
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Table_Cafe",
@@ -49952,19 +50095,6 @@
     0
    ],
    "count": 2
-  },
-  {
-   "mesh": "Mod_Table_Cafe",
-   "color": [
-    70,
-    104,
-    160
-   ],
-   "cell": [
-    0,
-    -1
-   ],
-   "count": 1
   },
   {
    "mesh": "Mod_Table_Cafe",
@@ -49990,7 +50120,7 @@
     0,
     0
    ],
-   "count": 2
+   "count": 6
   },
   {
    "mesh": "Mod_Table_Cafe",
@@ -53019,7 +53149,7 @@
     -1,
     0
    ],
-   "count": 21
+   "count": 24
   },
   {
    "mesh": "Mod_Z_PlanchesPorte",
@@ -53812,7 +53942,7 @@
     -1,
     -1
    ],
-   "count": 36
+   "count": 35
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -53825,7 +53955,7 @@
     -1,
     0
    ],
-   "count": 32
+   "count": 31
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -53851,7 +53981,7 @@
     0,
     -1
    ],
-   "count": 47
+   "count": 44
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -53864,7 +53994,7 @@
     0,
     0
    ],
-   "count": 24
+   "count": 25
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -53929,7 +54059,20 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Z_TableRenversee",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    0
+   ],
+   "count": 1
   },
   {
    "mesh": "Mod_Z_TableRenversee",
@@ -53942,7 +54085,7 @@
     0,
     -1
    ],
-   "count": 5
+   "count": 4
   },
   {
    "mesh": "Mod_Z_TableRenversee",
@@ -53955,7 +54098,7 @@
     0,
     0
    ],
-   "count": 3
+   "count": 5
   },
   {
    "mesh": "Mod_Z_Tag_aidez_nous",
@@ -53994,7 +54137,7 @@
     -1,
     0
    ],
-   "count": 26
+   "count": 27
   },
   {
    "mesh": "Mod_Z_Tag_croix",
@@ -54228,7 +54371,7 @@
     -1,
     0
    ],
-   "count": 5
+   "count": 7
   },
   {
    "mesh": "Mod_Z_Tag_sang_main",
@@ -54280,7 +54423,7 @@
     -1,
     0
    ],
-   "count": 23
+   "count": 26
   },
   {
    "mesh": "Mod_Z_Tag_suie",
@@ -54384,7 +54527,7 @@
     -1,
     0
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Z_Tag_vide_3",
@@ -54423,7 +54566,7 @@
     -1,
     0
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Z_Tag_zone_infectee",
@@ -76169,9 +76312,9 @@
    3409.0
   ],
   [
-   -3913.8,
-   -5461.8,
-   3409.6
+   -3977.0,
+   -5561.4,
+   3146.5
   ],
   [
    277.0,
@@ -77371,11 +77514,11 @@
   },
   {
    "loc": [
-    -5364.8,
-    -5982.6,
-    3397.6
+    -2567.8,
+    -5925.7,
+    3134.5
    ],
-   "yaw": 158.4,
+   "yaw": -113.95,
    "mesh": "Mod_Vantail_EgliseG",
    "scale": 1.0,
    "open_angle": -100.0,
@@ -77389,11 +77532,11 @@
   },
   {
    "loc": [
-    -5532.1,
-    -5916.3,
-    3397.6
+    -2640.8,
+    -6090.2,
+    3134.5
    ],
-   "yaw": 158.4,
+   "yaw": -113.95,
    "mesh": "Mod_Vantail_EgliseD",
    "scale": 1.0,
    "open_angle": 100.0,
@@ -79668,7 +79811,7 @@
    "loc": [
     -3960.1,
     -5404.1,
-    3399.6
+    3136.5
    ],
    "style": "church",
    "theme": "eglise"

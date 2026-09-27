@@ -355,6 +355,23 @@ for p in V["plaza"]:
     ground[j0:j1, i0:i1] = (plane * (1 - w) + sub * w).astype(np.float32)
     plaza_planes.append((p, float(gxp), float(gyp), c0))
 V["plaza_planes"] = plaza_planes
+# églises et chapelles (visitables) : terrain creusé sous l'emprise, au niveau le plus bas de ses abords (bâties en terrasse)
+for bd in blds:
+    if not (bd["name"] == "Église Saint-Michel" or bd["cls"] in ("church", "chapel")):
+        continue
+    pg = bd["poly"]
+    ring = pg.buffer(1.5).exterior
+    rp = [ring.interpolate(t, normalized=True) for t in np.linspace(0, 1, 60)]
+    level = float(min(grid_sample(ground, [q_.x], [q_.y], order=1)[0] for q_ in rp)) - 0.2
+    x0, y0, x1, y1 = pg.buffer(1.0).bounds
+    i0 = max(0, int((x0 - ZONE["xmin"]) / RES)); i1 = min(NX, int((x1 - ZONE["xmin"]) / RES) + 2)
+    j0 = max(0, int((y0 - ZONE["ymin"]) / RES)); j1 = min(NY, int((y1 - ZONE["ymin"]) / RES) + 2)
+    sx, sy = np.meshgrid(XS[i0:i1], YS[j0:j1])
+    inside = shapely.contains_xy(pg.buffer(0.6), sx, sy)
+    sub = ground[j0:j1, i0:i1]
+    sub[inside] = np.minimum(sub[inside], level)
+    ground[j0:j1, i0:i1] = sub
+    print("église : terrain creusé à %.1f m sous l'emprise" % level)
 print("terrain + routes + places %.0f s" % (time.time() - t0))
 
 # ---------------------------------------------------------------- couches du sol

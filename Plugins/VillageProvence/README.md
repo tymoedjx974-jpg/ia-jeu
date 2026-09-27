@@ -101,7 +101,9 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 ## 5. Bâtiments visitables
 
-![Quatre intérieurs : maison bourgeoise, atelier, refuge de survivants, maison de grand-mère](Docs/interieurs_varies.jpg)
+| | |
+| --- | --- |
+| ![Église, mairie, pharmacie, épicerie](Docs/batiments_visitables_1.jpg) | ![Café, colimaçon, maisons de plain-pied](Docs/batiments_visitables_2.jpg) |
 
 135 bâtiments du village s'ouvrent. On entre par la porte (elle s'ouvre toute seule quand le joueur approche), ou par une fenêtre en parkour : les fenêtres des niveaux aménagés sont ouvertes, sans vitre.
 
@@ -115,6 +117,8 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 | Église | 1 | portail à deux battants, nef voûtée avec arcs de pierre, 19 rangées de bancs, autel et retable, chandeliers, statues, lutrin, confessionnal, bénitier, vitraux |
 
 **Commerces** : boulangerie (comptoir-vitrine, étagères à pain, four et pétrin dans l'arrière-boutique), café (comptoir en zinc, tabourets, tables de bistrot), restaurant (tables nappées), glacier, épicerie (rayonnages, cagettes de fruits, caisse), cave à vins (casiers, tonneaux), pharmacie (rayons blancs, comptoir), coiffeur (fauteuils et miroirs), galeries et boutiques de santons, poteries et savons (présentoirs), accueil (office de tourisme, poste, hôtel). La moitié des commerces ont été pillés (marchandises renversées, cartons, traces de sang).
+
+![Quatre intérieurs de maisons : bourgeoise, atelier, refuge de survivants, grand-mère](Docs/interieurs_varies.jpg)
 
 **Huit ambiances pour les maisons**, tirées au hasard (les villas penchent vers la maison bourgeoise, les mas vers la salle commune et l'atelier) :
 
@@ -145,7 +149,7 @@ Chaque bâtiment visitable a une vraie porte (acteur **AVPPorte**, dossier `Vill
 - **Verrouillée** : la porte ne s'ouvre plus (maison barricadée, objectif) ; fonctions **Ouvrir**, **Fermer**, **Basculer**, **Est Ouverte**, **Définir État** ;
 - pendant le mouvement, le vantail ne bloque pas le joueur (on ne reste pas coincé), et le navmesh traverse l'embrasure.
 
-Les portes des maisons saccagées et quelques autres sont ouvertes au départ. La position de chaque maison est aussi dans `VP_PointsApparition → Maisons Visitables` : tu peux y cacher du butin ou des zombies. Les intérieurs ne sont éclairés que par les fenêtres : ils sont sombres, et une lampe torche fait son effet.
+Les portes des maisons saccagées et quelques autres sont ouvertes au départ. La position de chaque maison est aussi dans `VP_PointsApparition → Maisons Visitables` : tu peux y cacher du butin ou des zombies. Les intérieurs ne sont éclairés que par les fenêtres : ils sont sombres (les greniers n'ont presque pas de fenêtres), et une lampe torche fait son effet.
 
 ## 6. Parkour
 

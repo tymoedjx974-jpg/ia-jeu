@@ -23,7 +23,7 @@ STAIR_W = 1.05      # largeur de l'escalier droit
 TREAD = 0.25        # giron
 RISE_MAX = 0.19     # hauteur de marche maximale
 OPEN_STEPS = 4      # marches d'accès sans garde-corps quand le bas de la volée touche le mur
-GAPS = (0.9, 0.6, 0.0)  # palier de départ entre le mur du fond et la 1re marche (le plus grand qui rentre)
+GAPS = (0.9, 0.6, 0.4, 0.0)  # palier de départ entre le mur du fond et la 1re marche (le plus grand qui rentre)
 PART = 0.1          # épaisseur des cloisons
 COL_PLAFOND = (247, 244, 238, 255)
 DOOR_TYPES = ("Porte", "Porte_Simple", "Remise", "Vitrine", "Vitrine_SansStore")
@@ -237,17 +237,12 @@ def plan(b, info, openings, gz):
                        for o in locs if o["floor"] == 0 and not o["door"] and o["side"] == side_band)
             # ensuite on préfère un vrai palier en bas de l'escalier (on arrive face à la 1re marche, pas collé au mur)
             found.append(((hide > 0.05, -gap, hide, len(found)), dict(s=s, d=d, end=end, st=st, gap=gap, xc=hit, band=band, y_b=y_b)))
-            break
-    if found:
-        found.sort(key=lambda f: f[0])
-        best = found[0][1]
-        STAIRS["fenêtre condamnée derrière" if found[0][0][0] else "mur plein"] += 1
-        STAIRS["palier %.1f m" % best["gap"]] += 1
-    if not best:
+    if not found:
         REJECT[kind + ":escalier"] += 1
         return None
-    spiral = None
-    if nlev == 3:
+    found.sort(key=lambda f: f[0])
+
+    def spiral_for(best):
         # colimaçon dans un angle de la chambre (au fond), sinon contre la cloison de la salle de bain, côté mur plein
         far = -best["end"]
         dd, ss = best["d"], best["s"]
@@ -269,13 +264,27 @@ def plan(b, info, openings, gz):
             if not any(o["floor"] in (1, 2) and o["side"] == sd_ and overlaps(*o["span"], lo_, hi_, 0.05)
                        and ("Porte" in o["type"] or o["z0"] < pl_lv(o["floor"]) + 0.5)
                        for sd_, lo_, hi_ in walls_ for o in locs):
-                spiral = (sx_, sy_, dxr, dyr)
+                if abs(far - best["xc"]) >= SPIRAL + 2.4:
+                    return (sx_, sy_, dxr, dyr)
+                return None
+        return None
+
+    key, best = found[0]
+    spiral = None
+    if nlev == 3:
+        # le colimaçon passe avant le palier de départ : on prend le 1er escalier droit qui lui laisse la place
+        for k_, b_ in found:
+            spiral = spiral_for(b_)
+            if spiral:
+                key, best = k_, b_
                 break
-        if spiral is None or abs(far - best["xc"]) < SPIRAL + 2.4:
+        if spiral is None:
             REJECT["maison:pas de colimaçon"] += 1
             base.update(nlev=2, top=lv[2] - (0.05 if b["nf"] == 2 else SLAB))
             base["ctop"] = base["top"]
             spiral = None
+    STAIRS["fenêtre condamnée derrière" if key[0] else "mur plein"] += 1
+    STAIRS["palier %.1f m" % best["gap"]] += 1
     return dict(base, n=n, rise=rise, run=run, spiral=spiral, **best)
 
 

@@ -28,7 +28,11 @@ views = {
     "int_rdc": (Wp(far - d * 0.45, -s * (W / 2 - 0.45)), l0 + 1.6, Wp(end + d * 1.0, s * 0.2), l0 + 1.0, 16),
     "int_etage": (Wp(xc + d * 0.4, -s * (W / 2 - 0.4)), l1 + 1.6, Wp(far - d * 0.6, s * 0.5), l1 + 0.6, 16),
     "int_escalier": (Wp(far - d * 0.8, s * (W / 2 - 1.5)), l0 + 1.5, Wp(end + d * 1.2, s * (W / 2 - 0.5)), l0 + 2.2, 18),
+    "int_cuisine": (Wp(far - d * 3.3, s * 0.3), l0 + 1.6, Wp(far - d * 0.6, -s * (W / 2 - 0.3)), l0 + 0.9, 18),
+    "int_sdb": (Wp(xc - d * 0.15, pl["band"][0] - s * 0.65 if s > 0 else pl["band"][1] - s * 0.65), l1 + 1.6, Wp(end + d * 0.4, -s * (W / 2 - 0.4)), l1 + 0.7, 16),
 }
+only = sys.argv[4].split(",") if len(sys.argv) > 4 else None
+views = {k: v for k, v in views.items() if only is None or k in only}
 for name, (p0, z0, p1, z1, lens) in views.items():
     bl.camera((p0[0], p0[1], z0), (p1[0], p1[1], z1), lens=lens, name=name)
     t = time.time()

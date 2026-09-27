@@ -319,6 +319,56 @@ def build(b, pl, mb, inst, rng):
     ya, yb2 = sorted((yo, y_b))
     _partition(mb, Wp, yaw_a, (xc, ya), (xc, yb2), l1, ctop, [(y_door, 0.85, 2.05)], COL_ETAGE, along_y=True)
 
+    # ---------- faïence murale de la salle de bain (1,25 m), interrompue aux portes et aux fenêtres
+    bx0, bx1 = sorted((end, xc))
+    by0, by1 = sorted((-s * W / 2, y_b - s * PART))
+    side_band = "+y" if s > 0 else "-y"
+    side_other = "-y" if s > 0 else "+y"
+    side_end = "-x" if d > 0 else "+x"
+    walls = [  # (côté, point de départ, point d'arrivée) dans le repère local, face tournée vers la pièce
+        (side_other, (bx0, -s * W / 2 + s * 0.005), (bx1, -s * W / 2 + s * 0.005)),
+        (side_band, (bx0, y_b - s * PART - s * 0.005), (bx1, y_b - s * PART - s * 0.005)),
+        (side_end, (end + d * 0.005, by0), (end + d * 0.005, by1)),
+        ("C", (xc - d * (PART / 2 + 0.005), by0), (xc - d * (PART / 2 + 0.005), by1)),
+    ]
+    y_door = y_b - s * 0.6
+    for side, (ax, ay), (bxx, byy) in walls:
+        along_x = abs(bxx - ax) > abs(byy - ay)
+        lo, hi = (ax, bxx) if along_x else (ay, byy)
+        cuts = []
+        for lo_ in pl["locs"]:
+            if lo_["floor"] == 1 and lo_["side"] == side and lo_["z0"] < l1 + 1.3:
+                cuts.append((lo_["span"][0] - 0.05, lo_["span"][1] + 0.05))
+        if side == "C":
+            cuts.append((y_door - 0.5, y_door + 0.5))
+        segs, cur = [], lo
+        for c0, c1 in sorted(cuts):
+            if c0 > cur:
+                segs.append((cur, min(c0, hi)))
+            cur = max(cur, c1)
+        if cur < hi:
+            segs.append((cur, hi))
+        room_c = np.array(((bx0 + bx1) / 2, (by0 + by1) / 2))
+        for a0, a1 in segs:
+            if a1 - a0 < 0.1:
+                continue
+            if along_x:
+                P0, P1 = Wp(a0, ay), Wp(a1, ay)
+                inward = np.array([0.0, room_c[1] - ay])
+            else:
+                P0, P1 = Wp(ax, a0), Wp(ax, a1)
+                inward = np.array([room_c[0] - ax, 0.0])
+            nw = inward[0] * a + inward[1] * q
+            nw = nw / (np.linalg.norm(nw) + 1e-9)
+            L_ = a1 - a0
+            yaw_w = math.atan2(P1[1] - P0[1], P1[0] - P0[0])
+            Pc = (np.array(P0) + np.array(P1)) / 2 + nw * 0.008
+            box(mb, "Faience", (Pc[0], Pc[1], l1 + 0.625), (L_, 0.012, 1.25), yaw=yaw_w, uv_scale=1.0, faces=("-y", "+y", "+z"))
+            # frise de couronnement
+            Pm = (np.array(P0) + np.array(P1)) / 2 + nw * 0.01
+            box(mb, "Faience", (Pm[0], Pm[1], l1 + 1.265), (L_, 0.02, 0.03), yaw=math.atan2(P1[1] - P0[1], P1[0] - P0[0]),
+                col=(60, 90, 140, 255), uv_scale=1.0)
+
     # ---------- marches en pierre devant une porte plus haute que la rue
     for Pout, out, u, w, zg in pl.get("steps", []):
         hgt = l0 - zg

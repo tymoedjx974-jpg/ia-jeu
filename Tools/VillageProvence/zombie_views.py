@@ -40,8 +40,27 @@ def view(name):
         # on arrive de l'extérieur du village
         if np.dot(t, np.array([-10 - bx, 20 - by])) < 0:
             t = -t
-        cam = c - t * 16 + np.array([-t[1], t[0]]) * 1.5
-        return (cam[0], cam[1], gz(*cam) + 1.7), (c[0], c[1], gz(*c) + 1.0), 22
+        cam = c + t * 9 + np.array([-t[1], t[0]]) * 3.5
+        tgt = c - t * 8
+        return (cam[0], cam[1], gz(*cam) + 2.3), (tgt[0], tgt[1], gz(*tgt) + 0.6), 20
+    if name == "facade":
+        c, t = road_dir(-34.6, -33.8)
+        cam = c - t * 9 + np.array([-t[1], t[0]]) * 0.8
+        tgt = c + t * 4
+        return (cam[0], cam[1], gz(*cam) + 1.7), (tgt[0], tgt[1], gz(*tgt) + 2.0), 18
+    if name == "depart":
+        d = [r for r in Z["route"] if r["kind"] == "depart"]
+        d.sort(key=lambda r: math.hypot(r["x"] + 10, r["y"] - 20))
+        r = d[0]
+        p = np.array([r["x"], r["y"]])
+        k = min(range(len(V["buildings"])), key=lambda i: V["buildings"][i]["poly"].distance(Point(*p)))
+        cen = V["buildings"][k]["poly"].centroid
+        out = p - np.array([cen.x, cen.y])
+        out /= np.linalg.norm(out)
+        cam = p + out * 7.5 + np.array([-out[1], out[0]]) * 2.5
+        return (cam[0], cam[1], gz(*cam) + 1.7), (p[0], p[1], gz(*p) + 1.8), 20
+    if name == "aerien":
+        return (-95.0, -95.0, gz(-10, 20) + 55.0), (-5.0, 15.0, gz(-10, 20) + 2.0), 30
     if name == "toits":
         p = [r for r in Z["route"] if r["kind"] == "planche"]
         p.sort(key=lambda r: math.hypot(r["x"] + 10, r["y"] - 20))

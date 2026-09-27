@@ -303,6 +303,9 @@ def make_vine_row(seed, lod=0):
         v, _, _ = make_vine(seed * 10 + k, lod)
         mb.extend(v, offset=(x + rng.normal(0, 0.05), rng.normal(0, 0.04), 0.0))
     tube(mb, "BoisBrut", [(2.4, 0, -0.2), (2.4, 0, 1.35)], 0.035, segs=5)
+    # fils de palissage tendus d'un piquet à l'autre (les segments se suivent le long du rang)
+    for z in (0.62, 0.95, 1.25):
+        tube(mb, "Fer", [(-2.4, 0, z), (2.4, 0, z - 0.01)], 0.0035, segs=3, col=(150, 150, 150, 0))
     return mb, 1.5, 2.4
 
 

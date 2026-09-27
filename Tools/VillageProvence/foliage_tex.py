@@ -56,11 +56,58 @@ def palmate(L, lobes=5, serr=0.0, rng=None):
     return pts
 
 
-def draw_leaf(dc, dh, x, y, ang, shape_pts, col, vein_col, hval=200):
+def draw_leaf(dc, dh, x, y, ang, shape_pts, col, vein_col, hval=200, veins=None, L=None):
+    """Feuille modelée : liseré plus sombre, reflet, nervure centrale et secondaires plus claires, relief bombé."""
     p = [(x + px, y + py) for px, py in rot(shape_pts, ang)]
-    dc.polygon(p, fill=col)
-    dh.polygon(p, fill=hval)
+    r, g, b = col[:3]
+    dark = (int(r * 0.72), int(g * 0.72), int(b * 0.7), 255)
+    dc.polygon(p, fill=dark)
+    dh.polygon(p, fill=int(hval * 0.8))
+    # intérieur légèrement rétréci, plus clair au centre : effet de volume
+    cx = sum(q[0] for q in p) / len(p)
+    cy = sum(q[1] for q in p) / len(p)
+    for k, f in enumerate((0.86, 0.6)):
+        inner = [(cx + (qx - cx) * f, cy + (qy - cy) * f) for qx, qy in p]
+        lift = 1.0 + 0.08 * k
+        dc.polygon(inner, fill=(min(255, int(r * lift)), min(255, int(g * lift)), min(255, int(b * lift)), 255))
+        dh.polygon(inner, fill=min(255, int(hval * (0.9 + 0.1 * k))))
+    if L:
+        vc = (min(255, int(r * 1.35 + 12)), min(255, int(g * 1.3 + 12)), min(255, int(b * 1.2 + 8)), 255)
+        if veins == "palm":
+            for va in (-1.2, -0.6, 0.0, 0.6, 1.2):
+                e = (x + math.cos(ang + va) * L * 0.85, y + math.sin(ang + va) * L * 0.85)
+                dc.line([(x, y), e], fill=vc, width=max(1, SS))
+                dh.line([(x, y), e], fill=int(hval * 0.7), width=max(1, SS))
+        else:
+            e = (x + math.cos(ang) * L * 0.92, y + math.sin(ang) * L * 0.92)
+            dc.line([(x, y), e], fill=vc, width=max(1, SS))
+            dh.line([(x, y), e], fill=int(hval * 0.7), width=max(1, SS))
+            if L > 18 * SS:
+                for t in (0.3, 0.5, 0.7):
+                    bx, by = x + math.cos(ang) * L * t, y + math.sin(ang) * L * t
+                    for sd in (-1, 1):
+                        va = ang + sd * 0.9
+                        e2 = (bx + math.cos(va) * L * 0.18, by + math.sin(va) * L * 0.18)
+                        dc.line([(bx, by), e2], fill=vc[:3] + (160,), width=1)
     return p
+
+
+def vine_leaf(L, rng, lobe_depth=0.45, serr=0.06, sharp=1.0):
+    """Feuille de vigne : cinq lobes, sinus profonds, bord denté, sinus pétiolaire à la base (orientée +x)."""
+    pts = []
+    N = 240
+    lobes = [(0.0, 1.0), (0.85, 0.82), (-0.85, 0.82), (1.75, 0.55), (-1.75, 0.55)]
+    lobes = [(a + rng.normal(0, 0.06), l * rng.uniform(0.92, 1.05)) for a, l in lobes]
+    for i in range(N):
+        a = -math.pi * 0.92 + 1.84 * math.pi * i / N
+        rr = 0.0
+        for la, ll in lobes:
+            d = (a - la) / 0.42
+            rr = max(rr, ll * math.exp(-d * d * sharp))
+        rr = (1 - lobe_depth) * 0.72 + lobe_depth * rr + (1 - lobe_depth) * 0.28 * rr
+        rr *= 1 + serr * (1 if (i % 4) < 2 else -1)
+        pts.append((L * rr * math.cos(a), L * rr * math.sin(a)))
+    return pts
 
 
 class Atlas:
@@ -145,22 +192,40 @@ def twig_cluster(at, q, rng, kind, leaf_len, leaf_w, n_leaves, cols, under_col=N
                 a = a_st + sd * rng.uniform(0.5, 1.1) * spread
                 ll = leaf_len * rng.uniform(0.75, 1.2) * SS
                 ww = leaf_w * rng.uniform(0.8, 1.2) * SS
-                if kind == "palm":
-                    shp = palmate(ll * 0.5, lobes=5)
+                if kind in ("palm", "vine"):
+                    shp = vine_leaf(ll * 0.5, rng, lobe_depth=0.5 if kind == "vine" else 0.62, serr=0.05 if kind == "vine" else 0.03,
+                                    sharp=1.0 if kind == "vine" else 1.6)
                     ang = a
-                    px_, py_ = x0 + math.cos(a) * ll * 0.45, y0 + math.sin(a) * ll * 0.45
+                    px_, py_ = x0 + math.cos(a) * ll * 0.12, y0 + math.sin(a) * ll * 0.12
                 else:
                     shp = leaf_shape(kind, ll, ww)
                     ang = a
                     px_, py_ = x0, y0
                 show_under = under_col is not None and rng.random() < 0.35
                 c = jitter_col(rng, under_col if show_under else cols[rng.integers(len(cols))])
-                draw_leaf(at.dc, at.dh, px_, py_, ang, shp, c + (255,), None, hval=int(rng.uniform(150, 255)))
-                # nervure centrale
-                vx = [(px_, py_), (px_ + math.cos(ang) * ll * 0.8, py_ + math.sin(ang) * ll * 0.8)] if kind != "palm" else None
-                if vx and ll > 20 * SS:
-                    vc = tuple(min(255, int(v * 1.25)) for v in c) + (255,)
-                    at.dc.line(vx, fill=vc, width=max(1, SS))
+                draw_leaf(at.dc, at.dh, px_, py_, ang, shp, c + (255,), None, hval=int(rng.uniform(150, 255)),
+                          veins="palm" if kind in ("palm", "vine") else "mid", L=ll * (0.45 if kind in ("palm", "vine") else 1.0))
+
+
+def grapes(at, q, rng, n=3, cols=((58, 40, 70), (72, 48, 86), (48, 34, 60))):
+    """Grappes de raisin noir (grenache) accrochées sous les feuilles."""
+    ox, oy, h = at.quad(q)
+    for _ in range(n):
+        x0 = ox + h * rng.uniform(0.2, 0.8)
+        y0 = oy + h * rng.uniform(0.35, 0.6)
+        L = h * rng.uniform(0.16, 0.24)
+        at.dc.line([(x0, y0 - 12 * SS), (x0, y0)], fill=(90, 110, 60, 255), width=2 * SS)
+        for k in range(46):
+            t = rng.uniform(0, 1) ** 0.8
+            wdt = L * 0.45 * (1 - t) ** 0.7 + 3 * SS
+            px_, py_ = x0 + rng.uniform(-wdt, wdt) * 0.9, y0 + t * L
+            rr = rng.uniform(4.5, 6.5) * SS
+            c = cols[rng.integers(len(cols))]
+            at.dc.ellipse([px_ - rr, py_ - rr, px_ + rr, py_ + rr], fill=(int(c[0] * 0.7), int(c[1] * 0.7), int(c[2] * 0.7), 255))
+            at.dc.ellipse([px_ - rr * 0.8, py_ - rr * 0.85, px_ + rr * 0.7, py_ + rr * 0.6], fill=c + (255,))
+            # pruine et reflet
+            at.dc.ellipse([px_ - rr * 0.45, py_ - rr * 0.6, px_ - rr * 0.05, py_ - rr * 0.2], fill=(150, 140, 175, 255))
+            at.dh.ellipse([px_ - rr, py_ - rr, px_ + rr, py_ + rr], fill=235)
 
 
 def needles(at, q, rng, cols, n_fasc=60, needle_len=0.22, spread=2.2):
@@ -210,34 +275,59 @@ def scales(at, q, rng, cols, blobs=900, r=(3, 7)):
 
 
 def spikes(at, q, rng, stem_cols, flower_cols, n=26, flower_frac=0.3):
-    """Lavande : tiges fines + épis violets."""
+    """Lavande : touffe de feuilles étroites gris-vert, tiges fines, épis en verticilles violets (plus foncés à la base)."""
     ox, oy, h = at.quad(q)
-    for i in range(n):
-        bx = ox + h * rng.uniform(0.25, 0.75)
-        by = oy + h * 0.99
-        a = -math.pi / 2 + rng.normal(0, 0.22)
-        L = h * rng.uniform(0.6, 0.95)
-        tx, ty = bx + math.cos(a) * L, by + math.sin(a) * L
-        c = jitter_col(rng, stem_cols[rng.integers(len(stem_cols))]) + (255,)
-        at.dc.line([(bx, by), (tx, ty)], fill=c, width=2 * SS)
-        at.dh.line([(bx, by), (tx, ty)], fill=150, width=2 * SS)
-        fc = flower_cols[rng.integers(len(flower_cols))]
-        nf = rng.integers(10, 18)
-        for k in range(nf):
-            t = 1 - flower_frac * k / nf
-            px_, py_ = bx + math.cos(a) * L * t, by + math.sin(a) * L * t
-            rr = rng.uniform(3.0, 4.8) * SS * (0.7 + 0.3 * (k / nf))
-            col = jitter_col(rng, fc, 0.1) + (255,)
-            at.dc.ellipse([px_ - rr, py_ - rr, px_ + rr, py_ + rr], fill=col)
-            at.dh.ellipse([px_ - rr, py_ - rr, px_ + rr, py_ + rr], fill=255)
-        # quelques feuilles étroites en bas
-    for i in range(40):
-        bx = ox + h * rng.uniform(0.3, 0.7)
-        by = oy + h * 0.99
-        a = -math.pi / 2 + rng.normal(0, 0.5)
-        L = h * rng.uniform(0.12, 0.3)
-        c = jitter_col(rng, (110, 125, 95)) + (255,)
+    # feuillage bas, dense et argenté
+    for i in range(160):
+        bx = ox + h * rng.normal(0.5, 0.12)
+        by = oy + h * 0.995
+        a = -math.pi / 2 + rng.normal(0, 0.7)
+        L = h * rng.uniform(0.08, 0.26)
+        c = jitter_col(rng, (118, 132, 104), 0.1) + (255,)
         at.dc.line([(bx, by), (bx + math.cos(a) * L, by + math.sin(a) * L)], fill=c, width=3 * SS)
+        at.dh.line([(bx, by), (bx + math.cos(a) * L, by + math.sin(a) * L)], fill=140, width=3 * SS)
+    for i in range(n):
+        bx = ox + h * rng.normal(0.5, 0.1)
+        by = oy + h * 0.97
+        a = -math.pi / 2 + rng.normal(0, 0.2)
+        L = h * rng.uniform(0.62, 0.95)
+        # tige légèrement arquée
+        pts = []
+        cur = rng.normal(0, 0.0025)
+        for k in range(12):
+            t = k / 11
+            aa = a + cur * k * 3
+            pts.append((bx + math.cos(aa) * L * t, by + math.sin(aa) * L * t))
+        c = jitter_col(rng, stem_cols[rng.integers(len(stem_cols))]) + (255,)
+        at.dc.line(pts, fill=c, width=2 * SS)
+        at.dh.line(pts, fill=150, width=2 * SS)
+        fc = flower_cols[rng.integers(len(flower_cols))]
+        nw = rng.integers(14, 20)
+        span = flower_frac * rng.uniform(0.85, 1.15)
+        for k in range(nw):
+            # verticilles serrés en haut de l'épi, espacés vers le bas
+            t = 1 - span * (k / (nw - 1)) ** 1.6
+            fi = min(10.999, t * 11)
+            i0 = int(fi)
+            fr = fi - i0
+            px_ = pts[i0][0] * (1 - fr) + pts[i0 + 1][0] * fr
+            py_ = pts[i0][1] * (1 - fr) + pts[i0 + 1][1] * fr
+            taper = 0.55 + 0.45 * min(1.0, k / 3.0)            # pointe plus fine
+            rr = rng.uniform(3.6, 5.0) * SS * taper
+            shade = 1.0 - 0.3 * (k / nw)
+            at.dc.ellipse([px_ - rr * 1.1, py_ - rr * 0.2, px_ + rr * 1.1, py_ + rr * 0.9], fill=(45, 17, 111, 255))
+            # fleurettes : petits tubes violets qui dépassent de part et d'autre, teintes variées
+            for f_ in range(rng.integers(4, 7)):
+                ex = px_ + rng.uniform(-1.3, 1.3) * rr
+                ey = py_ + rng.uniform(-0.9, 0.5) * rr
+                fr_ = rr * rng.uniform(0.45, 0.75)
+                base_c = flower_cols[rng.integers(len(flower_cols))]
+                col = tuple(int(min(255, v * shade * rng.uniform(0.85, 1.1))) for v in base_c) + (255,)
+                at.dc.ellipse([ex - fr_, ey - fr_ * 1.2, ex + fr_, ey + fr_ * 0.9], fill=col)
+                at.dh.ellipse([ex - fr_, ey - fr_, ex + fr_, ey + fr_], fill=255)
+                if rng.random() < 0.18:
+                    hc = (172, 125, 238, 255) if rng.random() < 0.6 else (194, 148, 249, 255)
+                    at.dc.ellipse([ex - fr_ * 0.45, ey - fr_ * 0.9, ex + fr_ * 0.35, ey - fr_ * 0.2], fill=hc)
 
 
 def grass(at, q, rng, cols, n=120, height=(0.5, 0.95), heads=None):
@@ -319,7 +409,12 @@ def build():
     # Vigne : feuilles palmées
     at = Atlas(1024)
     for q in range(4):
-        twig_cluster(at, q, rng, "palm", 125, 0, 14, [(98, 132, 58), (110, 142, 60), (90, 122, 50), (128, 148, 64), (150, 150, 70)], under_col=(150, 170, 110), stem_col=(110, 90, 60), spread=1.1, opposite=False, stem_w=4)
+        if q in (1, 3):
+            grapes(at, q, rng, n=2)
+        twig_cluster(at, q, rng, "vine", 135, 0, 16, [(86, 124, 52), (100, 136, 56), (78, 112, 46), (118, 144, 60), (150, 152, 66), (170, 150, 60)],
+                     under_col=(150, 170, 110), stem_col=(110, 90, 60), spread=1.1, opposite=False, stem_w=4)
+        if q in (0, 2):
+            grapes(at, q, rng, n=1)
     at.save("FeuillesVigne", (100, 130, 60))
     # Pin : aiguilles
     at = Atlas(1024)
@@ -339,8 +434,10 @@ def build():
     # Lavande
     at = Atlas(1024)
     for q in range(4):
-        spikes(at, q, rng, [(120, 135, 105), (110, 125, 100), (135, 145, 115)], [(112, 84, 172), (128, 100, 188), (100, 74, 160), (142, 114, 198)], n=48, flower_frac=0.38)
-    at.save("Lavande", (120, 110, 150))
+        # couleurs relevées sur une photo de lavande vraie en fleur (violet bleuté soutenu, reflets mauves)
+        spikes(at, q, rng, [(110, 138, 108), (100, 128, 98), (122, 147, 120)], [(76, 48, 152), (100, 66, 178), (113, 78, 190), (130, 90, 205), (88, 56, 165)],
+               n=70, flower_frac=0.36)
+    at.save("Lavande", (100, 70, 170))
     # Herbes sèches (été provençal)
     at = Atlas(1024)
     for q in range(4):

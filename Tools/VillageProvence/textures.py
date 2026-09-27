@@ -15,7 +15,8 @@ def register(name, size_m, n):
 
 
 # ------------------------------------------------------------------ pierre
-LIMESTONE = [hex2rgb(h) for h in ("#cbbb9c", "#c0b4a1", "#d3c09a", "#b9a78b", "#c8ad84", "#aa9e8e", "#d9cfb8", "#bca88a")]
+LIMESTONE = [hex2rgb(h) for h in ("#cbbb9c", "#c0b4a1", "#d3c09a", "#b9a78b", "#c8ad84", "#aa9e8e", "#d9cfb8", "#bca88a",
+                                   "#c79a6a", "#9f968a", "#b58f66", "#dcc7a1")]
 
 
 def rubble(n, size, seed, cmin=0.09, cmax=0.24, wmin=0.12, wmax=0.5, palette=LIMESTONE, joint=(0.006, 0.02)):
@@ -57,7 +58,7 @@ def rubble(n, size, seed, cmin=0.09, cmax=0.24, wmin=0.12, wmax=0.5, palette=LIM
     j = joint[0] + (joint[1] - joint[0]) * jr + band(n, n / 30, seed + 6) * 0.003
     maxd = ndimage.maximum(d, ID, index=np.arange(ID.max() + 1)).astype(F32)[ID]
     dn = np.clip(d / np.maximum(maxd, 1e-4), 0, 1)
-    bulge = (0.004 + 0.016 * rand_per_id(ID, seed + 7)) * np.sqrt(dn)
+    bulge = (0.008 + 0.022 * rand_per_id(ID, seed + 7)) * np.sqrt(dn)
     edge = smooth(j, j + 0.025 + 0.02 * rand_per_id(ID, seed + 8), d)
     surf = band(n, n / 60, seed + 9) * 0.0025 + band(n, 8, seed + 10) * 0.0007 + noise(n, 3, seed + 11) * 0.0002
     stone = (d > j).astype(F32)
@@ -66,9 +67,15 @@ def rubble(n, size, seed, cmin=0.09, cmax=0.24, wmin=0.12, wmax=0.5, palette=LIM
     bright = 0.9 + 0.2 * rand_per_id(ID, seed + 14)
     var = 1 + 0.06 * noise(n, n / 20, seed + 15) + 0.04 * band(n, 6, seed + 16)
     alb = col * (bright * var)[..., None]
-    alb *= (0.8 + 0.2 * edge)[..., None]
-    mortar = hex2rgb("#cdc3ae") * (0.9 + 0.08 * noise(n, n / 30, seed + 17))[..., None]
+    alb *= (0.72 + 0.28 * edge)[..., None]
+    # mortier de chaux sableux : grains, légèrement sali dans les creux
+    grains = noise(n, 2, seed + 23) * 0.06
+    mortar = hex2rgb("#d2c7b0") * (0.88 + 0.08 * noise(n, n / 30, seed + 17) + grains)[..., None]
+    mortar = lerp(mortar, mortar * 0.78, smooth(0.0, 1.0, j - d)[..., None] * 0.0 + (1 - smooth(0.0, 0.006, d))[..., None] * 0.35)
     alb = lerp(mortar, alb, stone)
+    # salissures qui coulent sous les pierres
+    drip = smooth(0.8, 2.2, blur_y(noise(n, n / 35, seed + 24), 25)) * 0.15
+    alb *= (1 - drip)[..., None]
     # lichens et coulures d'oxyde
     lich = smooth(2.1, 2.5, noise(n, n / 25, seed + 18) + 0.6 * band(n, 12, seed + 19)) * stone
     alb = lerp(alb, hex2rgb("#bda05a") * (0.9 + 0.1 * band(n, 5, seed + 20))[..., None], lich * 0.7)
@@ -80,7 +87,8 @@ def rubble(n, size, seed, cmin=0.09, cmax=0.24, wmin=0.12, wmax=0.5, palette=LIM
 
 @register("PierreMoellons", 3.0, 2048)
 def t_rubble(n, size):
-    r = rubble(n, size, 101)
+    # moellons de calcaire des murs de village : pierres de 12 à 35 cm, joints de chaux larges et beurrés
+    r = rubble(n, size, 101, cmin=0.12, cmax=0.3, wmin=0.18, wmax=0.55, joint=(0.01, 0.028))
     return dict(albedo=r["alb"], height=r["h"], rough=r["rough"])
 
 
@@ -117,7 +125,10 @@ def t_ashlar(n, size):
     stone = (d > j).astype(F32)
     chip = smooth(1.8, 2.4, noise(n, n / 60, 204)) * (d < 0.03)
     edge = smooth(j, j + 0.012, d) * (1 - chip * 0.7)
-    tool = band(n, 5, 205, aniso=3.0) * 0.0004 + band(n, n / 25, 206) * 0.0015 + noise(n, 4, 207) * 0.0002
+    # layage : fines stries parallèles du taillant, orientées différemment d'un bloc à l'autre
+    ang = rand_per_id(ID, 217) * np.pi
+    strie = np.sin((xx * np.cos(ang) + yy * np.sin(ang)) * 2 * np.pi / 0.004 + noise(n, 6, 218) * 2.0)
+    tool = strie * 0.00025 + band(n, n / 25, 206) * 0.0015 + noise(n, 4, 207) * 0.0002
     h = stone * (0.006 * edge + tool + (rand_per_id(ID, 208) - 0.5) * 0.004) - (1 - stone) * 0.004
     base = [hex2rgb(c) for c in ("#d9c9a8", "#d1bf9b", "#cdbfa6", "#dccfb2", "#c9b28c", "#c4b8a2")]
     col = palette_pick(ID, base, 209)
@@ -125,7 +136,9 @@ def t_ashlar(n, size):
     alb = col * ((0.93 + 0.12 * rand_per_id(ID, 212)) * var)[..., None]
     grime = smooth(0.8, 2.2, blur_y(noise(n, n / 30, 213), 40)) * 0.18
     alb *= (1 - grime)[..., None]
-    alb = lerp(hex2rgb("#c9bea8"), alb, stone)
+    alb *= (1 + 0.03 * strie)[..., None]
+    alb = lerp(alb, alb * 0.8, (1 - edge)[..., None] * 0.5)
+    alb = lerp(hex2rgb("#bfb39c"), alb, stone)
     lich = smooth(2.2, 2.6, noise(n, n / 20, 214) + 0.5 * band(n, 10, 215)) * stone
     alb = lerp(alb, hex2rgb("#a9a58c"), lich * 0.6)
     rough = np.clip(0.8 + 0.08 * noise(n, n / 30, 216), 0.5, 1)
@@ -378,44 +391,89 @@ def t_gravel(n, size):
 
 
 # ------------------------------------------------------------------ bois
-def planks(n, size, seed, width=0.12, base_col="#8a7a66", paint=None, age=0.5, vertical=True):
+def planks(n, size, seed, width=0.12, base_col="#8a7a66", paint=None, age=0.5, vertical=True, grey=0.3):
+    """Planches à veinage réaliste : cernes de croissance (dosse), nœuds, fibres, fentes, patine grise ; peinture écaillée en option."""
     px = size / n
     yy, xx = np.mgrid[0:n, 0:n].astype(F32) * px
     npl = max(1, int(round(size / width)))
     w = size / npl
-    k = np.floor(xx / w).astype(np.int64)
-    xl = xx - k * w
-    gap = (xl < 0.004) | (xl > w - 0.004)
+    k = np.floor(xx / w).astype(np.int64) % npl
+    xl = xx - np.floor(xx / w) * w
+    gap = (xl < 0.0035) | (xl > w - 0.0035)
     rng = np.random.default_rng(seed)
-    grain = band(n, 40, seed + 1, aniso=12.0) * 0.6 + band(n, 12, seed + 2, aniso=20.0) * 0.4
-    knots = smooth(2.5, 3.0, noise(n, n / 12, seed + 3))
-    wood = hex2rgb(base_col) * (0.85 + 0.25 * rand_per_id(k % npl, seed + 4, npl))[..., None]
-    wood = wood * (1 + 0.12 * grain + 0.1 * band(n, n / 10, seed + 5, aniso=8.0))[..., None]
-    wood = lerp(wood, wood * 0.5, knots)
-    h = grain * 0.0006 - gap * 0.003 + band(n, n / 8, seed + 6) * 0.0005
+    # chaque planche a sa propre découpe dans le tronc : position du cœur, profondeur, espacement des cernes
+    cu = (rand_per_id(k, seed + 1, npl) - 0.5) * 6 * w
+    d0 = 0.04 + 0.25 * rand_per_id(k, seed + 2, npl)
+    sp = 0.0035 + 0.003 * rand_per_id(k, seed + 3, npl)
+    wav = noise(n, n / 3, seed + 4, beta=3.0) * 0.012 + noise(n, n / 12, seed + 5, beta=2.5) * 0.002
+    r = np.sqrt((xl - w / 2 - cu) ** 2 + d0 ** 2) + wav
+    # nœuds : les cernes s'enroulent autour, tache sombre au centre
+    knot_h = np.zeros((n, n), F32)
+    knot_c = np.zeros((n, n), F32)
+    for _ in range(max(2, npl // 2)):
+        kx, ky = rng.uniform(0, size), rng.uniform(0, size)
+        kr = rng.uniform(0.008, 0.02)
+        dx = (xx - kx + size / 2) % size - size / 2
+        dy = ((yy - ky + size / 2) % size - size / 2) * 0.55
+        dd = np.sqrt(dx ** 2 + dy ** 2)
+        infl = np.exp(-(dd / (kr * 4.0)) ** 2)
+        r = r + infl * (kr * 3.0 - dd * 0.6)
+        knot_c = np.maximum(knot_c, smooth(kr, kr * 0.4, dd))
+        knot_h = np.maximum(knot_h, infl)
+    rings = (r / sp) % 1.0
+    late = smooth(0.62, 0.9, rings) * (1 - smooth(0.9, 1.0, rings))
+    fib = band(n, 30, seed + 6, aniso=18.0) * 0.5 + band(n, 8, seed + 7, aniso=30.0) * 0.5
+    # fentes le long du fil
+    crack = np.zeros((n, n), F32)
+    for _ in range(npl * 2):
+        cx0 = rng.uniform(0, size)
+        cy0, L = rng.uniform(0, size), rng.uniform(0.05, 0.35)
+        dist = np.abs((xx - cx0 + size / 2) % size - size / 2 + 0.002 * np.sin(yy * 40))
+        along = ((yy - cy0) % size) < L
+        crack = np.maximum(crack, (dist < 0.0012) * along * 1.0)
+    crack = blur(crack, 0.6)
+    tone = 0.82 + 0.3 * rand_per_id(k, seed + 8, npl)
+    wood = hex2rgb(base_col) * tone[..., None]
+    wood = wood * (1 - 0.3 * late + 0.06 * fib)[..., None]
+    wood = lerp(wood, hex2rgb("#3b2a1c"), knot_c * 0.85)
+    # patine grise du bois exposé
+    gr = np.clip(grey + 0.35 * noise(n, n / 6, seed + 9), 0, 1)
+    wood = lerp(wood, hex2rgb("#8f8b84") * (1 - 0.2 * late)[..., None], gr[..., None] * 0.6)
+    wood = lerp(wood, wood * 0.3, crack[..., None])
+    h = late * 0.0005 + fib * 0.00015 - crack * 0.0015 - gap * 0.003 + knot_h * 0.0003
     alb = wood
     mask = np.zeros((n, n), F32)
-    rough = np.clip(0.8 + 0.1 * grain, 0, 1)
+    rough = np.clip(0.72 + 0.12 * late + 0.1 * gr, 0, 1)
     if paint is not None:
-        flake = smooth(0.9 + 1.4 * (1 - age), 1.2 + 1.4 * (1 - age), noise(n, n / 8, seed + 7) + 0.6 * band(n, 30, seed + 8, aniso=6.0))
+        # la peinture s'écaille en lanières dans le sens du fil, surtout près des joints et du bas
+        edge_near = 1 - smooth(0.0, 0.02, np.minimum(xl, w - xl))
+        fl_noise = band(n, 25, seed + 10, aniso=10.0) + 0.8 * noise(n, n / 8, seed + 11) + 0.7 * edge_near
+        th = 1.1 + 1.4 * (1 - age)
+        flake = smooth(th, th + 0.15, fl_noise)
         pcol = np.ones(3, F32) * 0.92 if paint == "white" else hex2rgb(paint)
-        painted = pcol * (0.95 + 0.05 * grain)[..., None]
-        alb = lerp(painted, wood, flake)
-        mask = 1 - flake
-        h = h + (1 - flake) * 0.0004
-        rough = np.clip(lerp(0.55 + 0.1 * noise(n, 20, seed + 9), rough, flake), 0, 1)
-    alb = np.where(gap[..., None], alb * 0.35, alb)
+        brush = band(n, 12, seed + 12, aniso=14.0)
+        painted = pcol * (0.94 + 0.04 * brush - 0.08 * late * 0.4)[..., None]
+        chalk = smooth(0.5, 1.8, noise(n, n / 10, seed + 13)) * 0.12
+        painted = lerp(painted, np.ones(3, F32) * 0.97, chalk[..., None])
+        # liseré sombre au bord des écailles
+        rim = smooth(th - 0.25, th, fl_noise) * (1 - flake)
+        alb = lerp(painted, wood, flake[..., None])
+        alb = lerp(alb, alb * 0.75, rim[..., None] * 0.6)
+        mask = (1 - flake) * (1 - rim * 0.5)
+        h = h * (0.3 + 0.7 * flake) + (1 - flake) * 0.0005
+        rough = np.clip(lerp(0.5 + 0.1 * noise(n, 20, seed + 14) + chalk, rough, flake), 0, 1)
+    alb = np.where(gap[..., None], alb * 0.3, alb)
     return dict(albedo=alb, height=h, rough=rough, mask=mask)
 
 
 @register("BoisPeint", 1.0, 1024)
 def t_wood_painted(n, size):
-    return planks(n, size, 701, width=0.13, base_col="#8f8375", paint="white", age=0.55)
+    return planks(n, size, 701, width=0.13, base_col="#8f7a62", paint="white", age=0.5, grey=0.45)
 
 
 @register("BoisBrut", 1.0, 1024)
 def t_wood_raw(n, size):
-    return planks(n, size, 751, width=0.16, base_col="#8a7560")
+    return planks(n, size, 751, width=0.16, base_col="#9a7b58", grey=0.15)
 
 
 @register("Fer", 1.0, 512)
@@ -597,17 +655,31 @@ def t_bark_plane(n, size):
 
 @register("EcorceOlivier", 1.0, 1024)
 def t_bark_olive(n, size):
+    """Olivier : écorce gris argenté, sillons profonds et torsadés, bourrelets et trous de nœuds, lichens."""
     s = 1851
-    fib = band(n, n / 30, s, aniso=0.12) * 0.7 + band(n, n / 80, s + 1, aniso=0.15) * 0.3
-    wx = noise(n, n / 3, s + 2) * 40
-    fib = warp(fib, wx, wx * 0)
-    groove = smooth(0.8, 2.0, -fib)
-    alb = hex2rgb("#8a8578") * (1 + 0.15 * fib)[..., None]
-    alb = lerp(alb, hex2rgb("#3c3a34"), groove * 0.7)
-    lich = smooth(1.8, 2.4, noise(n, n / 20, s + 3))
-    alb = lerp(alb, hex2rgb("#a9ab93"), lich * 0.6)
-    h = fib * 0.004 - groove * 0.006
-    return dict(albedo=alb, height=h, rough=np.full((n, n), 0.85, F32))
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) / n
+    swirl = band(n, n / 1.5, s + 2) * 0.03 + band(n, n / 5, s + 7) * 0.006
+    u = (xx + swirl) % 1.0
+    ridges = np.sin(u * 2 * np.pi * 9 + band(n, n / 4, s + 8) * 1.2)
+    fine = band(n, 5, s + 1, aniso=0.2)
+    fib = ridges * 0.85 + fine * 0.15 + band(n, n / 30, s + 13, aniso=0.2) * 0.25
+    groove = smooth(-0.2, -0.85, fib)
+    alb = hex2rgb("#a39e91") * (0.9 + 0.14 * fib)[..., None] * (1 + 0.07 * band(n, 6, s + 9))[..., None]
+    alb = lerp(alb, hex2rgb("#3a352d"), groove[..., None] * 0.65)
+    rng = np.random.default_rng(s + 10)
+    holes = np.zeros((n, n), F32)
+    for _ in range(4):
+        cx, cy, rr = rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0.02, 0.05)
+        dd = np.sqrt(((xx - cx + 0.5) % 1 - 0.5) ** 2 + (((yy - cy + 0.5) % 1 - 0.5) * 0.7) ** 2)
+        holes = np.maximum(holes, smooth(rr, rr * 0.5, dd))
+        alb = lerp(alb, hex2rgb("#6b665c"), (smooth(rr * 1.8, rr, dd) * (1 - smooth(rr, rr * 0.5, dd)))[..., None] * 0.5)
+    alb = lerp(alb, hex2rgb("#1e1b17"), holes[..., None])
+    lich = smooth(1.7, 2.3, noise(n, n / 18, s + 3) + 0.5 * band(n, 10, s + 11))
+    alb = lerp(alb, hex2rgb("#b8b89c"), lich[..., None] * 0.55)
+    lich2 = smooth(2.2, 2.6, noise(n, n / 30, s + 12))
+    alb = lerp(alb, hex2rgb("#c9a94a"), lich2[..., None] * 0.5)
+    h = fib * 0.004 - groove * 0.008 - holes * 0.012
+    return dict(albedo=alb, height=h, rough=np.clip(0.8 + 0.1 * groove, 0, 1).astype(F32))
 
 
 @register("EcorcePin", 1.0, 1024)
@@ -625,15 +697,22 @@ def t_bark_pine(n, size):
 
 @register("EcorceChene", 1.0, 1024)
 def t_bark_oak(n, size):
+    """Chêne vert : écorce gris sombre découpée en petites plaques rectangulaires par des fissures profondes."""
     s = 1951
-    fis = band(n, n / 14, s, aniso=0.2) + 0.4 * band(n, n / 40, s + 1, aniso=0.25)
-    wx = noise(n, n / 4, s + 2) * 20
-    fis = warp(fis, wx, wx * 0)
-    ridge = smooth(-0.3, 0.8, fis)
-    alb = hex2rgb("#6c665c") * (0.7 + 0.4 * ridge)[..., None] * (1 + 0.06 * band(n, 6, s + 3))[..., None]
-    moss = smooth(1.7, 2.3, noise(n, n / 10, s + 4))
-    alb = lerp(alb, hex2rgb("#6f7447"), moss * 0.5)
-    h = ridge * 0.01
+    F1, F2, ID, _ = voronoi(n, (9, 14), s, jitter=0.8, stretch=(1.0, 0.55))
+    wx, wy = band(n, n / 10, s + 1) * 10, band(n, n / 10, s + 2) * 4
+    e = warp(F2 - F1, wx, wy)
+    ID = warp(ID.astype(F32), wx, wy, order=0).astype(np.int64)
+    plate = smooth(1.5, 7.0, e)
+    pal = [hex2rgb(c) for c in ("#5f5a52", "#6b655b", "#57524b", "#716a5f", "#4f4b45", "#7a7266")]
+    alb = palette_pick(ID, pal, s + 3) * (0.9 + 0.2 * rand_per_id(ID, s + 4))[..., None]
+    alb = alb * (1 + 0.1 * band(n, 6, s + 5) + 0.05 * band(n, 20, s + 6, aniso=3.0))[..., None]
+    alb = lerp(hex2rgb("#1d1a17"), alb, plate[..., None])
+    moss = smooth(1.8, 2.3, noise(n, n / 12, s + 7)) * plate
+    alb = lerp(alb, hex2rgb("#77804a"), moss[..., None] * 0.45)
+    lich = smooth(2.1, 2.5, noise(n, n / 25, s + 8)) * plate
+    alb = lerp(alb, hex2rgb("#b3b49a"), lich[..., None] * 0.6)
+    h = plate * 0.01 + (rand_per_id(ID, s + 9) - 0.5) * 0.003 + band(n, 6, s + 10) * 0.0006
     return dict(albedo=alb, height=h, rough=np.full((n, n), 0.9, F32))
 
 
@@ -771,6 +850,39 @@ def t_carrosserie(n, size):
     rough = np.clip(0.35 + 0.45 * dust + 0.4 * rust, 0.2, 1)
     mask = np.clip(1 - rust - scr * 0.5, 0, 1)
     return dict(albedo=alb, height=h, rough=rough, mask=mask)
+
+
+
+@register("Brique", 1.0, 1024)
+def t_brique(n, size):
+    """Briques de terre cuite faites main (22 x 5,5 cm), appareil en panneresses, joints de chaux, extrémités plus cuites."""
+    s = 2101
+    px = size / n
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) * px
+    bh, bw, jt = size / 16, size / 4.5, 0.009
+    wy = noise(n, n / 4, s, beta=3.0) * 0.003
+    row = np.floor((yy + wy) / bh).astype(np.int64)
+    xs = (xx + (row % 2) * bw / 2 + noise(n, n / 5, s + 1, beta=3.0) * 0.003) % size
+    colk = np.floor(xs / bw).astype(np.int64)
+    ID = row * 100 + colk
+    fy = ((yy + wy) / bh) % 1.0 * bh
+    fx = (xs / bw) % 1.0 * bw
+    d = np.minimum(np.minimum(fy, bh - fy), np.minimum(fx, bw - fx))
+    d = d + band(n, n / 40, s + 2) * 0.0015
+    brick = smooth(jt / 2, jt / 2 + 0.002, d)
+    bev = smooth(jt / 2, jt / 2 + 0.01, d)
+    pal = [hex2rgb(c) for c in ("#b5553a", "#a34a33", "#c46a45", "#9b4632", "#bb6040", "#8f3f2c", "#c77b52")]
+    alb = palette_pick(ID, pal, s + 3) * (0.88 + 0.22 * rand_per_id(ID, s + 4))[..., None]
+    burnt = smooth(0.35, 0.0, np.minimum(fx, bw - fx) / bw) * (rand_per_id(ID, s + 5) > 0.6)
+    alb = lerp(alb, alb * 0.55, burnt[..., None] * 0.6)
+    alb *= (1 + 0.08 * noise(n, n / 25, s + 6) + 0.05 * band(n, 4, s + 7))[..., None]
+    efflo = smooth(1.9, 2.5, noise(n, n / 12, s + 8)) * 0.35
+    alb = lerp(alb, hex2rgb("#e2d9c6"), efflo[..., None])
+    mortar = hex2rgb("#cfc4ad") * (0.9 + 0.1 * noise(n, 3, s + 9))[..., None]
+    alb = lerp(mortar, alb, brick[..., None])
+    h = brick * (0.004 * bev + (rand_per_id(ID, s + 10) - 0.5) * 0.002 + band(n, 10, s + 11) * 0.0004) - (1 - brick) * 0.004
+    rough = np.clip(0.85 + 0.08 * noise(n, n / 20, s + 12) - efflo * 0.1, 0.5, 1)
+    return dict(albedo=alb, height=h, rough=rough)
 
 
 def build(names=None, preview_dir="texprev"):

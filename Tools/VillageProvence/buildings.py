@@ -663,7 +663,13 @@ def chimney(b, mb, rinfo, planes):
     yaw = math.atan2(ridge[1], ridge[0])
     zb = zr - 0.6
     col = tuple(min(255, int(v * 1.02 + 8)) for v in b["facade"]) + (255,)
-    box(mb, "Enduit", (pt[0], pt[1], (zb + zc) / 2), (sx, sy, zc - zb), yaw=yaw, col=col, uv_scale=3.0)
+    if rng.random() < 0.3:
+        # souche en briques apparentes au-dessus du toit, enduit en dessous
+        zr_top = max(ztop_roof, zr) + 0.05
+        box(mb, "Enduit", (pt[0], pt[1], (zb + zr_top) / 2), (sx, sy, zr_top - zb), yaw=yaw, col=col, uv_scale=3.0)
+        box(mb, "Brique", (pt[0], pt[1], (zr_top + zc) / 2), (sx + 0.01, sy + 0.01, zc - zr_top), yaw=yaw, uv_scale=1.0)
+    else:
+        box(mb, "Enduit", (pt[0], pt[1], (zb + zc) / 2), (sx, sy, zc - zb), yaw=yaw, col=col, uv_scale=3.0)
     # chapeau : deux tuiles en bâtière
     for sgn in (-1, 1):
         cxy = pt + q * sgn * sy * 0.28

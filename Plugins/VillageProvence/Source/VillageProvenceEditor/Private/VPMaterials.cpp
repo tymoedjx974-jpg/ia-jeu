@@ -187,7 +187,7 @@ float3 push = float3(0.0, 0.0, 0.0);
 		for (int32 I = 0; I < VPVegetation::NumInteracteurs; ++I)
 		{
 			Code += FString::Printf(TEXT("{ float4 I = I%d; float r = max(floor(I.w), 1.0); float st = frac(I.w); float2 d = P.xy - I.xy; float dl = length(d); ")
-				TEXT("float fo = saturate(1.0 - dl / r); fo = fo * fo * (3.0 - 2.0 * fo); float dz = P.z - I.z; ")
+				TEXT("float fo = saturate(1.0 - dl / r); fo = fo * (2.0 - fo); float dz = P.z - I.z; ")
 				TEXT("fo *= st * saturate((dz + 80.0) / 40.0) * saturate((260.0 - dz) / 60.0); push.xy += d / max(dl, 1.0) * fo; push.z = max(push.z, fo); }\n"), I);
 		}
 		Code += TEXT(R"HLSL(

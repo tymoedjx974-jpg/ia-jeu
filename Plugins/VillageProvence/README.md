@@ -120,7 +120,7 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 ![Quatre intérieurs de maisons : bourgeoise, atelier, refuge de survivants, grand-mère](Docs/interieurs_varies.jpg)
 
-**Huit ambiances pour les maisons**, tirées au hasard (les villas penchent vers la maison bourgeoise, les mas vers la salle commune et l'atelier) :
+**Neuf ambiances pour les maisons**, tirées au hasard (les villas penchent vers la maison bourgeoise, les mas vers la salle commune et l'atelier) :
 
 | Ambiance | Rez-de-chaussée | Étage |
 | --- | --- | --- |
@@ -132,6 +132,9 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 | Famille | comme la classique, avec des plantes | chambre d'enfants (deux lits, bureau, coffre) |
 | Refuge de survivants | réchaud, conserves, jerricans, matelas et sacs de couchage au sol | dortoir |
 | Saccagée | meubles déplacés, chaises renversées, cartons, traces de sang | chambre des parents |
+| Moderne (maison rénovée) | béton ciré ou parquet clair, murs peints lisses ; cuisine laquée avec îlot et tabourets, canapé d'angle face à la télévision, lampe arc, étagère à cases, tableaux abstraits | lit plateforme, dressing, bureau avec ordinateur ; douche à l'italienne et vasque |
+
+![Intérieurs modernes](Docs/interieurs_modernes.jpg)
 
 **Décor différent d'une maison à l'autre** : sol en tomettes, carreaux de ciment (motif de couleur différente), dallage de pierre ou parquet ; murs blanc cassé, ocre, rose, bleu, vert ou gris ; poutres foncées, naturelles ou blanchies (ou plafond lisse) ; frise de la faïence de la salle de bain.
 

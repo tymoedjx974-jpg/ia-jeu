@@ -336,7 +336,7 @@ def build(b, pl, mb, inst, rng):
     upper = ip.difference(hole)
     for g in ([upper] if upper.geom_type == "Polygon" else list(upper.geoms)):
         _flat(mb, dec["floor1"], g, l1 + 0.002, up=True, col=dec["fcol1"])
-        _flat(mb, "Enduit", g, l1 - SLAB, up=False, col=COL_PLAFOND)
+        _flat(mb, dec["wall_mat"], g, l1 - SLAB, up=False, col=COL_PLAFOND)
     if pl["spiral"]:
         # 2e étage (grenier ou chambre) desservi par un escalier en colimaçon : 3/4 de tour de marches,
         # le quart restant (côté pièce) sert de palier en haut et d'accès en bas
@@ -348,9 +348,9 @@ def build(b, pl, mb, inst, rng):
         sh = sq.difference(landing).intersection(ip.buffer(0.01))
         up2 = ip.difference(sh)
         for g in _polys(up2):
-            _flat(mb, "Enduit", g, ctop, up=False, col=COL_PLAFOND)
+            _flat(mb, dec["wall_mat"], g, ctop, up=False, col=COL_PLAFOND)
             _flat(mb, dec["floor2"], g, l2 + 0.002, up=True, col=dec["fcol2"])
-        _flat(mb, "Enduit", ip, pl["top"], up=False, col=COL_PLAFOND)
+        _flat(mb, dec["wall_mat"], ip, pl["top"], up=False, col=COL_PLAFOND)
         delta = math.atan2(dy_, dx_)
         spiral_stair(mb, Wp(sx, sy), l1, l2, yaw_a + delta + math.pi / 4)
         # garde-corps du palier au-dessus des premières marches
@@ -363,7 +363,7 @@ def build(b, pl, mb, inst, rng):
             pp = p0 + (p1 - p0) * t_
             tube(mb, "Fer", [(pp[0], pp[1], l2), (pp[0], pp[1], l2 + 0.95)], 0.012, segs=5, col=(60, 55, 50, 255))
     else:
-        _flat(mb, "Enduit", ip, ctop, up=False, col=COL_PLAFOND)
+        _flat(mb, dec["wall_mat"], ip, ctop, up=False, col=COL_PLAFOND)
     # chants de la trémie (côté pièce et côté arrivée)
     ye = y_b
     Wbox("Enduit", (xr[0] + xr[1]) / 2, ye - s * 0.005, l1 - SLAB / 2, xr[1] - xr[0], 0.01, SLAB, col=COL_PLAFOND, faces=("-y", "+y"))
@@ -387,7 +387,7 @@ def build(b, pl, mb, inst, rng):
     bands = [(l0, l1 - SLAB, dec["wall0"]), (l1, ctop, dec["wall1"])]
     if pl["nlev"] == 3:
         bands.append((pl["lv"][2], pl["top"], dec["wall2"]))
-    _inner_walls(mb, ip, pl["openings_world"], bands)
+    _inner_walls(mb, ip, pl["openings_world"], bands, dec["wall_mat"])
 
     # ---------- escalier (marches pleines, girons en terre cuite, main courante)
     n, rise, tr = pl["n"], pl["rise"], TREAD
@@ -410,11 +410,11 @@ def build(b, pl, mb, inst, rng):
 
     # ---------- cloisons de l'étage (salle de bain) avec encadrement de porte
     x_lo, x_hi = sorted((end, xc))
-    _partition(mb, Wp, yaw_a, (x_lo, y_b - s * PART / 2), (x_hi, y_b - s * PART / 2), l1, ctop, [], dec["wall1"])
+    _partition(mb, Wp, yaw_a, (x_lo, y_b - s * PART / 2), (x_hi, y_b - s * PART / 2), l1, ctop, [], dec["wall1"], mat=dec["wall_mat"])
     yo = -s * W / 2
     y_door = y_b - s * 0.6
     ya, yb2 = sorted((yo, y_b))
-    _partition(mb, Wp, yaw_a, (xc, ya), (xc, yb2), l1, ctop, [(y_door, 0.85, 2.05)], dec["wall1"], along_y=True)
+    _partition(mb, Wp, yaw_a, (xc, ya), (xc, yb2), l1, ctop, [(y_door, 0.85, 2.05)], dec["wall1"], along_y=True, mat=dec["wall_mat"])
 
     # ---------- faïence murale de la salle de bain (1,25 m), interrompue aux portes et aux fenêtres
     bx0, bx1 = sorted((end, xc))
@@ -517,7 +517,7 @@ def build_rdc(b, pl, mb, inst, rng):
         return c + x * a + y * q
 
     _flat(mb, dec["floor0"], ip, l0 + 0.002, up=True, col=dec["fcol0"])
-    _flat(mb, "Enduit", ip, top, up=False, col=COL_PLAFOND)
+    _flat(mb, dec["wall_mat"], ip, top, up=False, col=COL_PLAFOND)
     if dec["beams"]:
         from shapely.geometry import LineString
         nb = int((L - 0.4) / 0.7)
@@ -531,7 +531,7 @@ def build_rdc(b, pl, mb, inst, rng):
                 (x0_, y0_), (x1_, y1_) = piece.coords[0], piece.coords[-1]
                 P = Wp(x, (y0_ + y1_) / 2)
                 box(mb, "BoisBrut", (P[0], P[1], top - 0.09), (0.14, abs(y1_ - y0_), 0.18), yaw=yaw_a, col=dec["beams"], uv_scale=1.0)
-    _inner_walls(mb, ip, pl["openings_world"], [(l0, top, dec["wall0"])])
+    _inner_walls(mb, ip, pl["openings_world"], [(l0, top, dec["wall0"])], dec["wall_mat"])
     # cloisons
     parts = []
     if pl["kind"] == "plainpied":
@@ -540,7 +540,7 @@ def build_rdc(b, pl, mb, inst, rng):
     elif pl.get("back"):
         parts.append((pl["back"]["x"], pl["back"]["door_y"]))
     for xp, dy in parts:
-        _partition(mb, Wp, yaw_a, (xp, -W / 2), (xp, W / 2), l0, top, [(dy, 0.85, 2.05)], dec["wall0"], along_y=True)
+        _partition(mb, Wp, yaw_a, (xp, -W / 2), (xp, W / 2), l0, top, [(dy, 0.85, 2.05)], dec["wall0"], along_y=True, mat=dec["wall_mat"])
     _entry_steps(mb, pl, l0)
     furnish_rdc(b, pl, inst, rng, Wp, yaw_a)
     b["visit_plan"] = dict(theme=dec["theme"], kind=pl["kind"], c=[float(c[0]), float(c[1])], a=[float(a[0]), float(a[1])], L=float(L),
@@ -639,6 +639,15 @@ def furnish_rdc(b, pl, inst, rng, Wp, yaw_a):
             x0, x1 = sorted((edges[k], edges[k + 1]))
             rooms.append((x0 + PART, x1 - PART, -W / 2, W / 2))
         living, bedroom, bath = rooms
+        if theme == "moderne":
+            wall4 = lambda P_, room, sides, name, z, col=(255, 255, 255), pref=0.5: wall(room, sides, name, col, pref)
+            modern_ground(P, living, living, living, ("+y", "+x", "-y", "-x"), l0, put, wall4, rng)
+            modern_bedroom(P, bedroom, ("+x", "-x", "+y", "-y"), l0, put, wall4, rng, hang=lambda: hang(bedroom, 1, ("Int_CadreModerne",)))
+            wall(bath, ALL, "Int_Douche")
+            wall(bath, ALL, "Int_WC")
+            wall(bath, ALL, "Int_VasqueModerne")
+            hang(living, 2, ("Int_CadreModerne",))
+            return
         # séjour-cuisine : coin cuisine contre un long mur, table, canapé, cheminée ou poêle selon l'ambiance
         rustic = theme in ("salle_commune", "grand_mere", "atelier")
         if theme == "refuge":
@@ -907,7 +916,7 @@ def spiral_stair(mb, C, z0, z1, yaw0):
     tube(mb, "Fer", rail, 0.02, segs=6, col=(60, 55, 50, 255))
 
 
-def _inner_walls(mb, ip, openings_w, bands):
+def _inner_walls(mb, ip, openings_w, bands, mat="Enduit"):
     """Faces intérieures des murs extérieurs, percées des ouvertures ; bands = [(z bas, z haut, couleur)]."""
     cs = np.array(ip.exterior.coords)
     if Polygon(cs).exterior.is_ccw is False:
@@ -943,7 +952,7 @@ def _inner_walls(mb, ip, openings_w, bands):
             for g in _polys(face):
                 if g.area < 0.005:
                     continue
-                planar_polygon(mb, "Enduit", np.array(g.exterior.coords)[:-1], [np.array(h.coords)[:-1] for h in g.interiors],
+                planar_polygon(mb, mat, np.array(g.exterior.coords)[:-1], [np.array(h.coords)[:-1] for h in g.interiors],
                                origin, e1, np.array([0, 0, 1.0]), lambda v2, P: np.stack([v2[:, 0] / 3.0, -v2[:, 1] / 3.0], -1), col)
 
 
@@ -955,7 +964,7 @@ def _polys(g):
     return [x for x in getattr(g, "geoms", []) if x.geom_type == "Polygon"]
 
 
-def _partition(mb, Wp, yaw_a, p0, p1, zb, zt, doors, col, along_y=False):
+def _partition(mb, Wp, yaw_a, p0, p1, zb, zt, doors, col, along_y=False, mat="Enduit"):
     """Cloison de 10 cm entre p0 et p1 (repère local), percée de portes (centre, largeur, hauteur) avec encadrement."""
     if along_y:
         x = p0[0]
@@ -977,10 +986,10 @@ def _partition(mb, Wp, yaw_a, p0, p1, zb, zt, doors, col, along_y=False):
         m = (a0 + a1) / 2
         if along_y:
             P = Wp(x, m)
-            box(mb, "Enduit", (P[0], P[1], (z0 + z1) / 2), (PART, a1 - a0, z1 - z0), yaw=yaw_a, col=col, uv_scale=3.0)
+            box(mb, mat, (P[0], P[1], (z0 + z1) / 2), (PART, a1 - a0, z1 - z0), yaw=yaw_a, col=col, uv_scale=3.0)
         else:
             P = Wp(m, y)
-            box(mb, "Enduit", (P[0], P[1], (z0 + z1) / 2), (a1 - a0, PART, z1 - z0), yaw=yaw_a, col=col, uv_scale=3.0)
+            box(mb, mat, (P[0], P[1], (z0 + z1) / 2), (a1 - a0, PART, z1 - z0), yaw=yaw_a, col=col, uv_scale=3.0)
     for a0, a1, h in cuts:
         for sgn in (-1, 1):
             for (m, lo, hi) in ((a0 - 0.035, zb, zb + h), (a1 + 0.035, zb, zb + h)):
@@ -1053,7 +1062,9 @@ class Placer:
 # ------------------------------------------------------------------ variété : thème et décor de chaque maison
 THEMES = {  # thème : poids
     "classique": 16, "salle_commune": 13, "bourgeoise": 12, "atelier": 11, "grand_mere": 12, "famille": 10, "refuge": 14, "saccagee": 12,
+    "moderne": 26,
 }
+MODERN_WALLS = [(246, 246, 244), (236, 237, 238), (232, 230, 226), (220, 222, 224), (242, 240, 234)]
 WALL_COLS = [(244, 238, 226), (238, 222, 186), (236, 214, 200), (214, 222, 232), (218, 228, 206), (228, 226, 220), (246, 232, 206)]
 CIMENT_COLS = [(176, 70, 52), (60, 96, 150), (84, 120, 84), (196, 150, 60), (70, 70, 72), (150, 80, 110)]
 PARQUET_COLS = [(255, 245, 230), (220, 196, 170), (170, 140, 115)]
@@ -1078,6 +1089,10 @@ def pick_decor(rng, style):
     f1 = rng.choice(["Tomettes", "Parquet", "CarreauxCiment"], p=[0.45, 0.4, 0.15])
 
     def fcol(m):
+        if m == "BetonCire":
+            return [(255, 255, 255), (225, 228, 232), (240, 232, 220), (200, 200, 200)][rng.integers(4)] + (255,)
+        if m == "Parquet" and theme == "moderne":
+            return (255, 250, 240, 255)
         if m == "CarreauxCiment":
             return CIMENT_COLS[rng.integers(len(CIMENT_COLS))] + (255,)
         if m == "Parquet":
@@ -1088,9 +1103,75 @@ def pick_decor(rng, style):
     beams = None if rng.random() < 0.15 else BEAM_COLS[rng.integers(len(BEAM_COLS))] + (255,)
     frise = [(60, 90, 140), (40, 110, 110), (170, 110, 40), (120, 60, 50), (70, 110, 70)][rng.integers(5)] + (255,)
     f2 = rng.choice(["Parquet", "Tomettes"], p=[0.6, 0.4])
+    if theme == "moderne":
+        # maison rénovée : béton ciré ou parquet clair, murs blancs ou gris clair, plafond lisse le plus souvent
+        f0 = rng.choice(["BetonCire", "Parquet"], p=[0.6, 0.4])
+        f1 = f2 = "Parquet"
+        w0 = MODERN_WALLS[rng.integers(len(MODERN_WALLS))]
+        w1 = MODERN_WALLS[rng.integers(len(MODERN_WALLS))]
+        beams = None if rng.random() < 0.75 else (236, 234, 230, 255)
+        frise = (70, 72, 76, 255)
     return dict(theme=theme, floor0=str(f0), floor1=str(f1), floor2=str(f2), fcol0=fcol(f0), fcol1=fcol(f1), fcol2=fcol(f2),
                 wall0=w0 + (255,), wall1=w1 + (255,), wall2=w1 + (255,), beams=beams, frise=frise,
-                kitchen_near_stairs=bool(rng.random() < 0.35))
+                kitchen_near_stairs=bool(rng.random() < 0.35), wall_mat="Peinture" if theme == "moderne" else "Enduit")
+
+
+def modern_ground(P, room_k, room_s, room_all, sides, z, put, wall, rng):
+    """Rez-de-chaussée rénové : cuisine laquée (îlot si la place le permet), séjour avec canapé d'angle face à la télévision."""
+    s_other, s_far, s_band, s_end = sides
+    laque = [(255, 255, 255), (70, 72, 76), (150, 160, 150), (40, 60, 90), (235, 230, 220)][int(rng.integers(5))]
+    wall(P, room_k, (s_other, s_far, s_band), "Int_CuisineModerne", z, laque, pref=0.5)
+    cx, cy = (room_k[0] + room_k[1]) / 2, (room_k[2] + room_k[3]) / 2
+    placed = False
+    for dx in (0.0, -0.3, 0.3, -0.6, 0.6):
+        for dy in (0.0, -0.3, 0.3):
+            if P.at("Int_Ilot", cx + dx, cy + dy, 0.0, pad=0.45):
+                put("Int_Ilot", cx + dx, cy + dy, z, 0.0, laque)
+                placed = True
+                break
+        if placed:
+            break
+    if not placed:
+        for dx in (0.0, -0.4, 0.4):
+            if P.at("Int_TableModerne", cx + dx, cy, 0.0, pad=0.2):
+                put("Int_TableModerne", cx + dx, cy, z, 0.0)
+                break
+    # séjour : télévision contre un mur, canapé d'angle en face à ~2,8 m, table basse, lampe arc, étagère
+    tv = wall(P, room_s, (s_other, s_band, s_end), "Int_MeubleTV", z, pref=0.5)
+    if tv:
+        tx, ty, tyaw, _ = tv
+        nx, ny = -math.sin(tyaw), math.cos(tyaw)
+        for dist in (2.9, 2.6, 3.2, 2.3):
+            sx_, sy_ = tx - nx * dist, ty - ny * dist
+            if P.at("Int_CanapeAngle", sx_, sy_, tyaw + math.pi):
+                put("Int_CanapeAngle", sx_, sy_, z, tyaw + math.pi)
+                bx, by = tx - nx * (dist - 1.4), ty - ny * (dist - 1.4)
+                if P.at("Int_TableBasseModerne", bx, by, tyaw):
+                    put("Int_TableBasseModerne", bx, by, z, tyaw)
+                break
+    wall(P, room_s, (s_band, s_other, s_end), "Int_EtagereCubes", z, pref=float(rng.random()))
+    wall(P, room_s, (s_end, s_band, s_other), "Int_LampeArc", z, pref=float(rng.random()))
+    for k in range(2):
+        wall(P, room_all, (s_other, s_band, s_far, s_end), "Int_PlanteModerne", z, pref=float(rng.random()))
+
+
+def modern_bedroom(P, room, sides, z, put, wall, rng, hang=None):
+    """Chambre moderne : lit plateforme, chevets, dressing, bureau avec ordinateur."""
+    got = wall(P, room, sides, "Int_LitModerne", z, pref=0.5)
+    if got:
+        bx_, by_, byaw, _ = got
+        tx, ty = math.cos(byaw), math.sin(byaw)
+        nx, ny = -math.sin(byaw), math.cos(byaw)
+        for sg in (-1, 1):
+            cx = bx_ + tx * sg * (1.8 / 2 + 0.3) + nx * 0.85
+            cy = by_ + ty * sg * (1.8 / 2 + 0.3) + ny * 0.85
+            if P.at("Int_Chevet", cx, cy, byaw):
+                put("Int_Chevet", cx, cy, z, byaw, (245, 245, 245))
+    wall(P, room, sides[1:] + sides[:1], "Int_Dressing", z, (245, 245, 245))
+    wall(P, room, sides[1:] + sides[:1], "Int_BureauInfo", z)
+    wall(P, room, sides, "Int_PlanteModerne", z, pref=float(rng.random()))
+    if hang:
+        hang()
 
 
 def furnish(pl, inst, rng, Wp, yaw_a):
@@ -1230,7 +1311,9 @@ def furnish(pl, inst, rng, Wp, yaw_a):
                     put("Int_Fauteuil", ax, ay, l0, fyaw - math.pi / 2, linen)
         return got
 
-    if theme in ("classique", "famille", "saccagee"):
+    if theme == "moderne":
+        modern_ground(P, room_k, room_s, room_all, (side_other, side_far, side_band, side_end), l0, put, wall, rng)
+    elif theme in ("classique", "famille", "saccagee"):
         kitchen(room_k)
         table_with_chairs(P, room_k, "Int_TableCuisine", 4, l0, fabric)
         fireplace_corner(room_s)
@@ -1323,17 +1406,21 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     by = sorted((-s * W / 2, y_b - s * PART))
     room_b = (bx[0] + 0.02, bx[1] - PART / 2, by[0], by[1])
     bath_w = by[1] - by[0]
-    got = P.wall(room_b, side_end, "Int_Baignoire") if bath_w >= 1.75 else None
-    got = got or P.wall(room_b, side_other, "Int_Baignoire", pref=0.0 if d > 0 else 1.0)
+    tub = "Int_Douche" if theme == "moderne" else "Int_Baignoire"
+    got = P.wall(room_b, side_end, tub) if bath_w >= 1.75 else None
+    got = got or P.wall(room_b, side_other, tub, pref=0.0 if d > 0 else 1.0)
     if got:
-        put("Int_Baignoire", got[0], got[1], l1, got[2])
+        put(tub, got[0], got[1], l1, got[2])
     got = P.wall(room_b, side_other, "Int_WC", pref=1.0 if d > 0 else 0.0) or P.wall(room_b, "+x" if d < 0 else "-x", "Int_WC")
     if got:
         put("Int_WC", got[0], got[1], l1, got[2])
-    got = wall(P, room_b, (side_band, side_other), "Int_Lavabo", l1, paint)
-    if got:
-        # miroir au-dessus du lavabo
-        put("Int_Miroir", got[0] - math.sin(got[2]) * 0.21, got[1] + math.cos(got[2]) * 0.21, l1 - 0.35, got[2])
+    if theme == "moderne":
+        wall(P, room_b, (side_band, side_other), "Int_VasqueModerne", l1)
+    else:
+        got = wall(P, room_b, (side_band, side_other), "Int_Lavabo", l1, paint)
+        if got:
+            # miroir au-dessus du lavabo
+            put("Int_Miroir", got[0] - math.sin(got[2]) * 0.21, got[1] + math.cos(got[2]) * 0.21, l1 - 0.35, got[2])
     wall(P, room_b, (side_band,), "Int_Commode", l1, pref=0.2 if d > 0 else 0.8)
     rx = sorted((xc, far))
     room_r = (rx[0] + PART / 2 + 0.02, rx[1], -W / 2, W / 2)
@@ -1341,10 +1428,12 @@ def furnish(pl, inst, rng, Wp, yaw_a):
         spx, spy = pl["spiral"][:2]
         P.blocks.append((spx - SPIRAL / 2 - 0.5, spx + SPIRAL / 2 + 0.5, spy - SPIRAL / 2 - 0.5, spy + SPIRAL / 2 + 0.5))
     upper = {"classique": "parents", "saccagee": "parents", "salle_commune": "parents", "bourgeoise": "parents", "grand_mere": "grand_mere",
-             "famille": "enfants", "atelier": "bureau", "refuge": "dortoir"}[theme]
+             "famille": "enfants", "atelier": "bureau", "refuge": "dortoir", "moderne": "moderne"}[theme]
     if upper == "enfants" and W < 3.0:
         upper = "parents"
-    if upper in ("parents", "grand_mere"):
+    if upper == "moderne":
+        modern_bedroom(P, room_r, (side_far, side_other, side_band), l1, put, wall, rng, hang=lambda: hang(room_r, 1, l1, 2, ("Int_CadreModerne",)))
+    elif upper in ("parents", "grand_mere"):
         double = W >= 3.2
         bed = "Int_LitDouble" if double else "Int_LitSimple"
         got = wall(P, room_r, (side_far, side_other, side_band), bed, l1, fabric, pref=0.5)

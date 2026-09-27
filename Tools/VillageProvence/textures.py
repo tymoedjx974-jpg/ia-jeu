@@ -483,6 +483,51 @@ def t_wood_varnish(n, size):
     return dict(albedo=r["albedo"] * 0.95, height=r["height"] * 0.25, rough=np.clip(r["rough"] * 0.45, 0.15, 0.6))
 
 
+@register("Laque", 1.0, 512)
+def t_laque(n, size):
+    """Laque satinée des meubles modernes (façades de cuisine, dressing) : presque unie, teintée par instance."""
+    s = 2101
+    alb = hex2rgb("#ecebe8") * (0.985 + 0.015 * noise(n, n / 4, s))[..., None]
+    h = band(n, 40, s + 1) * 0.00003
+    rough = np.clip(0.22 + 0.04 * noise(n, n / 6, s + 2), 0.1, 0.4)
+    return dict(albedo=alb, height=h, rough=rough, mask=np.ones((n, n), F32))
+
+
+@register("MetalBrosse", 1.0, 512)
+def t_metal_brosse(n, size):
+    """Inox brossé (électroménager, pieds de meubles, robinetterie)."""
+    s = 2111
+    streak = band(n, 30, s, aniso=0.02) * 0.6 + band(n, 4, s + 1, aniso=0.05) * 0.4
+    alb = hex2rgb("#c4c7ca") * (0.95 + 0.06 * streak)[..., None]
+    h = streak * 0.00004
+    rough = np.clip(0.3 + 0.08 * streak, 0.15, 0.5)
+    return dict(albedo=alb, height=h, rough=rough)
+
+
+@register("BetonCire", 2.0, 1024)
+def t_beton_cire(n, size):
+    """Béton ciré (sols et plans modernes) : nuages de teinte, fines piqûres, reflets doux ; teinte réglable par maison."""
+    s = 2121
+    clouds = noise(n, n / 3, s, beta=2.6)
+    alb = hex2rgb("#b3aea6") * (0.9 + 0.1 * clouds)[..., None]
+    pores = smooth(2.2, 2.8, noise(n, 3, s + 1))
+    alb = lerp(alb, hex2rgb("#7c776f"), pores[..., None] * 0.5)
+    trowel = band(n, n / 5, s + 2, aniso=0.4) * 0.04
+    alb = alb * (1 + trowel)[..., None]
+    h = -pores * 0.0004 + band(n, 20, s + 3) * 0.0001
+    rough = np.clip(0.38 + 0.12 * clouds + 0.2 * pores, 0.2, 0.8)
+    return dict(albedo=alb, height=h, rough=rough, mask=np.ones((n, n), F32))
+
+
+@register("Peinture", 2.0, 512)
+def t_peinture(n, size):
+    """Mur peint lisse (maisons rénovées) : très léger voile de rouleau, teinte par la couleur des murs."""
+    s = 2131
+    alb = hex2rgb("#f1f0ec") * (0.985 + 0.02 * noise(n, n / 3, s, beta=2.8))[..., None]
+    h = band(n, 12, s + 1, aniso=0.5) * 0.00004
+    return dict(albedo=alb, height=h, rough=np.full((n, n), 0.8, F32), mask=np.ones((n, n), F32))
+
+
 @register("Fer", 1.0, 512)
 def t_iron(n, size):
     s = 801

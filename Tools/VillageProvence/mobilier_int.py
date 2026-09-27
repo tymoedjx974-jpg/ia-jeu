@@ -973,6 +973,253 @@ def confessionnal():
     return mb
 
 
+# ------------------------------------------------------------------ intérieurs modernes
+GRIS = (70, 72, 76, 255)
+ANTHRACITE = (48, 50, 54, 255)
+
+
+def _centre(mb):
+    """Recentre un meuble sur son emprise au sol (placement et boîte de collision centrés)."""
+    arr = mb.arrays()
+    P = np.concatenate([a["P"] for a in arr.values()])
+    off = -(P.min(0) + P.max(0)) / 2
+    out = MB()
+    for mat, a in arr.items():
+        out.add(mat, a["P"] + np.array([off[0], off[1], 0.0], np.float32), a["N"], a["UV"], a["C"], a["I"])
+    return out
+
+
+def cuisine_moderne(w=3.0, d=0.65, h=0.9):
+    """Cuisine contemporaine : façades laquées sans poignées, plan en béton ciré, plaque à induction, four encastré, hotte,
+    évier inox, meubles hauts ; la couleur des façades se règle par instance."""
+    mb = MB()
+    box(mb, "Laque", (0, 0.02, 0.05), (w - 0.04, d - 0.1, 0.1), col=ANTHRACITE)
+    box(mb, "Laque", (0, 0.0, (h - 0.04) / 2 + 0.05), (w, d - 0.04, h - 0.14))
+    nd = int(w / 0.6)
+    for k in range(nd):
+        x = -w / 2 + (k + 0.5) * w / nd
+        box(mb, "Laque", (x, -d / 2 + 0.01, 0.47), (w / nd - 0.006, 0.02, 0.72))
+        box(mb, "MetalBrosse", (x, -d / 2 - 0.003, h - 0.12), (w / nd - 0.2, 0.008, 0.012))
+    box(mb, "BetonCire", (0, 0, h - 0.02), (w + 0.02, d, 0.04), uv_scale=2.0, col=(200, 196, 190, 255))
+    # four encastré, plaque à induction, évier et mitigeur
+    box(mb, "Verre", (-w / 2 + 0.9, -d / 2 - 0.004, 0.5), (0.56, 0.01, 0.5))
+    box(mb, "MetalBrosse", (-w / 2 + 0.9, -d / 2 - 0.006, 0.78), (0.56, 0.012, 0.06))
+    box(mb, "Verre", (-w / 2 + 0.9, -0.02, h + 0.003), (0.6, 0.52, 0.006))
+    box(mb, "MetalBrosse", (w / 2 - 0.8, -0.02, h + 0.002), (0.55, 0.42, 0.006))
+    box(mb, "Fer", (w / 2 - 0.8, -0.02, h + 0.004), (0.45, 0.34, 0.004), col=(35, 35, 38, 255))
+    tube(mb, "MetalBrosse", [(w / 2 - 0.8, 0.22, h), (w / 2 - 0.8, 0.22, h + 0.38), (w / 2 - 0.8, 0.05, h + 0.4)], 0.014, segs=8)
+    # crédence et meubles hauts, hotte inox
+    box(mb, "Laque", (0, d / 2 - 0.005, h + 0.3), (w, 0.01, 0.6), col=(210, 210, 208, 255), faces=("-y",))
+    for k in range(nd):
+        x = -w / 2 + (k + 0.5) * w / nd
+        if abs(x - (-w / 2 + 0.9)) < 0.35:
+            continue
+        box(mb, "Laque", (x, d / 2 - 0.18, 1.85), (w / nd - 0.006, 0.34, 0.7))
+    box(mb, "MetalBrosse", (-w / 2 + 0.9, d / 2 - 0.25, 1.55), (0.6, 0.5, 0.08))
+    box(mb, "MetalBrosse", (-w / 2 + 0.9, d / 2 - 0.12, 1.95), (0.3, 0.24, 0.8))
+    return mb
+
+
+def ilot(w=1.8, d=0.9, h=0.92):
+    """Îlot central : caisson laqué, plan en béton ciré qui déborde, trois tabourets hauts."""
+    mb = MB()
+    box(mb, "Laque", (0, -0.1, (h - 0.04) / 2), (w - 0.1, d - 0.3, h - 0.04))
+    box(mb, "BetonCire", (0, 0, h - 0.02), (w, d, 0.04), uv_scale=2.0, col=(200, 196, 190, 255))
+    for k in (-1, 0, 1):
+        x = k * 0.55
+        tube(mb, "MetalBrosse", [(x, 0.55, 0), (x, 0.55, 0.62)], 0.02, segs=8)
+        revolve(mb, "MetalBrosse", [(0, 0), (0.18, 0), (0.18, 0.01), (0, 0.01)], (x, 0.55, 0), segs=12)
+        revolve(mb, "Toile", [(0, 0), (0.19, 0), (0.19, 0.06), (0, 0.07)], (x, 0.55, 0.62), segs=14, col=(60, 62, 66, 255))
+    return mb
+
+
+def table_moderne(w=1.8, d=0.9, h=0.75):
+    """Table à manger moderne (plateau blanc, piètement en métal noir) et six chaises coques."""
+    mb = MB()
+    box(mb, "Laque", (0, 0, h - 0.015), (w, d, 0.03))
+    for sx in (-1, 1):
+        box(mb, "Fer", (sx * (w / 2 - 0.12), 0, (h - 0.03) / 2), (0.05, d - 0.1, 0.03), col=(25, 25, 25, 255))
+        box(mb, "Fer", (sx * (w / 2 - 0.12), 0, 0.015), (0.05, d - 0.1, 0.03), col=(25, 25, 25, 255))
+        for sy in (-1, 1):
+            box(mb, "Fer", (sx * (w / 2 - 0.12), sy * (d / 2 - 0.08), (h - 0.03) / 2), (0.04, 0.04, h - 0.03), col=(25, 25, 25, 255))
+    for k in range(3):
+        for sy in (-1, 1):
+            x, y = -w / 2 + 0.3 + k * (w - 0.6) / 2, sy * (d / 2 + 0.25)
+            for lx in (-0.18, 0.18):
+                for ly in (-0.18, 0.18):
+                    tube(mb, "BoisBrut", [(x + lx, y + ly, 0), (x + lx * 0.8, y + ly * 0.8, 0.44)], 0.014, segs=6)
+            revolve(mb, "Laque", [(0, 0), (0.22, 0.0), (0.24, 0.06), (0, 0.05)], (x, y, 0.44), segs=16)
+            box(mb, "Laque", (x, y + sy * 0.2, 0.68), (0.42, 0.04, 0.34), pitch=math.radians(-sy * 10))
+    revolve(mb, "Verre", [(0, 0), (0.08, 0), (0.1, 0.25), (0.06, 0.3), (0, 0.3)], (0, 0, h), segs=12)
+    return mb
+
+
+def canape_angle():
+    """Canapé d'angle bas en tissu gris, coussins, plaid."""
+    mb = MB()
+    col = (120, 122, 126, 255)
+    box(mb, "Toile", (0, 0.05, 0.2), (2.8, 0.95, 0.32), col=col)
+    box(mb, "Toile", (-1.05, -0.55, 0.2), (0.7, 1.2, 0.32), col=col)
+    box(mb, "Toile", (0, 0.44, 0.52), (2.8, 0.2, 0.46), col=col)
+    box(mb, "Toile", (1.3, 0.05, 0.42), (0.2, 0.95, 0.26), col=col)
+    for k in range(4):
+        box(mb, "Toile", (-0.95 + k * 0.62, 0.05, 0.42), (0.58, 0.72, 0.12), col=(130, 132, 136, 255))
+    box(mb, "Toile", (-1.05, -0.65, 0.42), (0.62, 1.0, 0.12), col=(130, 132, 136, 255))
+    for x, c in ((-0.9, (230, 200, 90)), (0.6, (80, 120, 150)), (0.95, (235, 232, 225))):
+        box(mb, "Toile", (x, 0.3, 0.6), (0.42, 0.14, 0.4), col=c + (255,), pitch=math.radians(-12))
+    box(mb, "TissuProvence", (-1.05, -0.8, 0.49), (0.6, 0.5, 0.02), col=(90, 90, 110, 255), uv_scale=0.5)
+    for x in (-1.3, 1.3):
+        box(mb, "Fer", (x, 0.4, 0.02), (0.05, 0.05, 0.05), col=(25, 25, 25, 255))
+    return mb
+
+
+def table_basse_moderne():
+    mb = MB()
+    box(mb, "BoisVernis", (0, 0, 0.36), (1.1, 0.6, 0.05))
+    box(mb, "BoisVernis", (0, 0, 0.12), (1.0, 0.5, 0.03))
+    for sx in (-1, 1):
+        box(mb, "Fer", (sx * 0.5, 0, 0.18), (0.03, 0.56, 0.36), col=(25, 25, 25, 255))
+    for k in range(3):
+        box(mb, "Toile", (-0.25 + k * 0.02, 0.05, 0.4 + k * 0.025), (0.3, 0.22, 0.025), col=((200, 60, 50), (240, 240, 235), (40, 60, 110))[k] + (255,))
+    return mb
+
+
+def meuble_tv():
+    """Meuble TV bas suspendu et téléviseur à écran plat, enceinte, console de jeu."""
+    mb = MB()
+    box(mb, "Laque", (0, 0.05, 0.35), (1.9, 0.4, 0.4))
+    box(mb, "BoisVernis", (0, 0.05, 0.56), (1.9, 0.4, 0.03))
+    box(mb, "Fer", (0, 0.15, 1.2), (1.45, 0.05, 0.84), col=(15, 15, 16, 255))
+    box(mb, "Verre", (0, 0.12, 1.2), (1.4, 0.01, 0.79))
+    box(mb, "Fer", (-0.6, 0.05, 0.62), (0.2, 0.2, 0.08), col=(20, 20, 20, 255))
+    box(mb, "Laque", (0.55, 0.05, 0.61), (0.3, 0.22, 0.06), col=(235, 235, 235, 255))
+    return mb
+
+
+def lampe_arc():
+    mb = MB()
+    box(mb, "PierreTaille", (0, 0.1, 0.05), (0.35, 0.25, 0.1), col=(240, 240, 238, 255), uv_scale=3.0)
+    pts = [(0, 0.1, 0.1)] + [(0.0, 0.1 - 1.3 * math.sin(t), 0.1 + 1.9 * math.sin(t * 1.2 + 0.2) / math.sin(1.4)) for t in np.linspace(0.05, 1.2, 12)]
+    tube(mb, "MetalBrosse", pts, 0.015, segs=6)
+    end = pts[-1]
+    revolve(mb, "MetalBrosse", [(0.0, 0.0), (0.2, -0.18), (0.21, -0.2), (0.0, -0.02)], end, segs=16)
+    return mb
+
+
+def etagere_cubes():
+    """Étagère à cases (4 x 4), livres, boîtes, plantes."""
+    mb = MB()
+    rng = np.random.default_rng(71)
+    w, h, d, n = 1.5, 1.5, 0.39, 4
+    for k in range(n + 1):
+        box(mb, "Laque", (-w / 2 + k * w / n, 0, h / 2), (0.03, d, h))
+        box(mb, "Laque", (0, 0, k * h / n), (w, d, 0.03))
+    for i in range(n):
+        for j in range(n):
+            x, z = -w / 2 + (i + 0.5) * w / n, j * h / n + 0.02
+            r = rng.random()
+            if r < 0.4:
+                for b in range(rng.integers(3, 7)):
+                    box(mb, "Toile", (x - 0.13 + b * 0.045, -0.02, z + 0.13), (0.035, 0.25, 0.24 + 0.05 * rng.random()),
+                        col=((200, 60, 50), (40, 60, 110), (230, 200, 90), (60, 110, 80), (240, 240, 235))[int(rng.integers(5))] + (255,))
+            elif r < 0.65:
+                box(mb, "Toile", (x, -0.01, z + 0.15), (0.32, 0.33, 0.3), col=((210, 205, 195), (90, 90, 95), (180, 150, 110))[int(rng.integers(3))] + (255,))
+            elif r < 0.8:
+                revolve(mb, "Laque", [(0, 0), (0.07, 0), (0.08, 0.14), (0, 0.14)], (x, 0, z), segs=10)
+                tube(mb, "Toile", [(x, 0, z + 0.14), (x + 0.05, 0.03, z + 0.3)], 0.03, segs=5, col=(70, 120, 60, 255))
+    return mb
+
+
+def lit_moderne():
+    """Lit plateforme bas, tête de lit capitonnée grise, linge blanc, plaid."""
+    mb = MB()
+    box(mb, "BoisVernis", (0, 0, 0.12), (1.7, 2.05, 0.24))
+    box(mb, "Toile", (0, -0.05, 0.36), (1.6, 1.95, 0.24), col=(240, 240, 236, 255))
+    box(mb, "Toile", (0, 1.02, 0.6), (1.8, 0.1, 1.0), col=(110, 112, 118, 255))
+    for x in (-0.4, 0.4):
+        box(mb, "Toile", (x, 0.75, 0.55), (0.6, 0.35, 0.14), col=(245, 245, 242, 255), pitch=math.radians(-15))
+    box(mb, "Toile", (0, -0.55, 0.49), (1.62, 0.6, 0.03), col=(70, 90, 110, 255))
+    return mb
+
+
+def dressing():
+    """Dressing à portes coulissantes (laque et miroir)."""
+    mb = MB()
+    box(mb, "Laque", (0, 0, 1.15), (2.0, 0.62, 2.3))
+    box(mb, "Miroir", (-0.5, -0.315, 1.15), (0.96, 0.01, 2.2))
+    box(mb, "Laque", (0.5, -0.33, 1.15), (0.96, 0.02, 2.2))
+    return mb
+
+
+def bureau_info():
+    """Bureau moderne : plateau blanc, écran, ordinateur portable, lampe, chaise de bureau à roulettes."""
+    mb = MB()
+    box(mb, "Laque", (0, 0, 0.74), (1.4, 0.7, 0.03))
+    for sx in (-1, 1):
+        box(mb, "Fer", (sx * 0.66, 0, 0.36), (0.04, 0.64, 0.72), col=(25, 25, 25, 255))
+    box(mb, "Fer", (0.0, 0.18, 1.02), (0.62, 0.03, 0.38), col=(15, 15, 16, 255))
+    box(mb, "Verre", (0.0, 0.165, 1.03), (0.58, 0.004, 0.33))
+    box(mb, "Fer", (0.0, 0.22, 0.8), (0.08, 0.06, 0.12), col=(25, 25, 25, 255))
+    box(mb, "MetalBrosse", (-0.4, -0.08, 0.765), (0.34, 0.24, 0.015))
+    box(mb, "MetalBrosse", (-0.4, 0.04, 0.88), (0.34, 0.01, 0.23), pitch=math.radians(-15))
+    box(mb, "Fer", (0.1, -0.12, 0.76), (0.44, 0.14, 0.015), col=(30, 30, 30, 255))
+    # chaise de bureau
+    cy = -0.65
+    for k in range(5):
+        a = k * 2 * math.pi / 5
+        tube(mb, "Fer", [(0, cy, 0.06), (0.3 * math.cos(a), cy + 0.3 * math.sin(a), 0.04)], 0.015, segs=5, col=(25, 25, 25, 255))
+    tube(mb, "MetalBrosse", [(0, cy, 0.06), (0, cy, 0.46)], 0.025, segs=8)
+    box(mb, "Toile", (0, cy, 0.5), (0.5, 0.48, 0.08), col=(40, 40, 44, 255))
+    box(mb, "Toile", (0, cy - 0.24, 0.85), (0.46, 0.06, 0.6), col=(40, 40, 44, 255), pitch=math.radians(8))
+    return mb
+
+
+def douche():
+    """Douche à l'italienne : receveur extra-plat, paroi vitrée, colonne de douche, faïence grand format."""
+    mb = MB()
+    box(mb, "Porcelaine", (0, 0, 0.02), (1.2, 0.9, 0.04))
+    box(mb, "Verre", (0.6, -0.1, 1.0), (0.012, 0.7, 2.0))
+    box(mb, "MetalBrosse", (0.6, -0.1, 2.0), (0.02, 0.72, 0.02))
+    tube(mb, "MetalBrosse", [(-0.3, 0.43, 0.9), (-0.3, 0.43, 2.05), (-0.3, 0.2, 2.1)], 0.015, segs=8)
+    revolve(mb, "MetalBrosse", [(0, 0), (0.12, 0), (0.12, 0.01), (0, 0.015)], (-0.3, 0.2, 2.08), segs=16)
+    box(mb, "Laque", (0, 0.44, 1.1), (1.2, 0.01, 2.2), col=(90, 92, 96, 255), faces=("-y",))
+    return mb
+
+
+def vasque_moderne():
+    """Meuble-vasque suspendu, vasque à poser, mitigeur, miroir rétroéclairé."""
+    mb = MB()
+    box(mb, "BoisVernis", (0, 0.02, 0.62), (0.9, 0.46, 0.36))
+    box(mb, "Porcelaine", (0, 0.0, 0.83), (0.9, 0.48, 0.03))
+    revolve(mb, "Porcelaine", [(0, 0), (0.2, 0.0), (0.22, 0.13), (0.2, 0.14), (0, 0.02)], (0, -0.02, 0.845), segs=18)
+    tube(mb, "MetalBrosse", [(0, 0.18, 0.845), (0, 0.18, 1.1), (0, 0.06, 1.1)], 0.012, segs=8)
+    box(mb, "Miroir", (0, 0.23, 1.55), (0.8, 0.01, 0.7))
+    return mb
+
+
+def plante_moderne():
+    mb = MB()
+    revolve(mb, "Laque", [(0, 0), (0.18, 0), (0.2, 0.45), (0, 0.45)], (0, 0, 0), segs=16)
+    rng = np.random.default_rng(12)
+    for k in range(9):
+        a = k * 0.7
+        h = 0.9 + 0.5 * rng.random()
+        tube(mb, "Toile", [(0, 0, 0.45), (0.12 * math.cos(a), 0.12 * math.sin(a), 0.45 + h * 0.6), (0.3 * math.cos(a), 0.3 * math.sin(a), 0.45 + h)],
+             [0.05, 0.035, 0.005], segs=4, col=(60, 100, 50, 255))
+    return mb
+
+
+def cadre_moderne():
+    """Grande toile abstraite (1,2 x 0,8 m) accrochée au mur."""
+    mb = MB()
+    z = 1.5
+    box(mb, "Laque", (0, 0.015, z), (1.2, 0.03, 0.8), col=(245, 245, 243, 255))
+    for (x, zz, w, hh, c) in ((-0.3, 0.1, 0.5, 0.45, (220, 90, 60)), (0.25, -0.12, 0.45, 0.35, (40, 70, 120)), (0.15, 0.2, 0.2, 0.2, (240, 200, 70)),
+                              (-0.35, -0.25, 0.3, 0.15, (30, 30, 32))):
+        box(mb, "Toile", (x, -0.002, z + zz), (w, 0.004, hh), col=c + (255,))
+    return mb
+
+
 FURNITURE = {
     "Int_TableCuisine": table_cuisine,
     "Int_Chaise": chaise_paillee,
@@ -1047,6 +1294,21 @@ FURNITURE = {
     "Int_Pupitre": pupitre,
     "Int_Statue": statue,
     "Int_Confessionnal": confessionnal,
+    "Int_CuisineModerne": cuisine_moderne,
+    "Int_Ilot": lambda: _centre(ilot()),
+    "Int_TableModerne": table_moderne,
+    "Int_CanapeAngle": lambda: _centre(canape_angle()),
+    "Int_TableBasseModerne": table_basse_moderne,
+    "Int_MeubleTV": meuble_tv,
+    "Int_LampeArc": lambda: _centre(lampe_arc()),
+    "Int_EtagereCubes": etagere_cubes,
+    "Int_LitModerne": lit_moderne,
+    "Int_Dressing": dressing,
+    "Int_BureauInfo": lambda: _centre(bureau_info()),
+    "Int_Douche": douche,
+    "Int_VasqueModerne": vasque_moderne,
+    "Int_PlanteModerne": plante_moderne,
+    "Int_CadreModerne": cadre_moderne,
 }
 
 # encombrement au sol (largeur X, profondeur Y, hauteur) : sert au placement et à la collision (boîte)
@@ -1078,11 +1340,16 @@ SIZE = {
     "Int_Pupitre": (0.55, 0.45, 1.25), "Int_Statue": (0.55, 0.55, 2.4), "Int_Confessionnal": (1.8, 0.9, 2.4),
     # modules de terrasse réutilisés à l'intérieur des cafés
     "Table_Cafe": (0.7, 0.7, 0.75), "Chaise_Bistrot": (0.45, 0.45, 0.9),
+    "Int_CuisineModerne": (3.0, 0.66, 2.3), "Int_Ilot": (1.8, 1.2, 0.95), "Int_TableModerne": (1.8, 1.9, 0.8),
+    "Int_CanapeAngle": (2.8, 1.7, 0.8), "Int_TableBasseModerne": (1.1, 0.6, 0.45), "Int_MeubleTV": (1.9, 0.45, 1.65),
+    "Int_LampeArc": (0.42, 1.56, 2.1), "Int_EtagereCubes": (1.55, 0.4, 1.52), "Int_LitModerne": (1.8, 2.1, 1.1),
+    "Int_Dressing": (2.0, 0.64, 2.3), "Int_BureauInfo": (1.4, 1.35, 1.2), "Int_Douche": (1.2, 0.9, 2.2),
+    "Int_VasqueModerne": (0.9, 0.5, 1.0), "Int_PlanteModerne": (0.6, 0.6, 1.8), "Int_CadreModerne": (1.2, 0.04, 0.0),
 }
 
 
 # seules les parties peintes et les tissus prennent la teinte de l'instance (alpha de sommet = 0 ailleurs, comme pour les modules)
-TINTABLE = ("BoisPeint", "Toile", "TissuProvence", "Carrosserie")
+TINTABLE = ("BoisPeint", "Toile", "TissuProvence", "Carrosserie", "Laque", "BetonCire")
 
 
 def _untint(fn):

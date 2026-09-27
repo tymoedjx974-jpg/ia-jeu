@@ -261,7 +261,7 @@ void FVPBuilder::SpawnInstances(FScopedSlowTask& Task)
 		}
 		if (ColR != 255 || ColG != 255 || ColB != 255)
 		{
-			for (const TCHAR* Slot : { TEXT("BoisPeint"), TEXT("Toile"), TEXT("TissuProvence"), TEXT("Carrosserie") })
+			for (const TCHAR* Slot : { TEXT("BoisPeint"), TEXT("Toile"), TEXT("TissuProvence"), TEXT("Carrosserie"), TEXT("Laque") })
 			{
 				const int32 Index = Mesh->GetMaterialIndex(FName(Slot));
 				if (Index != INDEX_NONE)

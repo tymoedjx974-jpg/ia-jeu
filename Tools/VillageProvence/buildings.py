@@ -509,7 +509,7 @@ def gen_building(b, mb, inst):
                 mb.quad(wall, a1 + e2 * z0, a0 + e2 * z0, a0 + e2 * z0 + inward * D, a1 + e2 * z0 + inward * D, [(0, 0), (o["s1"] / tw - o["s0"] / tw, 0), (o["s1"] / tw - o["s0"] / tw, D / tw), (0, D / tw)], col)
                 # fond sombre derrière les vitres (pas d'intérieur modélisé)
                 back = inward * 0.6
-                if not pl or not o.get("visit"):
+                if not pl or not (o.get("visit") or o.get("muree")):
                     mb.quad("Verre", a1 + e2 * z0 + back, a0 + e2 * z0 + back, a0 + e2 * z1 + back, a1 + e2 * z1 + back, [(0, 0), (1, 0), (1, 1), (0, 1)], WHITE, n=-inward)
                 # instance du module
                 yaw = math.atan2(u[1], u[0])
@@ -1366,6 +1366,7 @@ if __name__ == "__main__":
     npl = street_plaques(chunks[(0, 0)])
     print("plaques de rue:", npl)
     print("maisons visitables : %d (sur %d candidates) ; refus : %s" % (len(VISITED), len(VISIT_CANDS), dict(interiors.REJECT)))
+    print("escaliers droits : %s" % dict(interiors.STAIRS))
     themes = {b["id"]: (b.get("visit_plan") or {}).get("theme", "") for b in VISITED}
     for dr in MOVING_DOORS:
         dr["theme"] = themes.get(dr["house"], "")

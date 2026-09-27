@@ -15,7 +15,7 @@ from common import ombr
 from geomlib import box, tube, planar_polygon, triangulate, nrm, WHITE
 from materials import TILE
 from mobilier_int import SIZE
-from modules import VISIT
+from modules import OPENINGS, VISIT
 
 T_WALL = 0.45       # épaisseur des murs extérieurs
 SLAB = 0.24         # épaisseur des planchers
@@ -29,6 +29,7 @@ DOOR_TYPES = ("Porte", "Porte_Simple", "Remise", "Vitrine", "Vitrine_SansStore")
 PAINT = [(96, 132, 160), (122, 150, 128), (170, 186, 170), (214, 204, 170), (120, 140, 170), (150, 170, 190), (196, 120, 90)]
 FABRIC = [(222, 176, 64), (70, 104, 160), (176, 64, 50), (120, 136, 70), (206, 150, 60), (90, 120, 150)]
 REJECT = collections.Counter()   # raisons de refus des maisons candidates (diagnostic)
+STAIRS = collections.Counter()   # escaliers droits : dégagés / devant une fenêtre (diagnostic)
 LINEN = [(236, 226, 204), (212, 196, 170), (190, 170, 140), (160, 170, 150)]
 
 
@@ -187,6 +188,7 @@ def plan(b, info, openings, gz):
         return dict(base, d=d, start=start, cuts=cuts, door_y=sd * (W / 2 - 0.7))
 
     best = None
+    found = []
     order = [(s, d) for s in (1, -1) for d in (1, -1)]
     # escalier de préférence sur le long mur opposé à la porte d'entrée
     order.sort(key=lambda sd: (main["side"] == ("+y" if sd[0] > 0 else "-y")))
@@ -221,10 +223,15 @@ def plan(b, info, openings, gz):
                 if o["side"] == side_end and overlaps(*o["span"], y_b, y_b, 0.12):
                     bad = True
             if not bad:
-                best = dict(s=s, d=d, end=end, xc=xc, band=band, y_b=y_b)
+                # une volée qui passe devant une fenêtre du rez-de-chaussée la coupe en biais : on l'évite autant que possible
+                hide = sum(max(0.0, min(o["span"][1], xr[1]) - max(o["span"][0], xr[0]))
+                           for o in locs if o["floor"] == 0 and not o["door"] and o["side"] == side_band)
+                found.append((hide > 0.05, hide, len(found), dict(s=s, d=d, end=end, xc=xc, band=band, y_b=y_b)))
                 break
-        if best:
-            break
+    if found:
+        found.sort(key=lambda f: f[:3])
+        best = found[0][3]
+        STAIRS["fenêtre condamnée derrière" if found[0][0] else "mur plein"] += 1
     if not best:
         REJECT[kind + ":escalier"] += 1
         return None
@@ -265,8 +272,18 @@ def apply_openings(b, pl, openings, info):
     """Ouvre le bâtiment : porte(s) d'entrée au niveau du sol intérieur, fenêtres sans vitre sur les niveaux aménagés."""
     l0 = pl["l0"]
     steps = []
+    stair = None
+    if pl["kind"] == "maison":
+        stair = ("+y" if pl["s"] > 0 else "-y", *sorted((pl["end"], pl["end"] + pl["d"] * pl["run"])))
     for lo in pl["locs"]:
         o = openings[lo["i"]]
+        if (stair and lo["floor"] == 0 and not lo["door"] and lo["side"] == stair[0]
+                and lo["span"][0] < stair[2] - 0.05 and lo["span"][1] > stair[1] + 0.05 and o["type"].startswith("Fene")):
+            # fenêtre derrière la volée : condamnée (volets fermés dehors, mur plein dedans), l'escalier ne la coupe plus
+            if OPENINGS.get(o["type"]) == OPENINGS["Fenetre_Fermee"]:
+                o["type"] = "Fenetre_Fermee"
+            o["muree"] = True
+            continue
         if lo["floor"] < pl["nlev"] and o["type"] in VISIT:
             if lo["door"] and not (-0.8 <= lo["z0"] - l0 <= 0.45):
                 continue
@@ -282,6 +299,8 @@ def apply_openings(b, pl, openings, info):
     # ouvertures vues de l'intérieur (après ajustement des portes) : point sur la face intérieure, direction du mur
     ow = []
     for o in openings:
+        if o.get("muree"):
+            continue
         e = info[o["edge"]]
         sc = (o["s0"] + o["s1"]) / 2
         ow.append((e["p0"] + e["u"] * sc - e["out"] * T_WALL, e["u"], o["s1"] - o["s0"], o["z0"], o["z1"]))

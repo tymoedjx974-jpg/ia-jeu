@@ -144,9 +144,9 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 ![Escalier provençal, escalier moderne, deux colimaçons](Docs/escaliers.jpg)
 
-- **Escalier droit** : 1,05 m de large, marches de 19 cm pour 25 cm de giron ; girons en terre cuite avec nez de marche en bois, limon, balustres à chaque marche et main courante côté vide, main courante sur le mur. Dans les maisons modernes : marches en bois, garde-corps à câbles et main courante en inox.
+- **Escalier droit** : 1,05 m de large, marches de 19 cm pour 25 cm de giron ; girons en terre cuite avec nez de marche en bois, limon, balustres et main courante côté vide à partir de la 5ᵉ marche (les 4 premières restent ouvertes : le bas de la volée est contre le mur du fond, on y entre par le côté), main courante sur le mur. Dans les maisons modernes : marches en bois, garde-corps à câbles et main courante en inox.
 - **Colimaçon** (maisons sur 3 niveaux) : 2,2 m de diamètre, marches pleines en éventail (pierre ou bois), noyau central, garde-corps à barreaux ; le quart de tour restant sert d'accès en bas et de palier en haut, protégé par une rambarde.
-- **Accessibles** : le départ et l'arrivée de chaque escalier sont réservés (aucun meuble dessus). Chaque volée porte une **rampe de collision invisible** (dossier `VillageProvence/Escaliers`, étiquette `VP_RampeEscalier`) : seuls les personnages la touchent (canal Pawn), ils montent sans buter sur les marches, et le navmesh la suit, donc les zombies peuvent monter à l'étage. Les projectiles et la caméra la traversent.
+- **Accessibles** : le départ (zone de 1,8 × 1,3 m devant les premières marches) et l'arrivée (le couloir jusqu'à la chambre) de chaque escalier sont réservés : aucun meuble dessus. Chaque volée porte une **rampe de collision invisible** (dossier `VillageProvence/Escaliers`, étiquette `VP_RampeEscalier`) : seuls les personnages la touchent (canal Pawn), ils montent sans buter sur les marches, et le navmesh la suit, donc les zombies peuvent monter à l'étage. Les projectiles et la caméra la traversent.
 
 ### Portes (acteur VP_Porte)
 

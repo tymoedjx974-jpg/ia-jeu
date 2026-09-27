@@ -22,6 +22,7 @@ SLAB = 0.24         # épaisseur des planchers
 STAIR_W = 1.05      # largeur de l'escalier droit
 TREAD = 0.25        # giron
 RISE_MAX = 0.19     # hauteur de marche maximale
+OPEN_STEPS = 4      # marches d'accès sans garde-corps (le bas de la volée est contre le mur)
 PART = 0.1          # épaisseur des cloisons
 COL_PLAFOND = (247, 244, 238, 255)
 DOOR_TYPES = ("Porte", "Porte_Simple", "Remise", "Vitrine", "Vitrine_SansStore")
@@ -416,16 +417,18 @@ def build(b, pl, mb, inst, rng):
     # garde-corps côté vide
     yr = y_b - s * 0.05
     rail = []
-    for i in range(n):
+    i0 = OPEN_STEPS                      # premières marches sans garde-corps : c'est par là qu'on monte
+    for i in range(i0, n):
         x = end + d * (i + 0.5) * tr
         zt = l0 + (i + 1) * rise
         P = Wp(x, yr)
         rail.append((P[0], P[1], zt + 0.9))
         if not modern:
-            tube(mb, "Fer", [(P[0], P[1], zt), (P[0], P[1], zt + 0.9)], 0.011, segs=5, col=(55, 50, 45, 255))
+            tube(mb, "Fer", [(P[0], P[1], zt), (P[0], P[1], zt + 0.9)], 0.011 if i > i0 else 0.04, segs=5 if i > i0 else 8,
+                 col=(55, 50, 45, 255))
     if modern:
         # garde-corps à câbles tendus en inox : poteaux toutes les 4 marches, 4 câbles parallèles à la pente
-        for i in list(range(0, n, 4)) + [n - 1]:
+        for i in list(range(i0, n, 4)) + [n - 1]:
             x = end + d * (i + 0.5) * tr
             P = Wp(x, yr)
             zt = l0 + (i + 1) * rise
@@ -1347,7 +1350,8 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     # ================= rez-de-chaussée
     blocks, tall = blocks_for(0)
     blocks.append((xr[0] - 0.05, xr[1] + 0.05, band[0] - 0.05, band[1] + 0.05))                # escalier
-    appr = (min(end, end + d * 1.1), max(end, end + d * 1.1), *sorted((y_b, y_b - s * 0.9)))   # départ de l'escalier
+    # départ de l'escalier : le bas de la volée est contre le mur du fond, on y monte par le côté ouvert -> zone dégagée
+    appr = (min(end, end + d * 1.8), max(end, end + d * 1.8), *sorted((y_b, y_b - s * 1.3)))
     blocks.append(appr)
     P = Placer(blocks, tall)
     kx = sorted((far, far - d * 3.1))
@@ -1484,8 +1488,9 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     blocks, tall = blocks_for(1)
     hole = (min(end, end + d * run) - 0.2, max(end, end + d * run) + 0.2, band[0] - 0.05, band[1] + 0.05)
     blocks.append(hole)
-    arr = sorted((end + d * run, end + d * (run + 1.0)))
-    blocks.append((arr[0], arr[1], band[0] - 0.1, band[1]))
+    # arrivée : le couloir le long de l'escalier jusque dans la chambre reste libre
+    arr = sorted((end + d * run, xc + d * 1.3))
+    blocks.append((arr[0], arr[1], band[0] - 0.15, band[1]))
     y_door = y_b - s * 0.6
     blocks.append((xc - 0.9, xc + 0.9, y_door - 0.5, y_door + 0.5))
     P = Placer(blocks, tall)

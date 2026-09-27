@@ -32105,7 +32105,7 @@
     -1,
     -1
    ],
-   "count": 11
+   "count": 10
   },
   {
    "mesh": "Mod_Int_Armoire",
@@ -32118,7 +32118,7 @@
     -1,
     0
    ],
-   "count": 9
+   "count": 8
   },
   {
    "mesh": "Mod_Int_Armoire",
@@ -32144,7 +32144,7 @@
     0,
     -1
    ],
-   "count": 20
+   "count": 19
   },
   {
    "mesh": "Mod_Int_Armoire",
@@ -32638,7 +32638,20 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_Buffet",
+   "color": [
+    122,
+    150,
+    128
+   ],
+   "cell": [
+    -1,
+    -1
+   ],
+   "count": 1
   },
   {
    "mesh": "Mod_Int_Buffet",
@@ -32690,7 +32703,7 @@
     -1,
     0
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Buffet",
@@ -33184,7 +33197,7 @@
     0,
     -1
    ],
-   "count": 6
+   "count": 5
   },
   {
    "mesh": "Mod_Int_BureauInfo",
@@ -33566,19 +33579,6 @@
   {
    "mesh": "Mod_Int_Canape",
    "color": [
-    236,
-    226,
-    204
-   ],
-   "cell": [
-    -1,
-    -2
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_Canape",
-   "color": [
     160,
     170,
     150
@@ -33938,7 +33938,7 @@
     -1,
     -1
    ],
-   "count": 39
+   "count": 40
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -33951,7 +33951,7 @@
     -1,
     0
    ],
-   "count": 16
+   "count": 17
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -33990,7 +33990,7 @@
     0,
     -1
    ],
-   "count": 59
+   "count": 58
   },
   {
    "mesh": "Mod_Int_Carton",
@@ -34029,7 +34029,7 @@
     1,
     -1
    ],
-   "count": 11
+   "count": 10
   },
   {
    "mesh": "Mod_Int_CasierBouteilles",
@@ -34146,7 +34146,7 @@
     -1,
     -1
    ],
-   "count": 40
+   "count": 29
   },
   {
    "mesh": "Mod_Int_Chaise",
@@ -34159,7 +34159,7 @@
     -1,
     0
    ],
-   "count": 44
+   "count": 42
   },
   {
    "mesh": "Mod_Int_Chaise",
@@ -34289,7 +34289,7 @@
     -1,
     0
    ],
-   "count": 5
+   "count": 3
   },
   {
    "mesh": "Mod_Int_ChaiseRenversee",
@@ -35945,19 +35945,6 @@
   {
    "mesh": "Mod_Int_Fauteuil",
    "color": [
-    236,
-    226,
-    204
-   ],
-   "cell": [
-    -1,
-    -2
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_Fauteuil",
-   "color": [
     160,
     170,
     150
@@ -36031,20 +36018,7 @@
     -1,
     0
    ],
-   "count": 3
-  },
-  {
-   "mesh": "Mod_Int_Fauteuil",
-   "color": [
-    160,
-    170,
-    150
-   ],
-   "cell": [
-    -1,
-    1
-   ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_Fauteuil",
@@ -36291,7 +36265,7 @@
     -1,
     -1
    ],
-   "count": 6
+   "count": 5
   },
   {
    "mesh": "Mod_Int_Frigo",
@@ -36738,19 +36712,6 @@
   {
    "mesh": "Mod_Int_Ilot",
    "color": [
-    40,
-    60,
-    90
-   ],
-   "cell": [
-    -1,
-    0
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_Ilot",
-   "color": [
     235,
     230,
     220
@@ -36799,19 +36760,6 @@
     -1
    ],
    "count": 2
-  },
-  {
-   "mesh": "Mod_Int_Ilot",
-   "color": [
-    235,
-    230,
-    220
-   ],
-   "cell": [
-    0,
-    -1
-   ],
-   "count": 1
   },
   {
    "mesh": "Mod_Int_Ilot",
@@ -36876,7 +36824,7 @@
     0,
     -1
    ],
-   "count": 15
+   "count": 13
   },
   {
    "mesh": "Mod_Int_Jerrican",
@@ -38384,7 +38332,7 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Malle",
@@ -39000,19 +38948,6 @@
   {
    "mesh": "Mod_Int_PlanTravail",
    "color": [
-    122,
-    150,
-    128
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_PlanTravail",
-   "color": [
     170,
     186,
     170
@@ -39047,7 +38982,7 @@
     -1,
     0
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Int_PlanTravail",
@@ -39307,7 +39242,7 @@
     -1,
     -1
    ],
-   "count": 14
+   "count": 13
   },
   {
    "mesh": "Mod_Int_Plante",
@@ -39866,7 +39801,7 @@
     0,
     -1
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Int_SacCouchage",
@@ -39970,7 +39905,7 @@
     -1,
     -1
    ],
-   "count": 8
+   "count": 5
   },
   {
    "mesh": "Mod_Int_Suspension",
@@ -39983,7 +39918,7 @@
     -1,
     0
    ],
-   "count": 6
+   "count": 5
   },
   {
    "mesh": "Mod_Int_Suspension",
@@ -40060,19 +39995,6 @@
    "cell": [
     -2,
     -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_TableBasse",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    -2
    ],
    "count": 1
   },
@@ -40269,7 +40191,7 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Int_TableCuisine",
@@ -40321,7 +40243,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Int_TableCuisine",
@@ -40333,19 +40255,6 @@
    "cell": [
     -1,
     -1
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Int_TableCuisine",
-   "color": [
-    70,
-    104,
-    160
-   ],
-   "cell": [
-    -1,
-    0
    ],
    "count": 1
   },
@@ -40802,7 +40711,7 @@
     -1,
     -2
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Int_Tapis",
@@ -54998,7 +54907,7 @@
     -1,
     0
    ],
-   "count": 44
+   "count": 45
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -55193,7 +55102,7 @@
     -1,
     0
    ],
-   "count": 41
+   "count": 40
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",

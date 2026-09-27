@@ -28,6 +28,8 @@ Un village provençal complet de **4 × 4 km**, construit sur le **plan réel de
 | **Intérieurs** | 135 bâtiments visitables : 105 maisons (à étage, de plain-pied, sur 3 niveaux avec colimaçon), 28 commerces, la mairie et l'église ; 8 ambiances ; portes qui s'ouvrent. |
 | **Parkour** | Planches entre les toits, échelles, échafaudages, caisses, balcons praticables. |
 
+![Les champs de lavande au pied du village](Docs/lavande_village.jpg)
+
 Tout est généré : aucune texture, aucun modèle ni aucun son n'a été copié d'Internet. Les textures (pierre, enduit à la chaux, tuiles canal, calade…) ont été calculées pour ce projet.
 
 ## 1. Installer le plugin

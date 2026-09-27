@@ -252,6 +252,48 @@ n2 = fbm((NY, NX), 7, octaves=2, seed=12)
 micro = 1.4 * n1 * (1.0 - 0.65 * fields_b) + 0.35 * n2 * (1.0 - 0.8 * fields_b)
 ground = ground + micro.astype(np.float32)
 
+# ---------------------------------------------------------------- ceinture du village : ~100 m de champs de lavande (quelques cyprès),
+# puis une forêt dense ; les ocres (falaises, sables, carrières) restent à nu. Fait après le calcul du sol : le relief
+# (corrigé de la canopée réelle) ne change pas.
+LAV_W, FOREST_W = 100.0, 600.0
+_near = [b["poly"] for b in blds if b["poly"].centroid.distance(CENTER) < 500]
+_blob = unary_union([p_.buffer(15.0) for p_ in _near])
+village = unary_union([p_ for p_ in polys_of(_blob) if p_.intersects(core.buffer(30.0))])
+village = village.buffer(10.0).buffer(-10.0).simplify(2.0)
+village = unary_union([Polygon(p_.exterior) for p_ in polys_of(village)])     # cours et jardins intérieurs : dans le village
+ochre_keep = unary_union([ln.buffer(30.0) for ln in V["cliffs"]] + [p_.buffer(8.0) for p_ in V["sand"] + V["quarry"] + V["rock"]])
+water = unary_union(V["ponds"] + V["pools"])
+ring_all = village.buffer(LAV_W).difference(village).intersection(ZB)
+band_all = village.buffer(LAV_W + FOREST_W).difference(village.buffer(LAV_W)).intersection(ZB)
+
+
+def _cut(key, g):
+    V[key] = [q for p_ in V[key] for q in polys_of(p_.difference(g)) if q.area > 20]
+
+
+# on vide la ceinture de ses anciennes cultures, et la bande de forêt de ses champs et garrigues
+for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest"):
+    _cut(key, ring_all)
+for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "lawn"):
+    _cut(key, band_all)
+gardens = unary_union(V["lawn"] + [p_ for ps, _ in V["pitch"] for p_ in ps] + V["cemetery"] + V["farmyard"])
+ring = ring_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(gardens.buffer(2.0))
+# parcelles de lavande irrégulières (Voronoï, ~45 m) : chacune a ses rangs dans sa propre direction
+_seeds = []
+_bx0, _by0, _bx1, _by1 = ring.bounds
+for _x in np.arange(_bx0, _bx1, 45.0):
+    for _y in np.arange(_by0, _by1, 45.0):
+        _seeds.append((_x + rng.uniform(-18, 18), _y + rng.uniform(-18, 18)))
+_cells = shapely.voronoi_polygons(shapely.MultiPoint(_seeds), extend_to=ring.envelope.buffer(50))
+lav = [q for c_ in polys_of(_cells) for q in polys_of(c_.intersection(ring)) if q.area > 60]
+V["lavender"] += lav
+V["lavender_ring"] = polys_of(ring)
+dense = band_all.difference(ochre_keep).difference(water.buffer(3.0))
+V["forest_dense"] = polys_of(dense)
+V["forest"] += V["forest_dense"]
+forest_all = V["forest"] + V["lc_forest"]
+print("ceinture : %d parcelles de lavande (%.0f ha), forêt dense %.0f ha" % (len(lav), ring.area / 1e4, dense.area / 1e4))
+
 # relief naturel renforcé hors du village : ondulations de colline, buttes, bosses, ravines d'écoulement
 def _norm(a):
     return (a - a.mean()) / (a.std() + 1e-6)

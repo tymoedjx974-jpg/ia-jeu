@@ -119,6 +119,17 @@ put_variants("Arbre_PinParasol", 2, pp[sub >= 0.9], scale=(0.8, 1.1))
 put_variants("Arbre_Chene", 4, pts[~pine], scale=(0.7, 1.25))
 under = bare_ochre(jitter_grid(forest, 4.0, keep=0.45), 0.2)
 put_variants("Buisson_Garrigue", 4, under, scale=(0.7, 1.4))
+# forêt dense autour de la ceinture de lavande : un second semis d'arbres, sous-bois fourni
+dense = unary_union(V.get("forest_dense") or []).intersection(ZBOX)
+if not dense.is_empty:
+    dp = bare_ochre(jitter_grid(dense, 8.0, keep=0.9))
+    dv = rng.random(len(dp))
+    put_variants("Arbre_Chene", 4, dp[dv < 0.5], scale=(0.8, 1.3))
+    put_variants("Arbre_Pin", 4, dp[(dv >= 0.5) & (dv < 0.92)], scale=(0.85, 1.25))
+    put_variants("Arbre_PinParasol", 2, dp[dv >= 0.92], scale=(0.8, 1.1))
+    du = bare_ochre(jitter_grid(dense, 3.6, keep=0.5), 0.2)
+    put_variants("Buisson_Garrigue", 4, du, scale=(0.8, 1.5))
+    print("forêt dense : %d arbres, %d buissons en plus" % (len(dp), len(du)), flush=True)
 print("forêt:", len(pts), "arbres, %d buissons  %.0fs" % (len(under), time.time() - T0), flush=True)
 
 # ------------------------------------------------------------------ garrigue : buissons, romarins, herbes sèches, arbres isolés
@@ -181,6 +192,26 @@ def rows(parcel, spacing, seg_len, name_prefix, nvar, margin=1.5, jitter=0.03):
 nv = rows(U("vineyard"), 2.5, 4.8, "Vigne_Rang", 3)
 nl = rows(U("lavender"), 1.7, 4.0, "Lavande_Rang", 3, margin=1.2)
 print("vignes: %d segments, lavande: %d segments  %.0fs" % (nv, nl, time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ cyprès dans les champs de lavande autour du village :
+# quelques fuseaux isolés, et de courts alignements en bordure de parcelle
+lring = unary_union(V.get("lavender_ring") or []).intersection(ZBOX)
+n_lc = 0
+if not lring.is_empty:
+    solo = jitter_grid(lring, 38.0, keep=0.4)
+    put_variants("Arbre_Cypres", 4, solo, scale=(0.8, 1.15), sink=0.1)
+    n_lc += len(solo)
+    for pg in polys_of(unary_union(V["lavender"]).intersection(lring)):
+        if rng.random() > 0.2 or pg.area < 600:
+            continue
+        ring_ = pg.exterior
+        s0 = rng.uniform(0, ring_.length)
+        m = int(rng.integers(4, 8))
+        P = np.array([ring_.interpolate((s0 + k * 4.5) % ring_.length).coords[0] for k in range(m)])
+        P = P[free(P[:, 0], P[:, 1])]
+        put_variants("Arbre_Cypres", 4, P, scale=(0.85, 1.1), sink=0.1)
+        n_lc += len(P)
+print("cyprès dans la lavande : %d" % n_lc, flush=True)
 
 # ------------------------------------------------------------------ vergers : oliviers (et cerisiers), alignés sur la parcelle
 def orchard(parcel, spacing, species_fn):
@@ -442,6 +473,7 @@ for (x, y, genus) in V["trees"]:
 # ------------------------------------------------------------------ cyprès dans le village : une partie des arbres de la ville devient des cyprès,
 # souvent en bouquets de 2 à 4 fuseaux comme dans les jardins provençaux
 town = unary_union([V["core"].buffer(60)] + [p.buffer(10) for p in (V.get("residential") or [])]).intersection(ZBOX)
+town = town.difference(dense)          # la forêt dense autour du village reste une forêt de pins et de chênes
 n_cyp = 0
 for sp in ("Arbre_Chene", "Arbre_Pin", "Arbre_PinParasol", "Arbre_Fruitier"):
     for k in [k for k in INST if k.startswith(sp + "_")]:

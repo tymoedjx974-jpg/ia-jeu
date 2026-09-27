@@ -4742,6 +4742,16 @@
    "tags": []
   },
   {
+   "name": "Mod_Z_Sol_zone_infectee",
+   "file": "Meshes/Mod_Z_Sol_zone_infectee.pvm",
+   "nanite": true,
+   "collision": "none",
+   "collision_dims": [],
+   "folder": "Zombies",
+   "tintable": true,
+   "tags": []
+  },
+  {
    "name": "Veg_Arbre_Platane_0",
    "file": "Meshes/Veg_Arbre_Platane_0.pvm",
    "nanite": false,
@@ -44488,6 +44498,19 @@
    "count": 1
   },
   {
+   "mesh": "Mod_Z_Sol_zone_infectee",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    0
+   ],
+   "count": 1
+  },
+  {
    "mesh": "Mod_Z_TableRenversee",
    "color": [
     255,
@@ -44954,19 +44977,6 @@
     -1
    ],
    "count": 9
-  },
-  {
-   "mesh": "Mod_Z_Tag_zone_infectee",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
-    0
-   ],
-   "count": 1
   },
   {
    "mesh": "Veg_Arbre_Chene_0",

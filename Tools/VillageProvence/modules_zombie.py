@@ -413,7 +413,7 @@ def graffiti(key, height=1.0, ground=False):
 
 WALL_TAGS = ["zone_infectee", "ne_pas_entrer", "ils_sont_dedans", "survivants_mairie", "aidez_nous", "morts_ici", "pas_de_bruit",
              "croix", "fleche", "vide_3", "sang_main", "suie", "impacts"]
-GROUND_TAGS = ["sang_1", "sang_2", "sang_flaque", "sang_trainee", "sos"]
+GROUND_TAGS = ["sang_1", "sang_2", "sang_flaque", "sang_trainee", "sos", "zone_infectee"]
 
 ZOMBIE_BUILDERS = {
     "Z_Citadine": lambda: car("citadine", rng_seed=1),
@@ -447,7 +447,7 @@ ZOMBIE_BUILDERS = {
 for _k in WALL_TAGS:
     ZOMBIE_BUILDERS[f"Z_Tag_{_k}"] = (lambda k: (lambda: graffiti(k, 1.0 if k not in ("suie",) else 1.6)))(_k)
 for _k in GROUND_TAGS:
-    ZOMBIE_BUILDERS[f"Z_Sol_{_k}"] = (lambda k: (lambda: graffiti(k, 1.2 if k != "sos" else 3.0, ground=True)))(_k)
+    ZOMBIE_BUILDERS[f"Z_Sol_{_k}"] = (lambda k: (lambda: graffiti(k, {"sos": 3.0, "zone_infectee": 1.6}.get(k, 1.2), ground=True)))(_k)
 
 # collisions : ("box", sx, sy, sz) centrée, ("boxes", [cx, cy, cz, sx, sy, sz] * n) ou ("complex",)
 ZOMBIE_COLLIDE = {

@@ -172,7 +172,11 @@ if best:
         x, y = p.x - t[0] * (6 + 5 * k) + n_[0] * rng.uniform(-1.5, 1.5), p.y - t[1] * (6 + 5 * k) + n_[1] * rng.uniform(-1.5, 1.5)
         put(name, x, y, gz(x, y) + 0.02, math.atan2(t[1], t[0]) + rng.normal(0, 0.5), col=PAINTS[rng.integers(len(PAINTS))])
         occupied.append(footprint(x, y, 0, 4.5, 1.8))
-    put("Z_Tag_zone_infectee", p.x + t[0] * 0.3, p.y + t[1] * 0.3, gz(p.x, p.y) + 1.25, math.atan2(n_[1], n_[0]), s=(0.7, 0.7, 0.7))
+    # inscription peinte sur la chaussée, lisible en arrivant de l'extérieur
+    to_village = t if np.dot(t, np.array([CENTER.x - p.x, CENTER.y - p.y])) > 0 else -t
+    q = np.array([p.x, p.y]) - to_village * 5.0
+    # le haut du texte pointe vers le village : on le lit en arrivant de l'extérieur
+    put("Z_Sol_zone_infectee", q[0], q[1], gz(*q) + 0.09, math.atan2(to_village[1], to_village[0]) - math.pi / 2)
     route.append(dict(kind="barrage", x=p.x, y=p.y))
 print("barrage :", blocks, "barrières", flush=True)
 

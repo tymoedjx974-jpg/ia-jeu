@@ -36,6 +36,7 @@ MATS = {
     "EcorcePin": dict(kind="opaque", tex="EcorcePin"),
     "EcorceChene": dict(kind="opaque", tex="EcorceChene"),
     "FeuillesOlivier": dict(kind="foliage", tex="FeuillesOlivier"),
+    "FeuillesLaurier": dict(kind="foliage", tex="FeuillesLaurier"),
     "FeuillesPlatane": dict(kind="foliage", tex="FeuillesPlatane"),
     "FeuillesChene": dict(kind="foliage", tex="FeuillesChene"),
     "FeuillesFruitier": dict(kind="foliage", tex="FeuillesFruitier"),
@@ -82,7 +83,7 @@ def uv_scale(mat):
 #   Flexibilite : flexion du tronc (même valeur pour l'écorce et le feuillage d'une espèce)
 ARBRE = dict(Souplesse=0.25, Ondulation=0.0, Frisson=5.0, Flexibilite=1.0)
 WIND = {
-    "FeuillesOlivier": ARBRE, "FeuillesPlatane": ARBRE, "FeuillesChene": ARBRE, "FeuillesFruitier": ARBRE,
+    "FeuillesOlivier": ARBRE, "FeuillesLaurier": ARBRE, "FeuillesPlatane": ARBRE, "FeuillesChene": ARBRE, "FeuillesFruitier": ARBRE,
     "AiguillesPin": dict(ARBRE, Frisson=3.0), "FeuillesCypres": dict(ARBRE, Frisson=2.5),
     "FeuillesVigne": dict(Souplesse=0.45, Ondulation=3.0, Frisson=4.0, Flexibilite=0.0),
     "FeuillesGarrigue": dict(Souplesse=0.55, Ondulation=4.0, Frisson=3.0, Flexibilite=0.0),

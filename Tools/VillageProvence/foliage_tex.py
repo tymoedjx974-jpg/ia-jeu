@@ -146,7 +146,7 @@ class Atlas:
         prev.save(f"texprev/{name}.jpg", quality=88)
 
 
-def twig_cluster(at, q, rng, kind, leaf_len, leaf_w, n_leaves, cols, under_col=None, stem_col=(90, 80, 60), spread=0.9, opposite=True, stem_w=3):
+def twig_cluster(at, q, rng, kind, leaf_len, leaf_w, n_leaves, cols, under_col=None, stem_col=(90, 80, 60), spread=0.9, opposite=True, stem_w=3, under_frac=0.35):
     ox, oy, h = at.quad(q)
     cx = ox + h * 0.5
     base = (cx, oy + h * 0.97)
@@ -201,10 +201,11 @@ def twig_cluster(at, q, rng, kind, leaf_len, leaf_w, n_leaves, cols, under_col=N
                     shp = leaf_shape(kind, ll, ww)
                     ang = a
                     px_, py_ = x0, y0
-                show_under = under_col is not None and rng.random() < 0.35
-                c = jitter_col(rng, under_col if show_under else cols[rng.integers(len(cols))])
+                show_under = under_col is not None and rng.random() < under_frac
+                c = jitter_col(rng, under_col, 0.06) if show_under else jitter_col(rng, cols[rng.integers(len(cols))])
                 draw_leaf(at.dc, at.dh, px_, py_, ang, shp, c + (255,), None, hval=int(rng.uniform(150, 255)),
                           veins="palm" if kind in ("palm", "vine") else "mid", L=ll * (0.45 if kind in ("palm", "vine") else 1.0))
+    return stems
 
 
 def grapes(at, q, rng, n=3, cols=((58, 40, 70), (72, 48, 86), (48, 34, 60))):
@@ -226,6 +227,28 @@ def grapes(at, q, rng, n=3, cols=((58, 40, 70), (72, 48, 86), (48, 34, 60))):
             # pruine et reflet
             at.dc.ellipse([px_ - rr * 0.45, py_ - rr * 0.6, px_ - rr * 0.05, py_ - rr * 0.2], fill=(150, 140, 175, 255))
             at.dh.ellipse([px_ - rr, py_ - rr, px_ + rr, py_ + rr], fill=235)
+
+
+def olives(at, q, rng, stems, n=4, cols=((112, 142, 54), (126, 156, 64), (98, 128, 48), (70, 44, 58), (54, 36, 46))):
+    """Olives (drupes ovales) par petites grappes pendantes : surtout vertes, quelques-unes violet-noir (d'après photo)."""
+    for _ in range(n):
+        st = stems[rng.integers(len(stems))]
+        x0, y0 = st[int(rng.uniform(0.35, 0.9) * (len(st) - 1))]
+        for k in range(rng.integers(2, 6)):
+            px_, py_ = x0 + rng.normal(0, 9) * SS, y0 + rng.uniform(4, 22) * SS
+            at.dc.line([(x0, y0), (px_, py_)], fill=(128, 128, 96, 255), width=SS)
+            c = cols[rng.integers(3)] if rng.random() < 0.8 else cols[3 + rng.integers(2)]
+            a = rng.normal(0, 0.35)
+            rx, ry = rng.uniform(5.5, 7.0) * SS, rng.uniform(7.5, 9.5) * SS
+            ell = [(px_ + math.cos(t) * rx * math.cos(a) - math.sin(t) * ry * math.sin(a),
+                    py_ + ry * 0.8 + math.cos(t) * rx * math.sin(a) + math.sin(t) * ry * math.cos(a)) for t in np.linspace(0, 6.283, 24)]
+            at.dc.polygon(ell, fill=(int(c[0] * 0.68), int(c[1] * 0.68), int(c[2] * 0.68), 255))
+            inner = [(px_ + (x - px_) * 0.8 - rx * 0.1, py_ + ry * 0.8 + (y - py_ - ry * 0.8) * 0.82 - ry * 0.08) for x, y in ell]
+            at.dc.polygon(inner, fill=c + (255,))
+            hx, hy = px_ - rx * 0.35, py_ + ry * 0.35
+            at.dc.ellipse([hx - rx * 0.22, hy - ry * 0.18, hx + rx * 0.22, hy + ry * 0.18],
+                          fill=tuple(min(255, int(v * 1.6 + 40)) for v in c) + (255,))
+            at.dh.polygon(ell, fill=240)
 
 
 def needles(at, q, rng, cols, n_fasc=60, needle_len=0.22, spread=2.2):
@@ -389,8 +412,16 @@ def build():
     # Olivier : feuilles lancéolées gris-vert, revers argenté
     at = Atlas(1024)
     for q in range(4):
-        twig_cluster(at, q, rng, "lance", 70, 12, 44, [(88, 102, 70), (98, 110, 78), (80, 95, 66), (105, 115, 85)], under_col=(165, 172, 150), stem_col=(110, 100, 80), spread=0.8)
-    at.save("FeuillesOlivier", (95, 105, 75))
+        # couleurs relevées sur la photo de référence : dessus vert-de-gris sombre, revers gris argenté très visible
+        stems = twig_cluster(at, q, rng, "lance", 82, 11, 46, [(74, 92, 72), (86, 104, 80), (66, 84, 66), (98, 116, 90), (112, 128, 104)],
+                     under_col=(168, 180, 164), stem_col=(132, 128, 104), spread=0.75, stem_w=2, under_frac=0.45)
+        olives(at, q, rng, stems, n=int(rng.integers(3, 6)))
+    at.save("FeuillesOlivier", (100, 115, 95))
+    # Laurier-rose : feuilles lancéolées vert franc, sans fruits
+    at = Atlas(1024)
+    for q in range(4):
+        twig_cluster(at, q, rng, "lance", 90, 16, 40, [(62, 96, 52), (72, 108, 58), (56, 88, 48)], under_col=(110, 140, 90), stem_col=(96, 104, 70), spread=0.9)
+    at.save("FeuillesLaurier", (66, 100, 55))
     # Platane : grandes feuilles palmées
     at = Atlas(1024)
     for q in range(4):

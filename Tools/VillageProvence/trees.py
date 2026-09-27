@@ -330,7 +330,7 @@ def catalog():
     for v in range(4):
         C[f"Buisson_Garrigue_{v}"] = (lambda lod, v=v: make_bush(300 + v, "FeuillesGarrigue", (0.5, 1.2), 24, lod))
     for v in range(2):
-        C[f"Buisson_LaurierRose_{v}"] = (lambda lod, v=v: make_bush(400 + v, "FeuillesOlivier", (1.6, 2.4), 40, lod, flowers=("Fleurs", 3, 26)))
+        C[f"Buisson_LaurierRose_{v}"] = (lambda lod, v=v: make_bush(400 + v, "FeuillesLaurier", (1.6, 2.4), 40, lod, flowers=("Fleurs", 3, 26)))
         C[f"Buisson_Romarin_{v}"] = (lambda lod, v=v: make_bush(420 + v, "FeuillesGarrigue", (0.5, 0.8), 18, lod, quad=v))
     for v in range(3):
         C[f"Lavande_{v}"] = (lambda lod, v=v: make_lavender(500 + v, lod))

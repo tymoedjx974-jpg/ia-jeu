@@ -326,9 +326,9 @@ for bld in V["buildings"]:
     lawn.append(jitter_grid(p.buffer(10).difference(p.buffer(2)), 1.8, keep=0.4))
 GT = np.concatenate(gard_trees) if gard_trees else np.zeros((0, 2))
 tv = rng.random(len(GT))
-put_variants("Arbre_Olivier", 4, GT[tv < 0.45], scale=(0.7, 1.05))
-put_variants("Arbre_Pin", 4, GT[(tv >= 0.45) & (tv < 0.65)], scale=(0.7, 1.0))
-put_variants("Arbre_PinParasol", 2, GT[(tv >= 0.65) & (tv < 0.75)], scale=(0.7, 1.0))
+put_variants("Arbre_Olivier", 4, GT[tv < 0.6], scale=(0.7, 1.1))
+put_variants("Arbre_Pin", 4, GT[(tv >= 0.6) & (tv < 0.7)], scale=(0.7, 1.0))
+put_variants("Arbre_PinParasol", 2, GT[(tv >= 0.7) & (tv < 0.75)], scale=(0.7, 1.0))
 put_variants("Arbre_Platane", 3, GT[(tv >= 0.75) & (tv < 0.85)], scale=(0.6, 0.8))
 put_variants("Arbre_Fruitier", 3, GT[tv >= 0.85], scale=(0.8, 1.1))
 if gard_cyp:
@@ -344,6 +344,60 @@ if gard_lav:
 if lawn:
     put_variants("Herbe_Verte", 3, np.concatenate(lawn), scale=(0.8, 1.2))
 print("jardins: %d arbres, %d buissons  %.0fs" % (len(GT), len(GB), time.time() - T0), flush=True)
+
+# ------------------------------------------------------------------ oliviers en plus : oliveraies en terrasses, vieux village, places, bords de route
+CEN = Point(-10.0, 20.0)
+extra = []
+# oliveraies (restanques) sur une partie des prés et des champs autour du village
+groves = [pg for pg in polys_of(U("meadow")) if pg.centroid.distance(CEN) < 1300 and pg.area > 400 and rng.random() < 0.45]
+groves += [pg for pg in polys_of(U("farmland")) if pg.centroid.distance(CEN) < 1000 and pg.area > 800 and rng.random() < 0.18]
+if groves:
+    G_ = orchard(unary_union(groves), 7.5, None)
+    put_variants("Arbre_Olivier", 4, G_, scale=(0.8, 1.3))
+    extra.append(len(G_))
+# vieux village : oliviers isolés dans les cours et les recoins
+yard = V["core"].buffer(25).difference(bu.buffer(2.2))
+Y_ = jitter_grid(yard, 16.0, keep=0.35)
+put_variants("Arbre_Olivier", 4, Y_, scale=(0.6, 0.95))
+extra.append(len(Y_))
+# un vieil olivier sur chaque place, à l'écart des platanes
+PL_ = []
+for p in V["plaza"]:
+    freep = p.difference(bu.buffer(3.5))
+    if freep.is_empty or freep.area < 25:
+        continue
+    for _ in range(40):
+        q = Point(rng.uniform(*freep.bounds[0::2]), rng.uniform(*freep.bounds[1::2]))
+        if freep.contains(q) and all(q.distance(Point(*o)) > 6 for o in plaza_trees):
+            PL_.append((q.x, q.y))
+            break
+if PL_:
+    PL_ = np.array(PL_)
+    put_variants("Arbre_Olivier", 4, PL_[free(PL_[:, 0], PL_[:, 1])], scale=(1.1, 1.35))
+    extra.append(len(PL_))
+# le long des routes et chemins du faubourg
+RD_ = []
+for r in V["roads"]:
+    ln = r["line"]
+    if ln.distance(CEN) > 900 or r["cls"] in ("steps",):
+        continue
+    for k in range(int(ln.length / 22)):
+        if rng.random() > 0.4:
+            continue
+        t = (k + rng.uniform(0.2, 0.8)) * 22
+        a, b = ln.interpolate(max(0, t - 1)), ln.interpolate(min(ln.length, t + 1))
+        d = np.array([b.x - a.x, b.y - a.y])
+        d /= np.linalg.norm(d) + 1e-9
+        side = rng.choice([-1, 1])
+        off = (r.get("width") or 4.0) / 2 + rng.uniform(2.5, 4.5)
+        pt = ln.interpolate(t)
+        RD_.append((pt.x - d[1] * off * side, pt.y + d[0] * off * side))
+if RD_:
+    RD_ = np.array(RD_)
+    RD_ = RD_[free(RD_[:, 0], RD_[:, 1])]
+    put_variants("Arbre_Olivier", 4, RD_, scale=(0.7, 1.1))
+    extra.append(len(RD_))
+print("oliviers ajoutés : %d (oliveraies, vieux village, places, routes)  %.0fs" % (sum(extra), time.time() - T0), flush=True)
 
 # ------------------------------------------------------------------ bas-côtés : herbes sèches le long des routes
 side = []

@@ -194,13 +194,24 @@ nl = rows(U("lavender"), 1.7, 4.0, "Lavande_Rang", 3, margin=1.2)
 print("vignes: %d segments, lavande: %d segments  %.0fs" % (nv, nl, time.time() - T0), flush=True)
 
 # ------------------------------------------------------------------ cyprès dans les champs de lavande autour du village :
-# quelques fuseaux isolés, et de courts alignements en bordure de parcelle
+# fuseaux isolés, courts alignements en bordure de parcelle, et vieux oliviers épars (seuls ou par deux ou trois)
 lring = unary_union(V.get("lavender_ring") or []).intersection(ZBOX)
-n_lc = 0
+n_lc = n_lo = 0
 if not lring.is_empty:
-    solo = jitter_grid(lring, 38.0, keep=0.4)
+    solo = jitter_grid(lring, 42.0, keep=0.3)
     put_variants("Arbre_Cypres", 4, solo, scale=(0.8, 1.15), sink=0.1)
     n_lc += len(solo)
+    oli = jitter_grid(lring, 38.0, keep=0.35)
+    grp = []
+    for o in oli:
+        for _ in range(int(rng.choice([0, 0, 1, 2]))):
+            a_, d_ = rng.uniform(0, 2 * math.pi), rng.uniform(5, 8)
+            grp.append((o[0] + math.cos(a_) * d_, o[1] + math.sin(a_) * d_))
+    if grp:
+        grp = np.array(grp)
+        oli = np.concatenate([oli, grp[free(grp[:, 0], grp[:, 1])]])
+    put_variants("Arbre_Olivier", 4, oli, scale=(0.85, 1.35))
+    n_lo = len(oli)
     for pg in polys_of(unary_union(V["lavender"]).intersection(lring)):
         if rng.random() > 0.2 or pg.area < 600:
             continue
@@ -211,7 +222,7 @@ if not lring.is_empty:
         P = P[free(P[:, 0], P[:, 1])]
         put_variants("Arbre_Cypres", 4, P, scale=(0.85, 1.1), sink=0.1)
         n_lc += len(P)
-print("cyprès dans la lavande : %d" % n_lc, flush=True)
+print("dans la lavande : %d cyprès, %d oliviers" % (n_lc, n_lo), flush=True)
 
 # ------------------------------------------------------------------ vergers : oliviers (et cerisiers), alignés sur la parcelle
 def orchard(parcel, spacing, species_fn):

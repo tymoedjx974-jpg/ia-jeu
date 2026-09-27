@@ -252,10 +252,12 @@ n2 = fbm((NY, NX), 7, octaves=2, seed=12)
 micro = 1.4 * n1 * (1.0 - 0.65 * fields_b) + 0.35 * n2 * (1.0 - 0.8 * fields_b)
 ground = ground + micro.astype(np.float32)
 
-# ---------------------------------------------------------------- ceinture du village : ~100 m de champs de lavande (quelques cyprès),
+# ---------------------------------------------------------------- ceinture du village : ~500 m de champs de lavande (oliviers et cyprès épars,
+# une dizaine de mas avec jardin),
 # puis une forêt dense ; les ocres (falaises, sables, carrières) restent à nu. Fait après le calcul du sol : le relief
 # (corrigé de la canopée réelle) ne change pas.
-LAV_W, FOREST_W = 100.0, 600.0
+LAV_W, FOREST_W = 500.0, 600.0
+MAX_MAS = 10          # maisons isolées gardées dans les champs de lavande
 _near = [b["poly"] for b in blds if b["poly"].centroid.distance(CENTER) < 500]
 _blob = unary_union([p_.buffer(15.0) for p_ in _near])
 village = unary_union([p_ for p_ in polys_of(_blob) if p_.intersects(core.buffer(30.0))])
@@ -270,6 +272,30 @@ band_all = village.buffer(LAV_W + FOREST_W).difference(village.buffer(LAV_W)).in
 def _cut(key, g):
     V[key] = [q for p_ in V[key] for q in polys_of(p_.difference(g)) if q.area > 20]
 
+
+# une mer de lavande : seules une dizaine de maisons bien espacées restent dans la ceinture (avec leur jardin), les autres
+# constructions et leurs dessertes disparaissent
+_in_ring = [b for b in blds if ring_all.contains(b["poly"].centroid)]
+_cands = [b for b in _in_ring if 70 <= b["poly"].area <= 320 and b["poly"].distance(village) > 60
+          and b["poly"].centroid.distance(village.buffer(LAV_W).exterior if village.buffer(LAV_W).geom_type == "Polygon" else village.buffer(LAV_W).boundary) > 40]
+rng.shuffle(_cands)
+mas = []
+for b in _cands:
+    if len(mas) < MAX_MAS and all(b["poly"].distance(m["poly"]) > 120 for m in mas):
+        mas.append(b)
+_mas_ids = {id(b) for b in mas}
+blds = [b for b in blds if not ring_all.contains(b["poly"].centroid) or id(b) in _mas_ids]
+mas_zone = unary_union([m["poly"].buffer(16.0) for m in mas]) if mas else Polygon()
+V["lawn"] += [m["poly"].buffer(14.0, join_style=2).difference(m["poly"].buffer(1.0)) for m in mas]
+V["mas"] = [m["poly"] for m in mas]
+V["pools"] = [p_ for p_ in V["pools"] if not ring_all.contains(p_.centroid) or p_.distance(mas_zone) < 5]
+_n_roads = len(roads)
+roads = [r for r in roads if not (r["cls"] in ("service", "residential", "living_street", "footway", "steps", "pedestrian")
+                                   and r["line"].intersection(ring_all).length > 0.6 * r["line"].length
+                                   and r["line"].distance(mas_zone) > 25)]
+_cut("residential", ring_all)
+print("ceinture : %d maisons gardées sur %d, %d dessertes retirées" % (len(mas), len(_in_ring), _n_roads - len(roads)))
+water = unary_union(V["ponds"] + V["pools"])
 
 # on vide la ceinture de ses anciennes cultures, et la bande de forêt de ses champs et garrigues
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest"):
@@ -426,7 +452,8 @@ gy, gx = np.gradient(ground, RES)
 slope = np.degrees(np.arctan(np.hypot(gx, gy)))
 scrub = blur(rasterize(V["scrub"] + V["lc_shrub"] + V["grass_nat"]), 1.5)
 W[L["dry"]] += scrub
-forest = blur(rasterize(forest_all), 1.5)
+# la forêt dense est tramée à part : les trous (clairières, champs) des autres polygones de forêt ne doivent pas l'effacer
+forest = blur(np.maximum(rasterize(forest_all), rasterize(V["forest_dense"])), 1.5)
 W[L["forest"]] += 1.3 * forest
 cult = blur(rasterize(V["vineyard"] + V["lavender"] + V["orchard"] + V["olive"]), 0.8)
 W[L["earth"]] += 1.6 * cult

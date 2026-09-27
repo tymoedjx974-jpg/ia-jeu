@@ -11931,6 +11931,7 @@
    "name": "Enduit",
    "master": "Base",
    "params": {},
+   "tile_m": 3.0,
    "BC": "T_Enduit_BC",
    "N": "T_Enduit_N",
    "ORM": "T_Enduit_ORM"
@@ -11939,6 +11940,7 @@
    "name": "PierreMoellons",
    "master": "Base",
    "params": {},
+   "tile_m": 3.0,
    "BC": "T_PierreMoellons_BC",
    "N": "T_PierreMoellons_N",
    "ORM": "T_PierreMoellons_ORM"
@@ -11947,6 +11949,7 @@
    "name": "PierreTaille",
    "master": "Base",
    "params": {},
+   "tile_m": 3.0,
    "BC": "T_PierreTaille_BC",
    "N": "T_PierreTaille_N",
    "ORM": "T_PierreTaille_ORM"
@@ -11955,6 +11958,7 @@
    "name": "TuilesCanal",
    "master": "Base",
    "params": {},
+   "tile_m": 2.0,
    "BC": "T_TuilesCanal_BC",
    "N": "T_TuilesCanal_N",
    "ORM": "T_TuilesCanal_ORM"
@@ -11963,6 +11967,7 @@
    "name": "Genoise",
    "master": "Base",
    "params": {},
+   "tile_m": 1.12,
    "BC": "T_Genoise_BC",
    "N": "T_Genoise_N",
    "ORM": "T_Genoise_ORM"
@@ -11971,6 +11976,7 @@
    "name": "Calade",
    "master": "Base",
    "params": {},
+   "tile_m": 2.0,
    "BC": "T_Calade_BC",
    "N": "T_Calade_N",
    "ORM": "T_Calade_ORM"
@@ -11979,6 +11985,7 @@
    "name": "Dallage",
    "master": "Base",
    "params": {},
+   "tile_m": 3.0,
    "BC": "T_Dallage_BC",
    "N": "T_Dallage_N",
    "ORM": "T_Dallage_ORM"
@@ -11987,6 +11994,7 @@
    "name": "Asphalte",
    "master": "Base",
    "params": {},
+   "tile_m": 4.0,
    "BC": "T_Asphalte_BC",
    "N": "T_Asphalte_N",
    "ORM": "T_Asphalte_ORM"
@@ -11995,6 +12003,7 @@
    "name": "Gravier",
    "master": "Base",
    "params": {},
+   "tile_m": 2.0,
    "BC": "T_Gravier_BC",
    "N": "T_Gravier_N",
    "ORM": "T_Gravier_ORM"
@@ -12003,6 +12012,7 @@
    "name": "BoisPeint",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_BoisPeint_BC",
    "N": "T_BoisPeint_N",
    "ORM": "T_BoisPeint_ORM"
@@ -12011,6 +12021,7 @@
    "name": "BoisBrut",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_BoisBrut_BC",
    "N": "T_BoisBrut_N",
    "ORM": "T_BoisBrut_ORM"
@@ -12019,6 +12030,7 @@
    "name": "Fer",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Fer_BC",
    "N": "T_Fer_N",
    "ORM": "T_Fer_ORM"
@@ -12036,6 +12048,7 @@
      1.0
     ]
    },
+   "tile_m": 1.0,
    "BC": "T_Fer_BC",
    "N": "T_Fer_N",
    "ORM": "T_Fer_ORM"
@@ -12044,6 +12057,7 @@
    "name": "TerreCuite",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_TerreCuite_BC",
    "N": "T_TerreCuite_N",
    "ORM": "T_TerreCuite_ORM"
@@ -12052,6 +12066,7 @@
    "name": "Toile",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Toile_BC",
    "N": "T_Toile_N",
    "ORM": "T_Toile_ORM"
@@ -12067,7 +12082,8 @@
      1.0
     ],
     "Rugosite": 0.06
-   }
+   },
+   "tile_m": 1.0
   },
   {
    "name": "Eau",
@@ -12081,6 +12097,7 @@
     ],
     "Rugosite": 0.03
    },
+   "tile_m": 2.0,
    "BC": "T_Eau_BC",
    "N": "T_Eau_N",
    "ORM": "T_Eau_ORM"
@@ -12089,6 +12106,7 @@
    "name": "Enseignes",
    "master": "Enseigne",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Enseignes_BC"
   },
   {
@@ -12102,7 +12120,8 @@
      1.0
     ],
     "Emission": 0.0
-   }
+   },
+   "tile_m": 1.0
   },
   {
    "name": "EcorcePlatane",
@@ -12110,6 +12129,7 @@
    "params": {
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_EcorcePlatane_BC",
    "N": "T_EcorcePlatane_N",
    "ORM": "T_EcorcePlatane_ORM"
@@ -12120,6 +12140,7 @@
    "params": {
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_EcorceOlivier_BC",
    "N": "T_EcorceOlivier_N",
    "ORM": "T_EcorceOlivier_ORM"
@@ -12130,6 +12151,7 @@
    "params": {
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_EcorcePin_BC",
    "N": "T_EcorcePin_N",
    "ORM": "T_EcorcePin_ORM"
@@ -12140,6 +12162,7 @@
    "params": {
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_EcorceChene_BC",
    "N": "T_EcorceChene_N",
    "ORM": "T_EcorceChene_ORM"
@@ -12153,6 +12176,7 @@
     "Frisson": 5.0,
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_FeuillesOlivier_BC",
    "N": "T_FeuillesOlivier_N"
   },
@@ -12165,6 +12189,7 @@
     "Frisson": 5.0,
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_FeuillesPlatane_BC",
    "N": "T_FeuillesPlatane_N"
   },
@@ -12177,6 +12202,7 @@
     "Frisson": 5.0,
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_FeuillesChene_BC",
    "N": "T_FeuillesChene_N"
   },
@@ -12189,6 +12215,7 @@
     "Frisson": 5.0,
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_FeuillesFruitier_BC",
    "N": "T_FeuillesFruitier_N"
   },
@@ -12201,6 +12228,7 @@
     "Frisson": 4.0,
     "Flexibilite": 0.0
    },
+   "tile_m": 1.0,
    "BC": "T_FeuillesVigne_BC",
    "N": "T_FeuillesVigne_N"
   },
@@ -12213,6 +12241,7 @@
     "Frisson": 3.0,
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_AiguillesPin_BC",
    "N": "T_AiguillesPin_N"
   },
@@ -12225,6 +12254,7 @@
     "Frisson": 2.5,
     "Flexibilite": 1.0
    },
+   "tile_m": 1.0,
    "BC": "T_FeuillesCypres_BC",
    "N": "T_FeuillesCypres_N"
   },
@@ -12237,6 +12267,7 @@
     "Frisson": 3.0,
     "Flexibilite": 0.0
    },
+   "tile_m": 1.0,
    "BC": "T_FeuillesGarrigue_BC",
    "N": "T_FeuillesGarrigue_N"
   },
@@ -12249,6 +12280,7 @@
     "Frisson": 2.0,
     "Flexibilite": 0.0
    },
+   "tile_m": 1.0,
    "BC": "T_Lavande_BC",
    "N": "T_Lavande_N"
   },
@@ -12261,6 +12293,7 @@
     "Frisson": 2.0,
     "Flexibilite": 0.0
    },
+   "tile_m": 1.0,
    "BC": "T_HerbeSeche_BC",
    "N": "T_HerbeSeche_N"
   },
@@ -12273,6 +12306,7 @@
     "Frisson": 2.0,
     "Flexibilite": 0.0
    },
+   "tile_m": 1.0,
    "BC": "T_HerbeVerte_BC",
    "N": "T_HerbeVerte_N"
   },
@@ -12285,6 +12319,7 @@
     "Frisson": 3.0,
     "Flexibilite": 0.0
    },
+   "tile_m": 1.0,
    "BC": "T_Fleurs_BC",
    "N": "T_Fleurs_N"
   },
@@ -12297,6 +12332,7 @@
     "Frisson": 2.0,
     "Flexibilite": 0.0
    },
+   "tile_m": 1.0,
    "BC": "T_Glycine_BC",
    "N": "T_Glycine_N"
   },
@@ -12311,12 +12347,14 @@
      1.0
     ],
     "Rugosite": 0.55
-   }
+   },
+   "tile_m": 1.0
   },
   {
    "name": "Paille",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Chaume_BC",
    "N": "T_Chaume_N",
    "ORM": "T_Chaume_ORM"
@@ -12325,6 +12363,7 @@
    "name": "Horizon",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Horizon_BC",
    "N": "T_Horizon_N",
    "ORM": "T_Horizon_ORM"
@@ -12340,7 +12379,8 @@
      1.0
     ],
     "Rugosite": 0.3
-   }
+   },
+   "tile_m": 2.0
   },
   {
    "name": "EauPiscine",
@@ -12354,6 +12394,7 @@
     ],
     "Rugosite": 0.02
    },
+   "tile_m": 2.0,
    "BC": "T_Eau_BC",
    "N": "T_Eau_N",
    "ORM": "T_Eau_ORM"
@@ -12362,6 +12403,7 @@
    "name": "Terrain",
    "master": "Terrain",
    "params": {},
+   "tile_m": 4.0,
    "layers": [
     {
      "BC": "T_SolSec_BC",
@@ -12410,6 +12452,7 @@
    "name": "Tomettes",
    "master": "Base",
    "params": {},
+   "tile_m": 1.12,
    "BC": "T_Tomettes_BC",
    "N": "T_Tomettes_N",
    "ORM": "T_Tomettes_ORM"
@@ -12418,6 +12461,7 @@
    "name": "Brique",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Brique_BC",
    "N": "T_Brique_N",
    "ORM": "T_Brique_ORM"
@@ -12426,6 +12470,7 @@
    "name": "Faience",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Faience_BC",
    "N": "T_Faience_N",
    "ORM": "T_Faience_ORM"
@@ -12434,6 +12479,7 @@
    "name": "TissuProvence",
    "master": "Base",
    "params": {},
+   "tile_m": 0.5,
    "BC": "T_TissuProvence_BC",
    "N": "T_TissuProvence_N",
    "ORM": "T_TissuProvence_ORM"
@@ -12449,7 +12495,8 @@
      1.0
     ],
     "Rugosite": 0.12
-   }
+   },
+   "tile_m": 1.0
   },
   {
    "name": "Miroir",
@@ -12463,12 +12510,14 @@
     ],
     "Rugosite": 0.02,
     "Metal": 1.0
-   }
+   },
+   "tile_m": 1.0
   },
   {
    "name": "Carrosserie",
    "master": "Base",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Carrosserie_BC",
    "N": "T_Carrosserie_N",
    "ORM": "T_Carrosserie_ORM"
@@ -12484,7 +12533,8 @@
      1.0
     ],
     "Rugosite": 0.85
-   }
+   },
+   "tile_m": 1.0
   },
   {
    "name": "Plastique",
@@ -12497,12 +12547,14 @@
      1.0
     ],
     "Rugosite": 0.55
-   }
+   },
+   "tile_m": 1.0
   },
   {
    "name": "Graffitis",
    "master": "Enseigne",
    "params": {},
+   "tile_m": 1.0,
    "BC": "T_Graffitis_BC"
   }
  ],

@@ -174,9 +174,42 @@ La zone est grande et très détaillée. Si ton PC peine :
 ## Personnaliser
 
 - **Couleurs et matériaux** : tout se règle dans les instances de matériaux de `Content/VillageProvence/Materials` (`MI_Enduit`, `MI_TuilesCanal`, `MI_PierreMoellons`…). Les volets de chaque couleur ont leur instance dans `Materials/Teintes`.
-- **Encore plus de réalisme** : remplace une texture par une texture Megascans ou Fab dans l'instance de matériau (BaseColor, Normal, ORM). Le paramètre `Tiling` règle la taille. La géométrie ne change pas.
+- **Textures Fab / Megascans** : voir la section suivante.
 - **Le jour et la nuit** : les lanternes ont un matériau `MI_Lanterne` avec un paramètre `Emission` (0 le jour ; essaie 20 la nuit).
 - **Régénérer le village** : le générateur Python complet est dans `Tools/VillageProvence` (voir `generer_tout.sh`). Il récupère les données réelles, reconstruit tout, et peut produire des aperçus avec Blender. Tu peux y changer les couleurs des façades, la densité des arbres ou le nom du village.
+
+## Textures Fab / Megascans
+
+Le village utilise des textures générées pour lui. Pour un rendu photoréaliste, tu peux les remplacer en un clic par des surfaces scannées de Fab (Megascans) :
+
+1. Dans l'éditeur, ouvre la fenêtre **Fab**. Cherche des surfaces, prends-les (**Add to My Library**), puis **Add to Project**. Choisis de préférence des surfaces gratuites, par exemple dans la collection gratuite du moment.
+2. Menu **Tools > Village provençal > Appliquer les textures Fab / Megascans du projet**.
+3. Une fenêtre affiche, pour chaque matériau, la surface Fab qui a été branchée.
+
+Surfaces à chercher sur Fab (en anglais) :
+
+| Matériau du village | Recherche Fab |
+| --- | --- |
+| Enduit des façades | `lime plaster`, `plaster`, `stucco` |
+| Murs en moellons | `rubble wall`, `stone wall`, `rough stone` |
+| Pierre de taille | `limestone blocks`, `ashlar`, `sandstone blocks` |
+| Tuiles canal | `clay roof tiles`, `terracotta roof`, `spanish roof tiles` |
+| Calades | `cobblestone`, `pebbles` |
+| Places dallées | `flagstone`, `stone paving` |
+| Volets et portes | `painted wood`, `peeling paint` |
+| Bois brut | `old wood planks`, `weathered wood` |
+| Brique | `old brick` |
+| Tomettes | `terracotta tiles`, `hexagon tiles` |
+| Écorces | `oak bark`, `olive bark`, `pine bark` |
+| Terrain | `dry ground`, `plowed soil`, `red sand`, `rock cliff`, `forest floor`, `dry grass`, `gravel path` |
+
+- **Correspondances** : elles sont réglées dans `Plugins/VillageProvence/Data/TexturesFab.json` : mots-clés cherchés dans le nom des textures, taille réelle de la surface (en mètres) et teinte. Pour imposer une surface précise, mets un mot de son nom en premier dans la liste.
+- **Teinte** :
+  - `forcee` : la couleur de chaque façade ou de chaque volet s'applique à toute la texture. C'est le réglage de l'enduit et du bois peint, pour garder les couleurs du village.
+  - `coupee` : la texture reste telle quelle.
+  - `texture` : la teinte suit le masque de la texture, comme pour les textures d'origine.
+- **Retour en arrière** : **Tools > Village provençal > Revenir aux textures d'origine du village**.
+- **Végétation** : les arbres, la lavande et la vigne sont des maillages du village. Pour utiliser des plantes Fab (Megaplants), remplace le maillage dans les composants de `VillageProvence/Vegetation`.
 
 ## Si la compilation échoue
 

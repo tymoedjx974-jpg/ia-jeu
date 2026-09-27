@@ -1,5 +1,6 @@
 #include "VillageProvenceEditorModule.h"
 #include "VPBuilder.h"
+#include "VPFab.h"
 #include "ToolMenus.h"
 #include "Misc/MessageDialog.h"
 #include "Modules/ModuleManager.h"
@@ -39,6 +40,22 @@ void FVillageProvenceEditorModule::RegisterMenus()
 		LOCTEXT("BuildActorsTip", "Réutilise les assets déjà créés et replace le village dans le niveau ouvert (par exemple dans un autre niveau)."),
 		FSlateIcon(),
 		FUIAction(FExecuteAction::CreateStatic(&FVillageProvenceEditorModule::BuildActorsOnly)));
+	Section.AddMenuEntry("VP_Fab",
+		LOCTEXT("Fab", "Appliquer les textures Fab / Megascans du projet"),
+		LOCTEXT("FabTip", "Cherche dans le projet les surfaces ajoutées depuis Fab (pierre, enduit, tuiles, bois, brique, sols...) et les branche sur les matériaux du village. Correspondances modifiables dans Data/TexturesFab.json."),
+		FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([]()
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FVPFab::Apply()));
+		})));
+	Section.AddMenuEntry("VP_FabRestore",
+		LOCTEXT("FabRestore", "Revenir aux textures d'origine du village"),
+		LOCTEXT("FabRestoreTip", "Remet les textures générées pour le village dans tous ses matériaux."),
+		FSlateIcon(),
+		FUIAction(FExecuteAction::CreateLambda([]()
+		{
+			FMessageDialog::Open(EAppMsgType::Ok, FText::FromString(FVPFab::Restore()));
+		})));
 	Section.AddMenuEntry("VP_Remove",
 		LOCTEXT("Remove", "Retirer le village du niveau"),
 		LOCTEXT("RemoveTip", "Supprime du niveau ouvert tous les acteurs créés par le plugin (les assets restent dans le Content Browser)."),

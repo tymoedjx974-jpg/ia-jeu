@@ -1,0 +1,255 @@
+{
+ "_aide": "Correspondances entre les matériaux du village et les surfaces Fab / Megascans ajoutées au projet. Pour chaque matériau : mots-clés cherchés dans le nom des textures (le premier trouvé l'emporte, en anglais comme sur Fab), taille réelle de la surface en mètres, et teinte : 'forcee' (la couleur des façades, des volets ou des tissus s'applique à toute la texture), 'coupee' (texture telle quelle), 'texture' (masque de la texture). Pour imposer une surface précise, mets un mot de son nom en premier.",
+ "materiaux": [
+  {
+   "materiau": "Enduit",
+   "mots_cles": [
+    "lime plaster",
+    "plaster",
+    "stucco",
+    "rendered wall"
+   ],
+   "taille_m": 2.0,
+   "teinte": "forcee"
+  },
+  {
+   "materiau": "PierreMoellons",
+   "mots_cles": [
+    "rubble",
+    "stone wall",
+    "rough stone",
+    "fieldstone",
+    "castle wall",
+    "stone"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "PierreTaille",
+   "mots_cles": [
+    "ashlar",
+    "limestone block",
+    "sandstone block",
+    "stone block",
+    "cut stone",
+    "limestone"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "TuilesCanal",
+   "mots_cles": [
+    "roof tile",
+    "clay roof",
+    "terracotta roof",
+    "spanish tile",
+    "barrel tile",
+    "roof"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Calade",
+   "mots_cles": [
+    "cobblestone",
+    "pebble",
+    "river stone",
+    "cobble"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Dallage",
+   "mots_cles": [
+    "flagstone",
+    "paving",
+    "stone floor",
+    "pavement",
+    "stone tiles"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Asphalte",
+   "mots_cles": [
+    "asphalt",
+    "road"
+   ],
+   "taille_m": 4.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Gravier",
+   "mots_cles": [
+    "gravel"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "BoisPeint",
+   "mots_cles": [
+    "painted wood",
+    "painted plank",
+    "peeling paint"
+   ],
+   "taille_m": 2.0,
+   "teinte": "forcee"
+  },
+  {
+   "materiau": "BoisBrut",
+   "mots_cles": [
+    "old wood",
+    "wood plank",
+    "planks",
+    "raw wood",
+    "weathered wood",
+    "wood"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Brique",
+   "mots_cles": [
+    "old brick",
+    "brick"
+   ],
+   "taille_m": 2.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Tomettes",
+   "mots_cles": [
+    "terracotta tile",
+    "hexagon tile",
+    "hexagonal",
+    "clay tile",
+    "floor tile"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "TerreCuite",
+   "mots_cles": [
+    "terracotta",
+    "clay"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Faience",
+   "mots_cles": [
+    "ceramic tile",
+    "wall tile",
+    "glazed tile"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "Fer",
+   "mots_cles": [
+    "rusty metal",
+    "wrought iron",
+    "rust",
+    "iron"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "EcorceChene",
+   "mots_cles": [
+    "oak bark",
+    "bark"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "EcorceOlivier",
+   "mots_cles": [
+    "olive bark",
+    "olive",
+    "bark"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "EcorcePin",
+   "mots_cles": [
+    "pine bark",
+    "pine",
+    "bark"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  },
+  {
+   "materiau": "EcorcePlatane",
+   "mots_cles": [
+    "plane tree",
+    "sycamore",
+    "birch bark",
+    "bark"
+   ],
+   "taille_m": 1.0,
+   "teinte": "coupee"
+  }
+ ],
+ "terrain_taille_m": 2.0,
+ "terrain": {
+  "SolSec": [
+   "dry ground",
+   "dry soil",
+   "dry dirt",
+   "dirt"
+  ],
+  "TerreLabouree": [
+   "plowed",
+   "tilled",
+   "farmland",
+   "soil"
+  ],
+  "Ocre": [
+   "red sand",
+   "ochre",
+   "red soil",
+   "sand"
+  ],
+  "Roche": [
+   "cliff",
+   "rock face",
+   "rock"
+  ],
+  "SolForet": [
+   "forest floor",
+   "pine needles",
+   "forest ground"
+  ],
+  "Herbe": [
+   "dry grass",
+   "grass"
+  ],
+  "Chemin": [
+   "gravel path",
+   "dirt path",
+   "path",
+   "gravel"
+  ],
+  "Chaume": [
+   "stubble",
+   "straw",
+   "hay"
+  ]
+ }
+}

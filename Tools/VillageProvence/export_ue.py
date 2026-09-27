@@ -281,7 +281,7 @@ MASTER = {"opaque": "Base", "masked": "Enseigne", "foliage": "Feuillage", "glass
 texnames = {t["name"] for t in manifest["textures"]}
 for m, spec in MATS.items():
     kind = spec["kind"]
-    e = dict(name=m, master=spec.get("master", MASTER[kind]), params=dict(WIND.get(m, {})))
+    e = dict(name=m, master=spec.get("master", MASTER[kind]), params=dict(WIND.get(m, {})), tile_m=float(TILE.get(m, 1.0)))
     if spec.get("tex"):
         t = spec["tex"]
         for suf in ("BC", "N", "ORM"):

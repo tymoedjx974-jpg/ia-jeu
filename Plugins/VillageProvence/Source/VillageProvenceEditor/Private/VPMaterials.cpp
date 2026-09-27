@@ -298,7 +298,16 @@ UMaterial* FVPBuilder::BuildMaster(const FString& Type)
 		UMaterialExpressionLinearInterpolate* TintMix = Node<UMaterialExpressionLinearInterpolate>(M, -450, -550);
 		TintMix->A.Connect(0, One);
 		TintMix->B.Connect(0, Tint);
-		TintMix->Alpha.Connect(OutB, ORM);
+		// masque de teinte = canal bleu de l'ORM ; avec des textures Megascans (bleu = déplacement), on le force à 1 ou à 0
+		UMaterialExpressionLinearInterpolate* Forced = Node<UMaterialExpressionLinearInterpolate>(M, -850, -250);
+		Forced->A.Connect(OutB, ORM);
+		Forced->ConstB = 1.f;
+		Forced->Alpha.Connect(0, Scalar(M, TEXT("TeinteForcee"), 0.f, -1050, -250));
+		UMaterialExpressionLinearInterpolate* Cut = Node<UMaterialExpressionLinearInterpolate>(M, -650, -250);
+		Cut->A.Connect(0, Forced);
+		Cut->ConstB = 0.f;
+		Cut->Alpha.Connect(0, Scalar(M, TEXT("TeinteCoupee"), 0.f, -850, -150));
+		TintMix->Alpha.Connect(0, Cut);
 		UMaterialExpressionMultiply* Color = Mul(M, BC, OutRGB, TintMix, 0, -250, -400);
 		UMaterialExpressionMultiply* Rough = Mul(M, ORM, OutG, Scalar(M, TEXT("EchelleRugosite"), 1.f, -850, 100), 0, -450, 50);
 		VP_INPUT(M, BaseColor).Connect(0, Color);
@@ -391,7 +400,8 @@ UMaterial* FVPBuilder::BuildMaster(const FString& Type)
 	else if (Type == TEXT("Terrain"))
 	{
 		// terrain : 8 couches mélangées par la couleur de sommet (couches 0-3) et les canaux UV 1 et 2 (couches 4-7)
-		UMaterialExpressionTextureCoordinate* UV0 = Node<UMaterialExpressionTextureCoordinate>(M, -3000, 0);
+		UMaterialExpressionTextureCoordinate* UVBase = Node<UMaterialExpressionTextureCoordinate>(M, -3200, 0);
+		UMaterialExpressionMultiply* UV0 = Mul(M, UVBase, 0, Scalar(M, TEXT("Tiling"), 1.f, -3200, 150), 0, -3000, 0);
 		UMaterialExpressionTextureCoordinate* UV1 = Node<UMaterialExpressionTextureCoordinate>(M, -3000, 400);
 		UV1->CoordinateIndex = 1;
 		UMaterialExpressionTextureCoordinate* UV2 = Node<UMaterialExpressionTextureCoordinate>(M, -3000, 600);
@@ -427,7 +437,7 @@ UMaterial* FVPBuilder::BuildMaster(const FString& Type)
 			AccO = AccO ? static_cast<UMaterialExpression*>(Add(M, AccO, 0, WO, 0, -1700, Y + 350)) : static_cast<UMaterialExpression*>(WO);
 		}
 		// variation à grande échelle (casse la répétition des textures)
-		UMaterialExpressionTextureSampleParameter2D* Macro = TexParam(M, TEXT("Macro"), White, SAMPLERTYPE_Color, Mul(M, UV0, 0, nullptr, 0, -2600, -800, 0.02f), -2400, -800, true);
+		UMaterialExpressionTextureSampleParameter2D* Macro = TexParam(M, TEXT("Macro"), White, SAMPLERTYPE_Color, Mul(M, UVBase, 0, nullptr, 0, -2600, -800, 0.02f), -2400, -800, true);
 		UMaterialExpressionLinearInterpolate* MacroF = Node<UMaterialExpressionLinearInterpolate>(M, -1500, -800);
 		MacroF->ConstA = 0.8f;
 		MacroF->ConstB = 1.12f;

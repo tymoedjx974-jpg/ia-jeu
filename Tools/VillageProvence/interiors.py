@@ -22,7 +22,8 @@ SLAB = 0.24         # épaisseur des planchers
 STAIR_W = 1.05      # largeur de l'escalier droit
 TREAD = 0.25        # giron
 RISE_MAX = 0.19     # hauteur de marche maximale
-OPEN_STEPS = 4      # marches d'accès sans garde-corps (le bas de la volée est contre le mur)
+OPEN_STEPS = 4      # marches d'accès sans garde-corps quand le bas de la volée touche le mur
+GAPS = (0.9, 0.6, 0.0)  # palier de départ entre le mur du fond et la 1re marche (le plus grand qui rentre)
 PART = 0.1          # épaisseur des cloisons
 COL_PLAFOND = (247, 244, 238, 255)
 DOOR_TYPES = ("Porte", "Porte_Simple", "Remise", "Vitrine", "Vitrine_SansStore")
@@ -194,44 +195,54 @@ def plan(b, info, openings, gz):
     order.sort(key=lambda sd: (main["side"] == ("+y" if sd[0] > 0 else "-y")))
     for s, d in order:
         end = -d * L / 2
-        xr = sorted((end, end + d * run))
         band = (W / 2 - STAIR_W, W / 2) if s > 0 else (-W / 2, -W / 2 + STAIR_W)
         y_b = band[0] if s > 0 else band[1]
         side_band = "+y" if s > 0 else "-y"
         side_other = "-y" if s > 0 else "+y"
         side_end = "-x" if d > 0 else "+x"
-        ok = True
-        for o in locs:
-            if o["floor"] == 0 and o["door"] and o["side"] == side_band and overlaps(*o["span"], *xr, 0.3):
-                ok = False
-            if o["floor"] == 0 and o["door"] and o["side"] == side_end and overlaps(*o["span"], *band, 0.2):
-                ok = False
-            if o["floor"] == 1 and o["type"].startswith("PorteFenetre") and o["side"] == side_band and overlaps(*o["span"], *xr, 0.2):
-                ok = False
-        if not ok:
-            continue
-        for delta in (0.0, 0.2, 0.4, 0.6, 0.8, 1.0):
-            xc = end + d * (run + delta)
-            if L - (run + delta) < 2.6:
-                break
-            bad = False
+        for gap in GAPS:
+            st = end + d * gap                     # première marche
+            xr = sorted((end, st + d * run))       # palier de départ + volée
+            ok = True
             for o in locs:
-                if o["floor"] != 1:
-                    continue
-                if o["side"] == side_other and overlaps(*o["span"], xc, xc, 0.12):
-                    bad = True
-                if o["side"] == side_end and overlaps(*o["span"], y_b, y_b, 0.12):
-                    bad = True
-            if not bad:
-                # une volée qui passe devant une fenêtre du rez-de-chaussée la coupe en biais : on l'évite autant que possible
-                hide = sum(max(0.0, min(o["span"][1], xr[1]) - max(o["span"][0], xr[0]))
-                           for o in locs if o["floor"] == 0 and not o["door"] and o["side"] == side_band)
-                found.append((hide > 0.05, hide, len(found), dict(s=s, d=d, end=end, xc=xc, band=band, y_b=y_b)))
-                break
+                if o["floor"] == 0 and o["door"] and o["side"] == side_band and overlaps(*o["span"], *xr, 0.3):
+                    ok = False
+                if o["floor"] == 0 and o["door"] and o["side"] == side_end and overlaps(*o["span"], *band, 0.2):
+                    ok = False
+                if o["floor"] == 1 and o["type"].startswith("PorteFenetre") and o["side"] == side_band and overlaps(*o["span"], *xr, 0.2):
+                    ok = False
+            if not ok:
+                continue
+            hit = None
+            for delta in (0.0, 0.2, 0.4, 0.6, 0.8, 1.0):
+                xc = st + d * (run + delta)
+                if L - (gap + run + delta) < 2.6:
+                    break
+                bad = False
+                for o in locs:
+                    if o["floor"] != 1:
+                        continue
+                    if o["side"] == side_other and overlaps(*o["span"], xc, xc, 0.12):
+                        bad = True
+                    if o["side"] == side_end and overlaps(*o["span"], y_b, y_b, 0.12):
+                        bad = True
+                if not bad:
+                    hit = xc
+                    break
+            if hit is None:
+                continue
+            # une volée qui passe devant une fenêtre du rez-de-chaussée la coupe en biais : on l'évite autant que possible
+            fr = sorted((st, st + d * run))
+            hide = sum(max(0.0, min(o["span"][1], fr[1]) - max(o["span"][0], fr[0]))
+                       for o in locs if o["floor"] == 0 and not o["door"] and o["side"] == side_band)
+            # ensuite on préfère un vrai palier en bas de l'escalier (on arrive face à la 1re marche, pas collé au mur)
+            found.append(((hide > 0.05, -gap, hide, len(found)), dict(s=s, d=d, end=end, st=st, gap=gap, xc=hit, band=band, y_b=y_b)))
+            break
     if found:
-        found.sort(key=lambda f: f[:3])
-        best = found[0][3]
-        STAIRS["fenêtre condamnée derrière" if found[0][0] else "mur plein"] += 1
+        found.sort(key=lambda f: f[0])
+        best = found[0][1]
+        STAIRS["fenêtre condamnée derrière" if found[0][0][0] else "mur plein"] += 1
+        STAIRS["palier %.1f m" % best["gap"]] += 1
     if not best:
         REJECT[kind + ":escalier"] += 1
         return None
@@ -274,7 +285,7 @@ def apply_openings(b, pl, openings, info):
     steps = []
     stair = None
     if pl["kind"] == "maison":
-        stair = ("+y" if pl["s"] > 0 else "-y", *sorted((pl["end"], pl["end"] + pl["d"] * pl["run"])))
+        stair = ("+y" if pl["s"] > 0 else "-y", *sorted((pl["st"], pl["st"] + pl["d"] * pl["run"])))
     for lo in pl["locs"]:
         o = openings[lo["i"]]
         if (stair and lo["floor"] == 0 and not lo["door"] and lo["side"] == stair[0]
@@ -331,6 +342,7 @@ def build(b, pl, mb, inst, rng):
         return build_rdc(b, pl, mb, inst, rng)
     c, a, q, L, W = pl["c"], pl["a"], pl["q"], pl["L"], pl["W"]
     s, d, end, xc, band, y_b = pl["s"], pl["d"], pl["end"], pl["xc"], pl["band"], pl["y_b"]
+    st = pl["st"]                                                   # première marche (après le palier de départ)
     l0, l1, ctop = pl["l0"], pl["l1"], pl["ctop"]
     ip = pl["ip"]
     yaw_a = math.atan2(a[1], a[0])
@@ -346,8 +358,8 @@ def build(b, pl, mb, inst, rng):
     def rect_world(x0, x1, y0, y1):
         return Polygon([tuple(Wp(x0, y0)), tuple(Wp(x1, y0)), tuple(Wp(x1, y1)), tuple(Wp(x0, y1))])
 
-    xr = sorted((end, end + d * pl["run"]))
-    hole_x = sorted((end - d * 0.2, end + d * pl["run"]))  # la trémie va jusqu'au mur de départ
+    xr = sorted((st, st + d * pl["run"]))
+    hole_x = sorted((end - d * 0.2, st + d * pl["run"]))   # la trémie va jusqu'au mur de départ (au-dessus du palier)
     hole = rect_world(hole_x[0], hole_x[1], band[0] - (0.0 if s > 0 else 0.2), band[1] + (0.2 if s > 0 else 0.0))
     hole = hole.intersection(ip.buffer(0.01))
 
@@ -386,8 +398,9 @@ def build(b, pl, mb, inst, rng):
         _flat(mb, dec["wall_mat"], ip, ctop, up=False, col=COL_PLAFOND)
     # chants de la trémie (côté pièce et côté arrivée)
     ye = y_b
-    Wbox("Enduit", (xr[0] + xr[1]) / 2, ye - s * 0.005, l1 - SLAB / 2, xr[1] - xr[0], 0.01, SLAB, col=COL_PLAFOND, faces=("-y", "+y"))
-    xa = end + d * pl["run"]
+    hx = sorted((end, st + d * pl["run"]))
+    Wbox("Enduit", (hx[0] + hx[1]) / 2, ye - s * 0.005, l1 - SLAB / 2, hx[1] - hx[0], 0.01, SLAB, col=COL_PLAFOND, faces=("-y", "+y"))
+    xa = st + d * pl["run"]
     Wbox("Enduit", xa + d * 0.005, (band[0] + band[1]) / 2, l1 - SLAB / 2, 0.01, STAIR_W, SLAB, col=COL_PLAFOND, faces=("-x", "+x"))
     # poutres apparentes (selon le petit axe, tous les 70 cm)
     slabs = [(l1 - SLAB, "volee"), (ctop, "colimacon" if pl["spiral"] else None)] + ([(pl["top"], None)] if pl["spiral"] else [])
@@ -416,7 +429,7 @@ def build(b, pl, mb, inst, rng):
     tread_mat, tread_col = ("BoisVernis", WHITE) if modern else ("TerreCuite", WHITE)
     body_mat = dec["wall_mat"]
     for i in range(n):
-        x0 = end + d * i * tr
+        x0 = st + d * i * tr
         xm = x0 + d * tr / 2
         top = l0 + (i + 1) * rise
         Wbox(body_mat, xm, ym, (l0 + top) / 2, tr, STAIR_W, top - l0 - 0.04, col=dec["wall0"])
@@ -425,7 +438,7 @@ def build(b, pl, mb, inst, rng):
             Wbox("BoisBrut", x0 - d * 0.02 + d * 0.025, ym, top - 0.02, 0.05, STAIR_W + 0.005, 0.045, col=(120, 90, 65, 255))
     # limon côté vide : bandeau incliné qui suit les nez de marche
     y_open = y_b - s * 0.02
-    P0, P1 = Wp(end, y_open), Wp(end + d * n * tr, y_open)
+    P0, P1 = Wp(st, y_open), Wp(st + d * n * tr, y_open)
     lim_mat, lim_col = ("MetalBrosse", WHITE) if modern else ("BoisBrut", (120, 90, 65, 255))
     for k in range(n):
         t0, t1 = k / n, (k + 1) / n
@@ -436,9 +449,10 @@ def build(b, pl, mb, inst, rng):
     # garde-corps côté vide
     yr = y_b - s * 0.05
     rail = []
-    i0 = OPEN_STEPS                      # premières marches sans garde-corps : c'est par là qu'on monte
+    # avec un palier on monte par l'avant : garde-corps dès la 1re marche ; sans palier, on monte par le côté
+    i0 = 0 if pl["gap"] >= 0.5 else OPEN_STEPS
     for i in range(i0, n):
-        x = end + d * (i + 0.5) * tr
+        x = st + d * (i + 0.5) * tr
         zt = l0 + (i + 1) * rise
         P = Wp(x, yr)
         rail.append((P[0], P[1], zt + 0.9))
@@ -448,7 +462,7 @@ def build(b, pl, mb, inst, rng):
     if modern:
         # garde-corps à câbles tendus en inox : poteaux toutes les 4 marches, 4 câbles parallèles à la pente
         for i in list(range(i0, n, 4)) + [n - 1]:
-            x = end + d * (i + 0.5) * tr
+            x = st + d * (i + 0.5) * tr
             P = Wp(x, yr)
             zt = l0 + (i + 1) * rise
             tube(mb, "MetalBrosse", [(P[0], P[1], zt), (P[0], P[1], zt + 0.9)], 0.018, segs=8)
@@ -461,14 +475,14 @@ def build(b, pl, mb, inst, rng):
     yw = s * (W / 2 - 0.06)
     wr = []
     for i in range(0, n + 1, 1):
-        P = Wp(end + d * i * tr, yw)
+        P = Wp(st + d * i * tr, yw)
         wr.append((P[0], P[1], l0 + i * rise + 0.9))
         if i % 4 == 2:
-            Pw_ = Wp(end + d * i * tr, s * (W / 2 - 0.005))
+            Pw_ = Wp(st + d * i * tr, s * (W / 2 - 0.005))
             tube(mb, "Fer", [(Pw_[0], Pw_[1], l0 + i * rise + 0.86), (P[0], P[1], l0 + i * rise + 0.88)], 0.008, segs=5, col=(55, 50, 45, 255))
     tube(mb, "MetalBrosse" if modern else "BoisBrut", wr, 0.022, segs=8, col=WHITE if modern else (120, 90, 65, 255))
     # rampe de collision invisible (Unreal) : le joueur monte en douceur au lieu de buter sur chaque marche
-    Rb, Rt = Wp(end, ym), Wp(end + d * n * tr, ym)
+    Rb, Rt = Wp(st, ym), Wp(st + d * n * tr, ym)
     b.setdefault("stair_ramps", []).append(([float(Rb[0]), float(Rb[1]), float(l0 - rise * 0.5)],
                                            [float(Rt[0]), float(Rt[1]), float(l1 - rise * 0.5)], float(STAIR_W)))
 
@@ -547,7 +561,7 @@ def build(b, pl, mb, inst, rng):
     furnish(pl, inst, rng, Wp, yaw_a)
     b["visit_plan"] = dict(theme=dec["theme"], kind="maison", levels=int(pl["nlev"]), entree=_entree(pl), lv=[float(z) for z in pl["lv"]],
                            spiral=[float(v) for v in pl["spiral"]] if pl["spiral"] else None, top=float(pl["top"]), c=[float(c[0]), float(c[1])], a=[float(a[0]), float(a[1])], L=float(L), W=float(W), s=int(s), d=int(d),
-                           end=float(end), xc=float(xc), run=float(pl["run"]), l0=float(l0), l1=float(l1), ctop=float(ctop),
+                           end=float(end), st=float(st), xc=float(xc), run=float(pl["run"]), l0=float(l0), l1=float(l1), ctop=float(ctop),
                            band=[float(band[0]), float(band[1])])
 
 
@@ -1295,7 +1309,8 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     side_far = "+x" if d > 0 else "-x"
     ALL = (side_other, side_far, side_band, side_end)
     run = pl["run"]
-    xr = sorted((end, end + d * run))
+    st = pl["st"]
+    xr = sorted((st, st + d * run))
     paint = PAINT[rng.integers(len(PAINT))]
     fabric = FABRIC[rng.integers(len(FABRIC))]
     fabric2 = FABRIC[rng.integers(len(FABRIC))]
@@ -1369,9 +1384,11 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     # ================= rez-de-chaussée
     blocks, tall = blocks_for(0)
     blocks.append((xr[0] - 0.05, xr[1] + 0.05, band[0] - 0.05, band[1] + 0.05))                # escalier
-    # départ de l'escalier : le bas de la volée est contre le mur du fond, on y monte par le côté ouvert -> zone dégagée
-    appr = (min(end, end + d * 1.8), max(end, end + d * 1.8), *sorted((y_b, y_b - s * 1.3)))
-    blocks.append(appr)
+    # départ de l'escalier : palier entre le mur du fond et la 1re marche, et passage dégagé pour y arriver depuis la pièce
+    lx = sorted((end, st))
+    blocks.append((lx[0] - 0.05, lx[1] + 0.05, band[0] - 0.05, band[1] + 0.05))
+    appr = sorted((end, st + d * 1.2))
+    blocks.append((appr[0], appr[1], *sorted((y_b, y_b - s * 1.3))))
     P = Placer(blocks, tall)
     kx = sorted((far, far - d * 3.1))
     room_k = (kx[0], kx[1], -W / 2, W / 2)
@@ -1505,10 +1522,10 @@ def furnish(pl, inst, rng, Wp, yaw_a):
     side_end = "-x" if d > 0 else "+x"
     side_far = "+x" if d > 0 else "-x"
     blocks, tall = blocks_for(1)
-    hole = (min(end, end + d * run) - 0.2, max(end, end + d * run) + 0.2, band[0] - 0.05, band[1] + 0.05)
+    hole = (min(end, st + d * run) - 0.2, max(end, st + d * run) + 0.2, band[0] - 0.05, band[1] + 0.05)
     blocks.append(hole)
     # arrivée : le couloir le long de l'escalier jusque dans la chambre reste libre
-    arr = sorted((end + d * run, xc + d * 1.3))
+    arr = sorted((st + d * run, xc + d * 1.3))
     blocks.append((arr[0], arr[1], band[0] - 0.15, band[1]))
     y_door = y_b - s * 0.6
     blocks.append((xc - 0.9, xc + 0.9, y_door - 0.5, y_door + 0.5))

@@ -28,7 +28,8 @@ views = {
     "int_rdc": (Wp(far - d * 0.45, -s * (W / 2 - 0.45)), l0 + 1.6, Wp(end + d * 1.0, s * 0.2), l0 + 1.0, 16),
     "int_etage": (Wp(xc + d * 0.4, -s * (W / 2 - 0.4)), l1 + 1.6, Wp(far - d * 0.6, s * 0.5), l1 + 0.6, 16),
     "int_escalier": (Wp(far - d * 0.8, s * (W / 2 - 1.5)), l0 + 1.5, Wp(end + d * 1.2, s * (W / 2 - 0.5)), l0 + 2.2, 18),
-    "int_escalier_face": (Wp(end + d * 2.2, -s * (W / 2 - 0.5)), l0 + 1.5, Wp(end + d * 2.0, pl["band"][0] if s < 0 else pl["band"][1]), l0 + 1.4, 15),
+    "int_escalier_face": (Wp(end + d * 2.6, -s * (W / 2 - 0.5)), l0 + 1.5, Wp(end + d * 1.6, pl["band"][0] if s < 0 else pl["band"][1]), l0 + 1.4, 15),
+    "int_palier": (Wp(end + d * 3.6, -s * (W / 2 - 0.6)), l0 + 1.6, Wp(end + d * 0.3, s * (W / 2 - 0.5)), l0 + 0.9, 15),
     "int_cuisine": (Wp(far - d * 3.3, s * 0.3), l0 + 1.6, Wp(far - d * 0.6, -s * (W / 2 - 0.3)), l0 + 0.9, 18),
     "int_sdb": (Wp(xc - d * 0.15, pl["band"][0] - s * 0.65 if s > 0 else pl["band"][1] - s * 0.65), l1 + 1.6, Wp(end + d * 0.4, -s * (W / 2 - 0.4)), l1 + 0.7, 16),
 }

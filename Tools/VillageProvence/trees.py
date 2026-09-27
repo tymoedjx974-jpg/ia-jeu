@@ -38,47 +38,72 @@ SPECIES = {
 
 
 def gnarled_trunk(mb, mat, pts, radii, segs, cols, rng, seed):
-    """Tronc d'olivier (d'après photo) : cannelures qui tournent, bourrelets autour des anciennes branches,
-    pied évasé en contreforts. Tube ordinaire dont chaque sommet est poussé le long du rayon."""
+    """Tronc d'olivier (d'après photo) : cannelures légèrement torsadées, bourrelets autour des anciennes branches,
+    pied légèrement renflé avec quelques racines noueuses qui s'enfoncent dans la terre (le tronc descend sous le sol,
+    aucun bord visible). Anneaux orientés de façon constante (pas de vrille de l'écorce), UV mesurés sur la surface."""
     pts = np.asarray(pts, np.float64)
     radii = np.asarray(radii, np.float64)
-    # sous-échantillonnage : plus d'anneaux pour que les bourrelets soient ronds
+    z0 = pts[0, 2]
+    pts = np.vstack([pts[:1] - np.array([0, 0, 0.35]), pts])
+    radii = np.concatenate([radii[:1], radii])
+    cols = [cols[0]] + list(cols)
+    # plus d'anneaux pour que les bourrelets soient ronds
     m = (len(pts) - 1) * 3 + 1
     t_old = np.linspace(0, 1, len(pts))
     t = np.linspace(0, 1, m)
     P = np.column_stack([np.interp(t, t_old, pts[:, k]) for k in range(3)])
     R = np.interp(t, t_old, radii)
+    # pas d'évasement conique : le pied garde à peu près le diamètre du tronc
+    R = np.minimum(R, np.interp(0.35, t, R) * 1.12)
     C = [cols[min(len(cols) - 1, int(round(ti * (len(cols) - 1))))] for ti in t]
-    tube(mb, mat, P, np.maximum(R, 0.012), segs=segs, cols=C, u_tile=1.0, v_tile=1.0)
-    blk = mb.parts[mat]
-    Pv, Nv = blk["P"][-1].astype(np.float64), blk["N"][-1].astype(np.float64)
     ring = segs + 1
+    ang = 2 * np.pi * np.arange(ring) / segs
     ph = rng.uniform(0, 2 * np.pi, 4)
-    burls = [(rng.uniform(0.15, 0.95), rng.uniform(0, 2 * np.pi), rng.uniform(0.2, 0.45), rng.uniform(0.05, 0.1)) for _ in range(rng.integers(3, 6))]
-    H = np.linalg.norm(P[-1] - P[0]) + 1e-6
+    burls = [(rng.uniform(0.35, 0.95), rng.uniform(0, 2 * np.pi), rng.uniform(0.15, 0.35), rng.uniform(0.05, 0.1)) for _ in range(rng.integers(3, 6))]
+    roots = [(rng.uniform(0, 2 * np.pi), rng.uniform(0.08, 0.16)) for _ in range(rng.integers(3, 5))]
+    Q = np.zeros((m, ring, 3))
+    X = np.array([1.0, 0.0, 0.0])
     for i in range(m):
-        ang = 2 * np.pi * np.arange(ring) / segs
+        T = nrm(P[min(i + 1, m - 1)] - P[max(i - 1, 0)])
+        ref = X - np.dot(X, T) * T
+        if np.linalg.norm(ref) < 1e-3:
+            ref = np.array([0.0, 1.0, 0.0]) - T[1] * T
+        ref = nrm(ref)
+        B = np.cross(T, ref)
         ti = t[i]
-        z = ti * H
-        f = 0.16 * np.sin(3 * ang + 2.8 * ti * 2 * np.pi * 0.35 + ph[0]) + 0.07 * np.sin(5 * ang - 5.0 * ti + ph[1])
+        z = P[i, 2] - z0
+        f = 0.1 * np.sin(3 * ang + 3.0 * ti + ph[0]) + 0.05 * np.sin(5 * ang - 2.5 * ti + ph[1])
         for tb, ab, amp, wdt in burls:
             da = np.angle(np.exp(1j * (ang - ab)))
             f = f + amp * np.exp(-((ti - tb) / wdt) ** 2 - (da / 0.6) ** 2)
-        flare = 0.45 * np.exp(-z / 0.3) * (1 + 0.4 * np.sin(4 * ang + ph[2]))
-        f = f + flare
-        sl = slice(i * ring, (i + 1) * ring)
-        Pv[sl] += Nv[sl] * (R[i] * f)[:, None]
-    # normales recalculées sur la surface déformée
-    I = blk["I"][-1]
+        zc = max(z, 0.0)
+        f = f + 0.12 * np.exp(-zc / 0.4)                   # renflement doux du pied
+        for ar, amp in roots:                               # racines : bosses étroites qui plongent dans le sol
+            da = np.angle(np.exp(1j * (ang - ar)))
+            f = f + amp * np.exp(-(da / 0.32) ** 2) * np.exp(-zc / 0.18)
+        d = np.outer(np.cos(ang), ref) + np.outer(np.sin(ang), B)
+        Q[i] = P[i] + d * (max(R[i], 0.012) * (1 + f))[:, None]
+    Pv = Q.reshape(-1, 3)
+    # UV : u = longueur d'arc autour de l'anneau, v = distance le long du tronc
+    arc = np.concatenate([np.zeros((m, 1)), np.cumsum(np.linalg.norm(np.diff(Q, axis=1), axis=2), axis=1)], axis=1)
+    vlen = np.concatenate([[0.0], np.cumsum(np.linalg.norm(np.diff(P, axis=0), axis=1))])
+    UV = np.column_stack([arc.ravel(), -np.repeat(vlen, ring)])
+    I = []
+    for i in range(m - 1):
+        for k in range(segs):
+            a_ = i * ring + k
+            I += [(a_, a_ + ring + 1, a_ + ring), (a_, a_ + 1, a_ + ring + 1)]
+    I = np.array(I, np.int64)
     fn = np.cross(Pv[I[:, 1]] - Pv[I[:, 0]], Pv[I[:, 2]] - Pv[I[:, 0]])
     Nn = np.zeros_like(Pv)
     for k in range(3):
         np.add.at(Nn, I[:, k], fn)
     Nn = nrm(Nn)
-    if np.mean(np.sum(Nn * Nv, axis=1)) < 0:
+    radial = Pv - np.repeat(P, ring, axis=0)
+    if np.mean(np.sum(Nn * radial, axis=1)) < 0:
         Nn = -Nn
-    blk["P"][-1] = Pv.astype(np.float32)
-    blk["N"][-1] = Nn.astype(np.float32)
+    Cv = np.repeat(np.array(C, np.uint8), ring, axis=0)
+    mb.add(mat, Pv, Nn, UV, Cv, I)
 
 
 def make_tree(species, seed, lod=0):

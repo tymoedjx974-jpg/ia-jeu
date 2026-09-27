@@ -29,5 +29,10 @@ for j in range(4):
         place(f"Arbre_Olivier_{(i + j) % 4}", (i * 7.5 + rng.normal(0, 0.6) + (j % 2) * 3.7, 3 + j * 7.5 + rng.normal(0, 0.6), 0), rng.uniform(0, 6.28), rng.uniform(0.9, 1.2))
 for k in range(160):
     place(f"Herbe_Seche_{k % 3}", (rng.uniform(-20, 20), rng.uniform(-6, 30), 0), rng.uniform(0, 6.28))
-bl.camera((-2.2, -3.0, 1.7), (1.5, 6.0, 2.6), lens=24.0)
-bl.render("renders/oliviers.png")
+if "pied" in sys.argv[1:]:
+    # gros plan sur le pied de l'olivier le plus proche
+    bl.camera((-1.0, 0.9, 1.0), (0.45, 3.98, 0.45), lens=28.0)
+    bl.render("renders/oliviers_pied.png")
+else:
+    bl.camera((-2.2, -3.0, 1.7), (1.5, 6.0, 2.6), lens=24.0)
+    bl.render("renders/oliviers.png")

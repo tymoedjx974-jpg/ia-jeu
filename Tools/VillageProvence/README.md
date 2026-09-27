@@ -40,7 +40,7 @@ Le script remplace le dossier `Plugins/VillageProvence/Data`. Ensuite, dans Unre
 python photo_texture.py mur.jpg PierreMoellons --taille 2.0 --relief 0.02
 python photo_texture.py enduit.jpg Enduit --taille 1.5 --relief 0.003 --teinte
 # photo floue ou pleine d'ombres de feuilles : recomposer à partir de petites zones nettes (x0 y0 x1 y1 en pixels)
-python photo_texture.py photos/olivier_tronc.jpg EcorceOlivier --taille 1.0 --morceaux 2721 3170 2990 3400 --px-par-m 1400 \
+python photo_texture.py photos/olivier_tronc.jpg EcorceOlivier --taille 1.0 --morceaux 2761 3312 2896 3600 --px-par-m 1400 \
     --taches 0.6 --mousse 0.3 --albedo 0.52 --saturation 0.7
 python export_ue.py ../../Plugins/VillageProvence/Data
 ```

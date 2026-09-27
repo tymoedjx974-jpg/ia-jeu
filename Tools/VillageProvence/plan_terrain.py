@@ -265,6 +265,22 @@ village = village.buffer(10.0).buffer(-10.0).simplify(2.0)
 village = unary_union([Polygon(p_.exterior) for p_ in polys_of(village)])     # cours et jardins intérieurs : dans le village
 ochre_keep = unary_union([ln.buffer(30.0) for ln in V["cliffs"]] + [p_.buffer(8.0) for p_ in V["sand"] + V["quarry"] + V["rock"]])
 water = unary_union(V["ponds"] + V["pools"])
+# quartier neuf le long de la coulée d'ocre (côté nord-est) : il prolonge le vieux village et en prend le style
+from quartier import new_quarter
+_gy, _gx = np.gradient(ground, RES)
+_slope = np.degrees(np.arctan(np.hypot(_gx, _gy))).astype(np.float32)
+quarter, q_blds, q_roads, q_plaza = new_quarter(V, roads, ochre_keep, village,
+                                                lambda x, y: float(grid_sample(_slope, [x], [y])[0]), rng, CENTER)
+blds = [b for b in blds if not quarter.contains(b["poly"].centroid)] + q_blds
+roads += q_roads
+V["plaza"] += q_plaza
+for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest", "lawn"):
+    V[key] = [q for p_ in V[key] for q in polys_of(p_.difference(quarter)) if q.area > 20]
+core = unary_union([core, quarter])
+V["core"] = core
+village = unary_union([village, quarter.buffer(10.0)])
+V["quartier"] = quarter
+print("quartier des Ocres : %d maisons, %d rues, %.1f ha" % (len(q_blds), len(q_roads), quarter.area / 1e4))
 ring_all = village.buffer(LAV_W).difference(village).intersection(ZB)
 band_all = village.buffer(LAV_W + FOREST_W).difference(village.buffer(LAV_W)).intersection(ZB)
 
@@ -322,6 +338,7 @@ V["forest"] += V["forest_dense"]
 forest_all = V["forest"] + V["lc_forest"]
 print("ceinture : %d parcelles de lavande (%.0f ha), forêt dense %.0f ha" % (len(lav), ring.area / 1e4, dense.area / 1e4))
 
+Bm = rasterize([b["poly"] for b in blds]).astype(np.float32) / 255.0     # bâti à jour (maisons retirées, quartier neuf)
 # relief naturel renforcé hors du village : ondulations de colline, buttes, bosses, ravines d'écoulement
 def _norm(a):
     return (a - a.mean()) / (a.std() + 1e-6)

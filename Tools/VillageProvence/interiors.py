@@ -35,7 +35,7 @@ LINEN = [(236, 226, 204), (212, 196, 170), (190, 170, 140), (160, 170, 150)]
 
 
 # ------------------------------------------------------------------ sélection
-def candidates(blds, center, max_n=340, spacing=9.0):
+def candidates(blds, center, max_n=560, spacing=9.0):
     """Bâtiments à ouvrir : maisons presque rectangulaires (à étage ou de plain-pied), commerces et mairie."""
     out = []
     for b in blds:

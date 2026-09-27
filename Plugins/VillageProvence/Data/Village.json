@@ -14984,7 +14984,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 8
   },
   {
    "mesh": "Mod_FenetreV_Barreaux",
@@ -15076,6 +15076,19 @@
     0
    ],
    "count": 1
+  },
+  {
+   "mesh": "Mod_FenetreV_Barreaux",
+   "color": [
+    160,
+    188,
+    150
+   ],
+   "cell": [
+    -1,
+    0
+   ],
+   "count": 9
   },
   {
    "mesh": "Mod_FenetreV_Barreaux",
@@ -15322,7 +15335,7 @@
     -1,
     -1
    ],
-   "count": 3
+   "count": 8
   },
   {
    "mesh": "Mod_FenetreV_Fermee",
@@ -15348,7 +15361,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_FenetreV_Fermee",
@@ -15517,7 +15530,7 @@
     -1,
     0
    ],
-   "count": 7
+   "count": 9
   },
   {
    "mesh": "Mod_FenetreV_Fermee",
@@ -15964,6 +15977,19 @@
   {
    "mesh": "Mod_FenetreV_MiClose",
    "color": [
+    78,
+    120,
+    168
+   ],
+   "cell": [
+    -1,
+    -1
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_FenetreV_MiClose",
+   "color": [
     98,
     114,
     72
@@ -16336,7 +16362,7 @@
     -1,
     -1
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_FenetreV_Nue",
@@ -16466,7 +16492,7 @@
     -1,
     0
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_FenetreV_Nue",
@@ -16973,7 +16999,7 @@
     -1,
     -1
    ],
-   "count": 9
+   "count": 13
   },
   {
    "mesh": "Mod_FenetreV_Ouverte",
@@ -16999,7 +17025,7 @@
     -1,
     -1
    ],
-   "count": 6
+   "count": 5
   },
   {
    "mesh": "Mod_FenetreV_Ouverte",
@@ -17039,19 +17065,6 @@
     -1
    ],
    "count": 15
-  },
-  {
-   "mesh": "Mod_FenetreV_Ouverte",
-   "color": [
-    128,
-    150,
-    190
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
   },
   {
    "mesh": "Mod_FenetreV_Ouverte",
@@ -17233,7 +17246,7 @@
     -1,
     0
    ],
-   "count": 5
+   "count": 6
   },
   {
    "mesh": "Mod_FenetreV_Ouverte",
@@ -17857,7 +17870,7 @@
     -1,
     -1
    ],
-   "count": 9
+   "count": 12
   },
   {
    "mesh": "Mod_FenetreV_Persiennes",
@@ -17883,7 +17896,7 @@
     -1,
     -1
    ],
-   "count": 11
+   "count": 8
   },
   {
    "mesh": "Mod_FenetreV_Persiennes",
@@ -18065,7 +18078,7 @@
     -1,
     0
    ],
-   "count": 5
+   "count": 6
   },
   {
    "mesh": "Mod_FenetreV_Persiennes",
@@ -18780,7 +18793,7 @@
     -1,
     -1
    ],
-   "count": 42
+   "count": 38
   },
   {
    "mesh": "Mod_Fenetre_Barreaux",
@@ -19079,7 +19092,7 @@
     -1,
     0
    ],
-   "count": 35
+   "count": 26
   },
   {
    "mesh": "Mod_Fenetre_Barreaux",
@@ -20626,7 +20639,7 @@
     -1,
     -1
    ],
-   "count": 61
+   "count": 56
   },
   {
    "mesh": "Mod_Fenetre_Fermee",
@@ -20665,7 +20678,7 @@
     -1,
     -1
    ],
-   "count": 24
+   "count": 25
   },
   {
    "mesh": "Mod_Fenetre_Fermee",
@@ -20938,7 +20951,7 @@
     -1,
     0
    ],
-   "count": 41
+   "count": 39
   },
   {
    "mesh": "Mod_Fenetre_Fermee",
@@ -22732,7 +22745,7 @@
     -1,
     -1
    ],
-   "count": 25
+   "count": 24
   },
   {
    "mesh": "Mod_Fenetre_MiClose",
@@ -24760,7 +24773,7 @@
     -1,
     -1
    ],
-   "count": 24
+   "count": 23
   },
   {
    "mesh": "Mod_Fenetre_Nue",
@@ -25072,7 +25085,7 @@
     -1,
     0
    ],
-   "count": 14
+   "count": 13
   },
   {
    "mesh": "Mod_Fenetre_Nue",
@@ -27308,7 +27321,7 @@
     -1,
     -1
    ],
-   "count": 164
+   "count": 160
   },
   {
    "mesh": "Mod_Fenetre_Ouverte",
@@ -27347,7 +27360,7 @@
     -1,
     -1
    ],
-   "count": 66
+   "count": 67
   },
   {
    "mesh": "Mod_Fenetre_Ouverte",
@@ -27399,7 +27412,7 @@
     -1,
     -1
    ],
-   "count": 61
+   "count": 62
   },
   {
    "mesh": "Mod_Fenetre_Ouverte",
@@ -27620,7 +27633,7 @@
     -1,
     0
    ],
-   "count": 75
+   "count": 74
   },
   {
    "mesh": "Mod_Fenetre_Ouverte",
@@ -30259,7 +30272,7 @@
     -1,
     -1
    ],
-   "count": 97
+   "count": 94
   },
   {
    "mesh": "Mod_Fenetre_Persiennes",
@@ -30298,7 +30311,7 @@
     -1,
     -1
    ],
-   "count": 40
+   "count": 43
   },
   {
    "mesh": "Mod_Fenetre_Persiennes",
@@ -30571,7 +30584,7 @@
     -1,
     0
    ],
-   "count": 41
+   "count": 40
   },
   {
    "mesh": "Mod_Fenetre_Persiennes",
@@ -32105,7 +32118,7 @@
     -1,
     -1
    ],
-   "count": 11
+   "count": 10
   },
   {
    "mesh": "Mod_Int_Armoire",
@@ -32482,7 +32495,7 @@
     -1,
     -1
    ],
-   "count": 11
+   "count": 9
   },
   {
    "mesh": "Mod_Int_Bibliotheque",
@@ -32643,19 +32656,6 @@
   {
    "mesh": "Mod_Int_Buffet",
    "color": [
-    122,
-    150,
-    128
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_Buffet",
-   "color": [
     150,
     170,
     190
@@ -33249,7 +33249,7 @@
     -1,
     -1
    ],
-   "count": 56
+   "count": 52
   },
   {
    "mesh": "Mod_Int_Cadre",
@@ -33379,7 +33379,7 @@
     -1,
     0
    ],
-   "count": 3
+   "count": 4
   },
   {
    "mesh": "Mod_Int_CadreModerne",
@@ -33575,19 +33575,6 @@
     -1
    ],
    "count": 3
-  },
-  {
-   "mesh": "Mod_Int_Canape",
-   "color": [
-    190,
-    170,
-    140
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
   },
   {
    "mesh": "Mod_Int_Canape",
@@ -34120,7 +34107,7 @@
     -1,
     -1
    ],
-   "count": 32
+   "count": 30
   },
   {
    "mesh": "Mod_Int_Chaise",
@@ -34250,7 +34237,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Int_ChaiseRenversee",
@@ -34367,7 +34354,7 @@
     -1,
     -1
    ],
-   "count": 10
+   "count": 9
   },
   {
    "mesh": "Mod_Int_Cheminee",
@@ -34536,7 +34523,7 @@
     -1,
     -1
    ],
-   "count": 16
+   "count": 13
   },
   {
    "mesh": "Mod_Int_Chevet",
@@ -34549,7 +34536,7 @@
     -1,
     0
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Chevet",
@@ -34601,7 +34588,7 @@
     0,
     -1
    ],
-   "count": 14
+   "count": 12
   },
   {
    "mesh": "Mod_Int_Chevet",
@@ -34731,7 +34718,7 @@
     -1,
     -1
    ],
-   "count": 26
+   "count": 23
   },
   {
    "mesh": "Mod_Int_Commode",
@@ -34978,7 +34965,7 @@
     -1,
     -1
    ],
-   "count": 3
+   "count": 4
   },
   {
    "mesh": "Mod_Int_Conserves",
@@ -35061,6 +35048,19 @@
   {
    "mesh": "Mod_Int_CuisineModerne",
    "color": [
+    235,
+    230,
+    220
+   ],
+   "cell": [
+    -1,
+    0
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_CuisineModerne",
+   "color": [
     150,
     160,
     150
@@ -35134,7 +35134,7 @@
     -1,
     0
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Douche",
@@ -35238,7 +35238,7 @@
     -1,
     0
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_Dressing",
@@ -35264,7 +35264,7 @@
     0,
     -1
    ],
-   "count": 4
+   "count": 5
   },
   {
    "mesh": "Mod_Int_Dressing",
@@ -35329,7 +35329,7 @@
     -1,
     -1
    ],
-   "count": 11
+   "count": 12
   },
   {
    "mesh": "Mod_Int_EtagereBocaux",
@@ -35901,20 +35901,7 @@
     -1,
     -1
    ],
-   "count": 3
-  },
-  {
-   "mesh": "Mod_Int_Fauteuil",
-   "color": [
-    190,
-    170,
-    140
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
+   "count": 4
   },
   {
    "mesh": "Mod_Int_Fauteuil",
@@ -36226,7 +36213,7 @@
     -1,
     -1
    ],
-   "count": 7
+   "count": 6
   },
   {
    "mesh": "Mod_Int_Frigo",
@@ -36679,6 +36666,19 @@
    ],
    "cell": [
     -1,
+    0
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Int_Ilot",
+   "color": [
+    235,
+    230,
+    220
+   ],
+   "cell": [
+    -1,
     1
    ],
    "count": 1
@@ -36759,7 +36759,7 @@
     -1,
     -1
    ],
-   "count": 6
+   "count": 9
   },
   {
    "mesh": "Mod_Int_Jerrican",
@@ -36835,19 +36835,6 @@
    ],
    "cell": [
     -1,
-    -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_Lampadaire",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
     0
    ],
    "count": 2
@@ -36915,7 +36902,7 @@
     -1,
     0
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_LampeArc",
@@ -37063,19 +37050,6 @@
   {
    "mesh": "Mod_Int_Lavabo",
    "color": [
-    122,
-    150,
-    128
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Int_Lavabo",
-   "color": [
     150,
     170,
     190
@@ -37084,7 +37058,7 @@
     -1,
     -1
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_Lavabo",
@@ -37552,7 +37526,7 @@
     -1,
     -1
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_LitDouble",
@@ -37565,7 +37539,7 @@
     -1,
     -1
    ],
-   "count": 3
+   "count": 2
   },
   {
    "mesh": "Mod_Int_LitDouble",
@@ -37578,7 +37552,7 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Int_LitDouble",
@@ -37916,7 +37890,7 @@
     -1,
     0
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_LitModerne",
@@ -37942,7 +37916,7 @@
     0,
     -1
    ],
-   "count": 8
+   "count": 7
   },
   {
    "mesh": "Mod_Int_LitModerne",
@@ -38397,7 +38371,7 @@
     -1,
     -1
    ],
-   "count": 8
+   "count": 12
   },
   {
    "mesh": "Mod_Int_Matelas",
@@ -38488,7 +38462,7 @@
     -1,
     0
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_MeubleTV",
@@ -38566,7 +38540,7 @@
     -1,
     -1
    ],
-   "count": 25
+   "count": 22
   },
   {
    "mesh": "Mod_Int_Miroir",
@@ -38722,7 +38696,7 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Int_Piano",
@@ -38814,19 +38788,6 @@
     -1
    ],
    "count": 2
-  },
-  {
-   "mesh": "Mod_Int_PlanTravail",
-   "color": [
-    122,
-    150,
-    128
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 1
   },
   {
    "mesh": "Mod_Int_PlanTravail",
@@ -39138,7 +39099,7 @@
     -1,
     -1
    ],
-   "count": 13
+   "count": 14
   },
   {
    "mesh": "Mod_Int_Plante",
@@ -39268,7 +39229,7 @@
     -1,
     0
    ],
-   "count": 4
+   "count": 7
   },
   {
    "mesh": "Mod_Int_PlanteModerne",
@@ -39619,7 +39580,7 @@
     -1,
     -1
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Int_Rechaud",
@@ -39801,7 +39762,7 @@
     -1,
     -1
    ],
-   "count": 6
+   "count": 5
   },
   {
    "mesh": "Mod_Int_Suspension",
@@ -39918,7 +39879,7 @@
     -1,
     -1
    ],
-   "count": 3
+   "count": 2
   },
   {
    "mesh": "Mod_Int_TableBasse",
@@ -40139,7 +40100,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Int_TableCuisine",
@@ -40625,19 +40586,6 @@
   {
    "mesh": "Mod_Int_Tapis",
    "color": [
-    70,
-    104,
-    160
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Int_Tapis",
-   "color": [
     120,
     136,
     70
@@ -40646,7 +40594,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 3
   },
   {
    "mesh": "Mod_Int_Tapis",
@@ -40984,7 +40932,7 @@
     -1,
     0
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Int_VasqueModerne",
@@ -41114,7 +41062,7 @@
     -1,
     0
    ],
-   "count": 12
+   "count": 13
   },
   {
    "mesh": "Mod_Int_WC",
@@ -42661,7 +42609,7 @@
     -1,
     -1
    ],
-   "count": 11
+   "count": 10
   },
   {
    "mesh": "Mod_Porte",
@@ -42700,7 +42648,7 @@
     -1,
     -1
    ],
-   "count": 17
+   "count": 18
   },
   {
    "mesh": "Mod_Porte",
@@ -43051,7 +42999,7 @@
     -1,
     0
    ],
-   "count": 3
+   "count": 2
   },
   {
    "mesh": "Mod_Porte",
@@ -46275,7 +46223,7 @@
     -1,
     -1
    ],
-   "count": 4
+   "count": 5
   },
   {
    "mesh": "Mod_PorteI",
@@ -46301,7 +46249,7 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_PorteI",
@@ -46439,6 +46387,19 @@
     140,
     160,
     118
+   ],
+   "cell": [
+    -1,
+    0
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_PorteI",
+   "color": [
+    160,
+    188,
+    150
    ],
    "cell": [
     -1,
@@ -49902,7 +49863,7 @@
     -1,
     0
    ],
-   "count": 67
+   "count": 66
   },
   {
    "mesh": "Mod_Pot_Geranium",
@@ -50162,7 +50123,7 @@
     -1,
     0
    ],
-   "count": 38
+   "count": 37
   },
   {
    "mesh": "Mod_Pot_Rose",
@@ -54452,7 +54413,7 @@
     -1,
     -1
    ],
-   "count": 130
+   "count": 128
   },
   {
    "mesh": "Mod_Z_PlanchesFenetre",
@@ -54465,7 +54426,7 @@
     -1,
     0
    ],
-   "count": 116
+   "count": 129
   },
   {
    "mesh": "Mod_Z_PlanchesFenetre",
@@ -54478,7 +54439,7 @@
     0,
     -1
    ],
-   "count": 151
+   "count": 155
   },
   {
    "mesh": "Mod_Z_PlanchesFenetre",
@@ -54491,7 +54452,7 @@
     0,
     0
    ],
-   "count": 34
+   "count": 33
   },
   {
    "mesh": "Mod_Z_PlanchesPorte",
@@ -54517,7 +54478,7 @@
     -1,
     0
    ],
-   "count": 24
+   "count": 17
   },
   {
    "mesh": "Mod_Z_PlanchesPorte",
@@ -54530,7 +54491,7 @@
     0,
     -1
    ],
-   "count": 22
+   "count": 20
   },
   {
    "mesh": "Mod_Z_PlanchesPorte",
@@ -54543,7 +54504,7 @@
     0,
     0
    ],
-   "count": 11
+   "count": 9
   },
   {
    "mesh": "Mod_Z_Pneus",
@@ -54738,7 +54699,7 @@
     -2,
     -2
    ],
-   "count": 9
+   "count": 6
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -54751,7 +54712,7 @@
     -2,
     0
    ],
-   "count": 10
+   "count": 20
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -54762,58 +54723,6 @@
    ],
    "cell": [
     -2,
-    1
-   ],
-   "count": 7
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_1",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    -2
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_1",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 43
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_1",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    0
-   ],
-   "count": 44
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_1",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
     1
    ],
    "count": 6
@@ -54827,9 +54736,61 @@
    ],
    "cell": [
     -1,
+    -2
+   ],
+   "count": 2
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_1",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    -1
+   ],
+   "count": 38
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_1",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    0
+   ],
+   "count": 42
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_1",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    1
+   ],
+   "count": 9
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_1",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
     2
    ],
-   "count": 3
+   "count": 1
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -54855,7 +54816,7 @@
     0,
     -1
    ],
-   "count": 46
+   "count": 54
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -54868,7 +54829,7 @@
     0,
     0
    ],
-   "count": 27
+   "count": 29
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -54894,7 +54855,7 @@
     1,
     -1
    ],
-   "count": 2
+   "count": 3
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -54907,7 +54868,7 @@
     1,
     0
    ],
-   "count": 6
+   "count": 3
   },
   {
    "mesh": "Mod_Z_Sol_sang_1",
@@ -54932,6 +54893,19 @@
    "cell": [
     -2,
     -2
+   ],
+   "count": 10
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_2",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -2,
+    0
    ],
    "count": 8
   },
@@ -54944,35 +54918,9 @@
    ],
    "cell": [
     -2,
-    0
-   ],
-   "count": 11
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_2",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -2,
     1
    ],
-   "count": 7
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_2",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    -2
-   ],
-   "count": 1
+   "count": 4
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",
@@ -54985,7 +54933,7 @@
     -1,
     -1
    ],
-   "count": 24
+   "count": 21
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",
@@ -54998,7 +54946,7 @@
     -1,
     0
    ],
-   "count": 40
+   "count": 33
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",
@@ -55011,7 +54959,7 @@
     -1,
     1
    ],
-   "count": 9
+   "count": 11
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",
@@ -55024,7 +54972,7 @@
     -1,
     2
    ],
-   "count": 1
+   "count": 3
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",
@@ -55037,7 +54985,7 @@
     0,
     -1
    ],
-   "count": 42
+   "count": 39
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",
@@ -55050,7 +54998,7 @@
     0,
     0
    ],
-   "count": 27
+   "count": 33
   },
   {
    "mesh": "Mod_Z_Sol_sang_2",
@@ -55088,205 +55036,179 @@
    "cell": [
     -2,
     -2
-   ],
-   "count": 6
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -2,
-    0
-   ],
-   "count": 7
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -2,
-    1
-   ],
-   "count": 4
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    -2
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    -1
-   ],
-   "count": 27
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    0
-   ],
-   "count": 20
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -1,
-    1
-   ],
-   "count": 7
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
-    -1
-   ],
-   "count": 43
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
-    0
-   ],
-   "count": 17
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
-    1
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    1,
-    -1
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    1,
-    0
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_flaque",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    1,
-    1
-   ],
-   "count": 2
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_trainee",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -2,
-    -2
-   ],
-   "count": 4
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_trainee",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -2,
-    -1
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Z_Sol_sang_trainee",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    -2,
-    0
    ],
    "count": 5
   },
   {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -2,
+    0
+   ],
+   "count": 7
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -2,
+    1
+   ],
+   "count": 4
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    -2
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    -1
+   ],
+   "count": 33
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    0
+   ],
+   "count": 35
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    1
+   ],
+   "count": 7
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    -2
+   ],
+   "count": 3
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    -1
+   ],
+   "count": 37
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    0
+   ],
+   "count": 19
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    1
+   ],
+   "count": 1
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_flaque",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    1,
+    -1
+   ],
+   "count": 3
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_trainee",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -2,
+    -2
+   ],
+   "count": 10
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_trainee",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -2,
+    0
+   ],
+   "count": 7
+  },
+  {
    "mesh": "Mod_Z_Sol_sang_trainee",
    "color": [
     255,
@@ -55297,7 +55219,20 @@
     -2,
     1
    ],
-   "count": 3
+   "count": 2
+  },
+  {
+   "mesh": "Mod_Z_Sol_sang_trainee",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    -2
+   ],
+   "count": 1
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -55323,7 +55258,7 @@
     -1,
     0
    ],
-   "count": 40
+   "count": 38
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -55336,7 +55271,7 @@
     -1,
     1
    ],
-   "count": 12
+   "count": 7
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -55362,7 +55297,7 @@
     0,
     -1
    ],
-   "count": 46
+   "count": 38
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -55375,7 +55310,7 @@
     0,
     0
    ],
-   "count": 25
+   "count": 21
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -55388,7 +55323,7 @@
     1,
     -1
    ],
-   "count": 6
+   "count": 4
   },
   {
    "mesh": "Mod_Z_Sol_sang_trainee",
@@ -55399,9 +55334,9 @@
    ],
    "cell": [
     1,
-    0
+    1
    ],
-   "count": 2
+   "count": 5
   },
   {
    "mesh": "Mod_Z_Sol_sos",
@@ -55495,6 +55430,19 @@
    "count": 1
   },
   {
+   "mesh": "Mod_Z_Tag_aidez_nous",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    -1
+   ],
+   "count": 1
+  },
+  {
    "mesh": "Mod_Z_Tag_croix",
    "color": [
     255,
@@ -55518,7 +55466,7 @@
     -1,
     0
    ],
-   "count": 26
+   "count": 32
   },
   {
    "mesh": "Mod_Z_Tag_croix",
@@ -55531,7 +55479,7 @@
     0,
     -1
    ],
-   "count": 33
+   "count": 25
   },
   {
    "mesh": "Mod_Z_Tag_croix",
@@ -55544,7 +55492,7 @@
     0,
     0
    ],
-   "count": 10
+   "count": 8
   },
   {
    "mesh": "Mod_Z_Tag_fleche",
@@ -55557,7 +55505,7 @@
     -1,
     -1
    ],
-   "count": 5
+   "count": 3
   },
   {
    "mesh": "Mod_Z_Tag_fleche",
@@ -55583,7 +55531,7 @@
     0,
     -1
    ],
-   "count": 10
+   "count": 5
   },
   {
    "mesh": "Mod_Z_Tag_fleche",
@@ -55609,20 +55557,7 @@
     -1,
     0
    ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Z_Tag_ils_sont_dedans",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
-    -1
-   ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Mod_Z_Tag_impacts",
@@ -55635,7 +55570,7 @@
     -1,
     -1
    ],
-   "count": 9
+   "count": 11
   },
   {
    "mesh": "Mod_Z_Tag_impacts",
@@ -55648,7 +55583,7 @@
     -1,
     0
    ],
-   "count": 5
+   "count": 6
   },
   {
    "mesh": "Mod_Z_Tag_impacts",
@@ -55661,7 +55596,7 @@
     0,
     -1
    ],
-   "count": 13
+   "count": 17
   },
   {
    "mesh": "Mod_Z_Tag_impacts",
@@ -55674,10 +55609,10 @@
     0,
     0
    ],
-   "count": 2
+   "count": 3
   },
   {
-   "mesh": "Mod_Z_Tag_morts_ici",
+   "mesh": "Mod_Z_Tag_ne_pas_entrer",
    "color": [
     255,
     255,
@@ -55690,7 +55625,7 @@
    "count": 2
   },
   {
-   "mesh": "Mod_Z_Tag_morts_ici",
+   "mesh": "Mod_Z_Tag_ne_pas_entrer",
    "color": [
     255,
     255,
@@ -55710,21 +55645,21 @@
     255
    ],
    "cell": [
-    -1,
+    0,
     -1
    ],
-   "count": 1
+   "count": 2
   },
   {
-   "mesh": "Mod_Z_Tag_ne_pas_entrer",
+   "mesh": "Mod_Z_Tag_pas_de_bruit",
    "color": [
     255,
     255,
     255
    ],
    "cell": [
-    0,
-    -1
+    -1,
+    0
    ],
    "count": 1
   },
@@ -55737,6 +55672,32 @@
    ],
    "cell": [
     -1,
+    -1
+   ],
+   "count": 6
+  },
+  {
+   "mesh": "Mod_Z_Tag_sang_main",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    -1,
+    0
+   ],
+   "count": 8
+  },
+  {
+   "mesh": "Mod_Z_Tag_sang_main",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
     -1
    ],
    "count": 4
@@ -55749,36 +55710,10 @@
     255
    ],
    "cell": [
-    -1,
-    0
-   ],
-   "count": 6
-  },
-  {
-   "mesh": "Mod_Z_Tag_sang_main",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
-    -1
-   ],
-   "count": 7
-  },
-  {
-   "mesh": "Mod_Z_Tag_sang_main",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
     0,
     0
    ],
-   "count": 3
+   "count": 1
   },
   {
    "mesh": "Mod_Z_Tag_suie",
@@ -55791,7 +55726,7 @@
     -1,
     -1
    ],
-   "count": 25
+   "count": 22
   },
   {
    "mesh": "Mod_Z_Tag_suie",
@@ -55803,6 +55738,19 @@
    "cell": [
     -1,
     0
+   ],
+   "count": 27
+  },
+  {
+   "mesh": "Mod_Z_Tag_suie",
+   "color": [
+    255,
+    255,
+    255
+   ],
+   "cell": [
+    0,
+    -1
    ],
    "count": 26
   },
@@ -55815,22 +55763,9 @@
    ],
    "cell": [
     0,
-    -1
-   ],
-   "count": 21
-  },
-  {
-   "mesh": "Mod_Z_Tag_suie",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
-    0,
     0
    ],
-   "count": 15
+   "count": 12
   },
   {
    "mesh": "Mod_Z_Tag_survivants_mairie",
@@ -55853,10 +55788,10 @@
     255
    ],
    "cell": [
-    0,
-    -1
+    -1,
+    0
    ],
-   "count": 3
+   "count": 1
   },
   {
    "mesh": "Mod_Z_Tag_survivants_mairie",
@@ -55882,7 +55817,7 @@
     -1,
     -1
    ],
-   "count": 2
+   "count": 4
   },
   {
    "mesh": "Mod_Z_Tag_vide_3",
@@ -55895,7 +55830,7 @@
     -1,
     0
    ],
-   "count": 3
+   "count": 4
   },
   {
    "mesh": "Mod_Z_Tag_vide_3",
@@ -55931,23 +55866,10 @@
     255
    ],
    "cell": [
-    -1,
-    0
-   ],
-   "count": 1
-  },
-  {
-   "mesh": "Mod_Z_Tag_zone_infectee",
-   "color": [
-    255,
-    255,
-    255
-   ],
-   "cell": [
     0,
     -1
    ],
-   "count": 2
+   "count": 1
   },
   {
    "mesh": "Mod_Z_Tag_zone_infectee",
@@ -55960,7 +55882,7 @@
     0,
     0
    ],
-   "count": 1
+   "count": 2
   },
   {
    "mesh": "Veg_Arbre_Chene_0",
@@ -73528,64 +73450,64 @@
    -10219.4
   ],
   [
-   11504.5,
-   9505.5,
-   1092.5
+   11649.8,
+   9397.0,
+   1088.3
   ],
   [
-   11666.7,
-   9459.9,
-   1090.7
+   11626.3,
+   9445.0,
+   1090.3
   ],
   [
-   -903.0,
-   -1737.9,
-   2927.0
+   -269.0,
+   -1719.1,
+   2921.9
   ],
   [
-   143.0,
-   -403.1,
-   2830.9
+   -483.1,
+   -225.5,
+   2845.5
   ],
   [
-   -4597.6,
-   -272.6,
-   2926.9
+   -3610.9,
+   -159.9,
+   2927.2
   ],
   [
-   -4293.8,
-   15.1,
-   2919.4
+   -4217.4,
+   -218.4,
+   2926.7
   ],
   [
-   -7943.5,
-   -4999.9,
-   3136.8
+   -7861.9,
+   -5234.1,
+   3135.6
   ],
   [
-   -6003.1,
-   -6325.8,
-   3171.8
+   -7639.9,
+   -5187.7,
+   3142.1
   ],
   [
-   -2476.5,
-   -6677.0,
-   2995.7
+   -1603.1,
+   -4454.1,
+   3007.4
   ],
   [
-   -852.5,
-   -3878.9,
-   2996.9
+   -1040.3,
+   -2509.2,
+   3024.3
   ],
   [
-   -1847.6,
-   -6152.0,
-   2987.6
+   -2419.1,
+   -6131.6,
+   3001.8
   ],
   [
-   -2110.2,
-   -6707.1,
-   2985.8
+   -1772.1,
+   -6569.7,
+   2979.2
   ],
   [
    32908.7,
@@ -77703,6 +77625,11 @@
    2554.8
   ],
   [
+   -789.5,
+   -6209.8,
+   2974.5
+  ],
+  [
    8129.2,
    2371.1,
    1902.1
@@ -77943,6 +77870,11 @@
    2156.7
   ],
   [
+   -19707.2,
+   708.0,
+   600.2
+  ],
+  [
    -20578.5,
    -18920.0,
    -115.6
@@ -78046,11 +77978,6 @@
    -39897.6,
    81712.4,
    539.7
-  ],
-  [
-   -27122.4,
-   100988.5,
-   583.7
   ],
   [
    3117.1,
@@ -78288,6 +78215,166 @@
    -4095.2
   ],
   [
+   101476.0,
+   -56169.9,
+   -3333.4
+  ],
+  [
+   7892.3,
+   27826.8,
+   942.0
+  ],
+  [
+   -31777.3,
+   33992.2,
+   -4707.5
+  ],
+  [
+   -30692.8,
+   -147.8,
+   137.0
+  ],
+  [
+   46880.1,
+   -91867.4,
+   -4726.4
+  ],
+  [
+   -23808.7,
+   -74976.7,
+   -4287.3
+  ],
+  [
+   -19935.9,
+   37660.2,
+   -4652.7
+  ],
+  [
+   -27960.7,
+   -114668.8,
+   -8393.5
+  ],
+  [
+   33350.7,
+   4209.6,
+   -1635.2
+  ],
+  [
+   -27830.2,
+   -32018.4,
+   -1770.4
+  ],
+  [
+   -33663.1,
+   -10973.2,
+   -670.8
+  ],
+  [
+   25673.9,
+   78568.2,
+   -895.9
+  ],
+  [
+   52353.1,
+   -37328.3,
+   -5563.5
+  ],
+  [
+   68476.8,
+   -73893.1,
+   -3007.1
+  ],
+  [
+   106212.9,
+   40673.7,
+   -971.9
+  ],
+  [
+   -31223.4,
+   -119902.7,
+   -8673.8
+  ],
+  [
+   -108297.1,
+   -65578.2,
+   -8947.5
+  ],
+  [
+   12601.8,
+   85763.4,
+   624.6
+  ],
+  [
+   -12370.4,
+   -102579.9,
+   -8388.2
+  ],
+  [
+   -21452.8,
+   -56312.6,
+   -3365.4
+  ],
+  [
+   -5425.5,
+   54160.4,
+   -16.0
+  ],
+  [
+   -79618.0,
+   97091.8,
+   -2184.8
+  ],
+  [
+   -88076.9,
+   64186.4,
+   -3437.4
+  ],
+  [
+   36913.7,
+   -15786.6,
+   -3196.7
+  ],
+  [
+   8124.8,
+   -35796.5,
+   400.1
+  ],
+  [
+   69910.5,
+   11699.8,
+   -119.0
+  ],
+  [
+   61087.4,
+   -61792.8,
+   -4717.8
+  ],
+  [
+   -86445.6,
+   85130.4,
+   -2946.8
+  ],
+  [
+   113624.9,
+   -33823.8,
+   -1627.0
+  ],
+  [
+   32297.4,
+   -63027.3,
+   -5823.4
+  ],
+  [
+   -89209.2,
+   -30821.6,
+   -7839.6
+  ],
+  [
+   -72381.9,
+   -74444.8,
+   -8038.4
+  ],
+  [
    7330.7,
    57243.9,
    316.0
@@ -78516,171 +78603,6 @@
    14162.3,
    -103156.0,
    -7047.2
-  ],
-  [
-   -106376.8,
-   55135.4,
-   -4295.1
-  ],
-  [
-   -123756.2,
-   15673.2,
-   -6547.8
-  ],
-  [
-   114464.8,
-   448.5,
-   -1399.6
-  ],
-  [
-   41479.2,
-   -4220.9,
-   -3255.5
-  ],
-  [
-   77354.3,
-   78406.2,
-   -358.1
-  ],
-  [
-   54399.2,
-   62633.2,
-   1266.5
-  ],
-  [
-   36491.1,
-   96050.9,
-   -976.8
-  ],
-  [
-   -39043.9,
-   -45111.6,
-   -2523.0
-  ],
-  [
-   107943.0,
-   1360.1,
-   -2239.2
-  ],
-  [
-   35268.9,
-   -14750.5,
-   -3355.8
-  ],
-  [
-   -124900.8,
-   -30185.4,
-   -7375.2
-  ],
-  [
-   103561.4,
-   -36246.2,
-   -112.6
-  ],
-  [
-   7896.3,
-   99443.7,
-   -188.9
-  ],
-  [
-   89391.2,
-   -55094.1,
-   -2348.9
-  ],
-  [
-   -30818.3,
-   53494.4,
-   -3513.7
-  ],
-  [
-   46206.6,
-   -37354.5,
-   -5725.0
-  ],
-  [
-   46236.5,
-   -14686.0,
-   -3262.3
-  ],
-  [
-   -77431.4,
-   52329.5,
-   -4524.0
-  ],
-  [
-   22001.1,
-   41491.6,
-   4665.8
-  ],
-  [
-   -17638.9,
-   -37900.6,
-   -2701.6
-  ],
-  [
-   1138.3,
-   36065.1,
-   626.3
-  ],
-  [
-   67716.6,
-   -94447.3,
-   -4513.7
-  ],
-  [
-   -8933.9,
-   24973.3,
-   -3004.3
-  ],
-  [
-   37698.8,
-   33563.3,
-   5320.5
-  ],
-  [
-   -71908.2,
-   27238.9,
-   -3249.2
-  ],
-  [
-   76667.7,
-   -64915.1,
-   -2872.9
-  ],
-  [
-   40867.2,
-   31546.9,
-   3448.6
-  ],
-  [
-   105961.0,
-   60248.9,
-   -1283.5
-  ],
-  [
-   2602.4,
-   61748.7,
-   -142.0
-  ],
-  [
-   26254.2,
-   109827.1,
-   -2135.8
-  ],
-  [
-   -21049.6,
-   -108825.1,
-   -7761.9
-  ],
-  [
-   17887.1,
-   -50633.6,
-   -4091.8
-  ],
-  [
-   -70349.2,
-   -61508.8,
-   -7707.2
   ]
  ],
  "doors": [
@@ -78974,6 +78896,24 @@
   },
   {
    "loc": [
+    -1377.1,
+    -6254.1,
+    2970.4
+   ],
+   "yaw": 79.02,
+   "mesh": "Mod_Vantail_Porte",
+   "scale": 1.0,
+   "open_angle": -100.0,
+   "color": [
+    160,
+    188,
+    150
+   ],
+   "open": false,
+   "house": "4fc8df52-12ed-447d-8623-d55313f9dc37"
+  },
+  {
+   "loc": [
     7214.8,
     2641.9,
     1892.1
@@ -79023,7 +78963,7 @@
     80,
     110
    ],
-   "open": false,
+   "open": true,
    "house": "b6a17194-0280-4f12-859c-84d27321af1e"
   },
   {
@@ -79041,7 +78981,7 @@
     60,
     40
    ],
-   "open": true,
+   "open": false,
    "house": "ab321bb9-3ec8-4bfa-80f1-ba872697e54e"
   },
   {
@@ -79275,7 +79215,7 @@
     120,
     168
    ],
-   "open": false,
+   "open": true,
    "house": "d63b5a95-389f-4c03-b5ca-1f278dc534d3"
   },
   {
@@ -79293,7 +79233,7 @@
     166,
     166
    ],
-   "open": true,
+   "open": false,
    "house": "b005dca4-35c2-4b7d-93d4-ae7696226334"
   },
   {
@@ -79329,7 +79269,7 @@
     90,
     70
    ],
-   "open": false,
+   "open": true,
    "house": "4090bf83-e0f2-49af-8197-a1c61acdef87"
   },
   {
@@ -79347,7 +79287,7 @@
     60,
     40
    ],
-   "open": true,
+   "open": false,
    "house": "72ee863f-5c50-4908-a688-6d84ee9a7f82"
   },
   {
@@ -79365,7 +79305,7 @@
     170,
     165
    ],
-   "open": false,
+   "open": true,
    "house": "1b2b619f-64a5-4896-86bc-c8152649fa33"
   },
   {
@@ -79383,7 +79323,7 @@
     150,
     60
    ],
-   "open": true,
+   "open": false,
    "house": "beaf0a93-263a-46a9-b26f-43a6e93097cd"
   },
   {
@@ -79419,7 +79359,7 @@
     80,
     110
    ],
-   "open": false,
+   "open": true,
    "house": "fcbf3914-de99-438b-b439-da1106fa6512"
   },
   {
@@ -79473,7 +79413,7 @@
     214,
     180
    ],
-   "open": true,
+   "open": false,
    "house": "b81cf840-f00b-45a5-9d0a-912a3a25796e"
   },
   {
@@ -79671,7 +79611,7 @@
     78,
     56
    ],
-   "open": false,
+   "open": true,
    "house": "4c03812d-246e-4b46-8af4-84c1e27a35a6"
   },
   {
@@ -79689,7 +79629,7 @@
     80,
     110
    ],
-   "open": true,
+   "open": false,
    "house": "182f70d2-b9ab-4cbb-bf30-d7fefc6f51e2"
   },
   {
@@ -79743,7 +79683,7 @@
     120,
     168
    ],
-   "open": false,
+   "open": true,
    "house": "4eff1441-9a7b-4e0e-8f97-27ced0efe0b9"
   },
   {
@@ -79763,6 +79703,24 @@
    ],
    "open": false,
    "house": "e24a249b-52fa-4267-b02f-bbb82f9c5906"
+  },
+  {
+   "loc": [
+    -19187.3,
+    304.8,
+    603.8
+   ],
+   "yaw": -161.23,
+   "mesh": "Mod_Vantail_Porte",
+   "scale": 1.0,
+   "open_angle": -100.0,
+   "color": [
+    78,
+    120,
+    168
+   ],
+   "open": false,
+   "house": "2b3afacc-0d56-488f-b5bc-c4699201c969"
   },
   {
    "loc": [
@@ -79797,7 +79755,7 @@
     214,
     180
    ],
-   "open": true,
+   "open": false,
    "house": "04ce7e69-a20e-447e-9e42-752c9d5474e8"
   },
   {
@@ -79833,7 +79791,7 @@
     120,
     168
    ],
-   "open": false,
+   "open": true,
    "house": "a422df27-aeca-45e5-95cd-61ccc5683c3c"
   },
   {
@@ -79851,7 +79809,7 @@
     48,
     46
    ],
-   "open": true,
+   "open": false,
    "house": "6027290a-57a1-4aa7-adbb-4b4418f4a252"
   },
   {
@@ -80013,7 +79971,7 @@
     66,
     44
    ],
-   "open": false,
+   "open": true,
    "house": "0ed49573-2af3-4204-94dc-0c176acdb9b8"
   },
   {
@@ -80031,7 +79989,7 @@
     214,
     180
    ],
-   "open": true,
+   "open": false,
    "house": "0ed49573-2af3-4204-94dc-0c176acdb9b8"
   },
   {
@@ -80144,24 +80102,6 @@
   },
   {
    "loc": [
-    -27329.2,
-    101226.2,
-    573.7
-   ],
-   "yaw": 2.33,
-   "mesh": "Mod_Vantail_Porte",
-   "scale": 1.0,
-   "open_angle": -100.0,
-   "color": [
-    96,
-    66,
-    44
-   ],
-   "open": true,
-   "house": "5ccb20b8-cf22-4f40-87b1-962b53d62bf2"
-  },
-  {
-   "loc": [
     2803.6,
     94888.0,
     -333.4
@@ -80193,7 +80133,7 @@
     150,
     190
    ],
-   "open": false,
+   "open": true,
    "house": "0545f5e9-ffa1-477a-9961-d58f27d4fc23"
   },
   {
@@ -80247,7 +80187,7 @@
     188,
     150
    ],
-   "open": true,
+   "open": false,
    "house": "01061e8a-0aa3-41b9-abe8-206694f4cdc2"
   },
   {
@@ -80535,7 +80475,7 @@
     60,
     40
    ],
-   "open": false,
+   "open": true,
    "house": "a5a02045-815e-4873-a82c-e050f4fcb4bc"
   },
   {
@@ -80553,7 +80493,7 @@
     60,
     40
    ],
-   "open": true,
+   "open": false,
    "house": "782f2339-a6c5-43e5-9009-a8645cba6a76"
   },
   {
@@ -80913,7 +80853,7 @@
     78,
     56
    ],
-   "open": false,
+   "open": true,
    "house": "2ec0b171-4cf0-41ad-b46c-189dca2212b2"
   },
   {
@@ -80931,7 +80871,7 @@
     120,
     168
    ],
-   "open": true,
+   "open": false,
    "house": "124c0c5d-58b0-47ee-8e1e-ae43a2846f48"
   },
   {
@@ -81003,7 +80943,7 @@
     188,
     150
    ],
-   "open": false,
+   "open": true,
    "house": "a12e7c09-bbc9-40b4-a115-a62a13fd6ef3"
   },
   {
@@ -81021,7 +80961,7 @@
     80,
     130
    ],
-   "open": true,
+   "open": false,
    "house": "a12e7c09-bbc9-40b4-a115-a62a13fd6ef3"
   },
   {
@@ -81285,13 +81225,13 @@
   {
    "house": "006af0c5-b650-4130-b1fb-611d50109f86",
    "a": [
-    8330.5,
-    2616.4,
+    8276.8,
+    2643.2,
     1812.6
    ],
    "b": [
-    7950.2,
-    2806.1,
+    7896.5,
+    2832.8,
     2127.6
    ],
    "width": 105.0
@@ -81587,20 +81527,6 @@
     -3966.5,
     -1572.9,
     3656.1
-   ],
-   "width": 105.0
-  },
-  {
-   "house": "31e7740c-1270-4019-9c7f-f9d4c067f4f0",
-   "a": [
-    -8153.0,
-    1218.4,
-    2969.0
-   ],
-   "b": [
-    -8208.3,
-    797.0,
-    3284.0
    ],
    "width": 105.0
   },
@@ -82091,20 +82017,6 @@
     -40145.6,
     81514.7,
     820.3
-   ],
-   "width": 105.0
-  },
-  {
-   "house": "5ccb20b8-cf22-4f40-87b1-962b53d62bf2",
-   "a": [
-    -26774.2,
-    100835.0,
-    564.3
-   ],
-   "b": [
-    -27173.8,
-    100816.0,
-    864.3
    ],
    "width": 105.0
   },
@@ -82603,6 +82515,16 @@
    "theme": "classique"
   },
   {
+   "id": "4fc8df52-12ed-447d-8623-d55313f9dc37",
+   "loc": [
+    -794.8,
+    -6209.8,
+    2964.5
+   ],
+   "style": "core",
+   "theme": "moderne"
+  },
+  {
    "id": "808b0012-996d-43ab-8588-fb2a30e6efc9",
    "loc": [
     8033.9,
@@ -83083,6 +83005,16 @@
    "theme": "bourgeoise"
   },
   {
+   "id": "2b3afacc-0d56-488f-b5bc-c4699201c969",
+   "loc": [
+    -19707.2,
+    707.8,
+    590.2
+   ],
+   "style": "core",
+   "theme": "refuge"
+  },
+  {
    "id": "84e3d014-4c38-4b81-a048-2e6ef3bd5e71",
    "loc": [
     -20574.5,
@@ -83291,16 +83223,6 @@
    ],
    "style": "villa",
    "theme": "classique"
-  },
-  {
-   "id": "5ccb20b8-cf22-4f40-87b1-962b53d62bf2",
-   "loc": [
-    -27123.3,
-    100986.9,
-    573.7
-   ],
-   "style": "villa",
-   "theme": "saccagee"
   },
   {
    "id": "ca9cac47-e848-4cab-bb90-9b54694baa7f",

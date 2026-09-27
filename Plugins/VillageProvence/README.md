@@ -109,9 +109,9 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 | Type | Nombre | Plan |
 | --- | --- | --- |
-| Maison à étage | 58 | rez-de-chaussée en deux pièces, escalier droit le long d'un mur, étage avec salle de bain et chambre ; la cuisine est tantôt au fond, tantôt du côté de l'escalier |
+| Maison à étage | 55 | rez-de-chaussée en deux pièces, escalier droit le long d'un mur, étage avec salle de bain et chambre ; la cuisine est tantôt au fond, tantôt du côté de l'escalier |
 | Maison sur 3 niveaux | 6 | comme la maison à étage, plus un **escalier en colimaçon** dans la chambre qui monte à un **grenier** encombré (malles, cartons, vieux meubles) ou à une chambre d'amis |
-| Maison de plain-pied | 41 | mas et villas : trois pièces en enfilade séparées par des cloisons (séjour-cuisine, chambre, salle de bain) |
+| Maison de plain-pied | 44 | mas et villas (et quelques maisons trop courtes pour un escalier : seul le rez-de-chaussée s'ouvre) : trois pièces en enfilade séparées par des cloisons (séjour-cuisine, chambre, salle de bain) |
 | Commerce | 28 | rez-de-chaussée ouvert, porte vitrée mobile, souvent une arrière-boutique ; aménagement selon l'enseigne (voir plus bas) |
 | Mairie | 1 | salle du conseil et des mariages : drapeaux, grande table, chaises, armoires d'archives |
 | Église | 1 | portail à deux battants, nef voûtée avec arcs de pierre, 19 rangées de bancs, autel et retable, chandeliers, statues, lutrin, confessionnal, bénitier, vitraux |
@@ -144,7 +144,7 @@ Le bouton **Afficher** de l'acteur montre les points dans l'éditeur. Un **Nav M
 
 ![Escalier provençal, escalier moderne, deux colimaçons](Docs/escaliers.jpg)
 
-- **Escalier droit** : 1,05 m de large, marches de 19 cm pour 25 cm de giron ; girons en terre cuite avec nez de marche en bois, limon, balustres et main courante côté vide. La première marche est à 0,9 m du mur du fond (0,6 ou 0,4 m dans les maisons courtes) : ce palier de départ permet d'arriver face à l'escalier au lieu de le trouver collé au mur. Dans les rares maisons trop courtes pour un palier (3 sur 63, dont une maison à 3 niveaux où le colimaçon a la priorité), les 4 premières marches restent sans garde-corps et on y monte par le côté, main courante sur le mur. Dans les maisons modernes : marches en bois, garde-corps à câbles et main courante en inox.
+- **Escalier droit** : 1,05 m de large, marches de 19 cm pour 25 cm de giron ; girons en terre cuite avec nez de marche en bois, limon, balustres et main courante côté vide. La première marche est à 0,9 m du mur du fond (0,6 ou 0,4 m dans les maisons courtes) : ce palier de départ permet d'arriver face à l'escalier au lieu de le trouver collé au mur. Aucun escalier n'est collé au mur : une maison trop courte pour un palier d'au moins 0,4 m s'ouvre de plain-pied (étages fermés). Avec un palier de 0,4 m, les 4 premières marches restent sans garde-corps pour pouvoir aussi y monter par le côté. Dans les maisons à 3 niveaux, l'escalier droit est placé de façon à laisser la place au colimaçon.
 - **Colimaçon** (maisons sur 3 niveaux) : 2,2 m de diamètre, marches pleines en éventail (pierre ou bois), noyau central, garde-corps à barreaux ; le quart de tour restant sert d'accès en bas et de palier en haut, protégé par une rambarde.
 - **Placement** : la volée va de préférence contre un mur sans fenêtre (et opposé à la porte d'entrée). Quand ce n'est pas possible, la fenêtre du rez-de-chaussée qui se trouve derrière est condamnée : volets fermés vus de dehors, mur plein dedans, l'escalier ne la coupe plus en biais.
 

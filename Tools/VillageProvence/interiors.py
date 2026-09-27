@@ -23,7 +23,7 @@ STAIR_W = 1.05      # largeur de l'escalier droit
 TREAD = 0.25        # giron
 RISE_MAX = 0.19     # hauteur de marche maximale
 OPEN_STEPS = 4      # marches d'accès sans garde-corps quand le bas de la volée touche le mur
-GAPS = (0.9, 0.6, 0.4, 0.0)  # palier de départ entre le mur du fond et la 1re marche (le plus grand qui rentre)
+GAPS = (0.9, 0.6, 0.4)  # palier de départ entre le mur du fond et la 1re marche (le plus grand qui rentre ; jamais collé au mur)
 PART = 0.1          # épaisseur des cloisons
 COL_PLAFOND = (247, 244, 238, 255)
 DOOR_TYPES = ("Porte", "Porte_Simple", "Remise", "Vitrine", "Vitrine_SansStore")
@@ -77,12 +77,12 @@ def candidates(blds, center, max_n=340, spacing=9.0):
 SPIRAL = 2.2       # emprise de l'escalier en colimaçon (carré, m)
 
 
-def plan(b, info, openings, gz):
+def plan(b, info, openings, gz, force=None):
     """Étudie le bâtiment ; renvoie le plan de l'intérieur, ou None s'il ne se prête pas à un intérieur simple.
     Trois sortes : maison à étage(s) (escalier droit, parfois colimaçon vers un 2e étage), maison de plain-pied,
     commerce ou mairie (rez-de-chaussée seulement)."""
     public = bool(b.get("shop") or b.get("mairie"))
-    kind = "commerce" if public else ("plainpied" if b["nf"] == 1 else "maison")
+    kind = force or ("commerce" if public else ("plainpied" if b["nf"] == 1 else "maison"))
     rng = b["rng"]
     p = b["poly"]
     ip = p.buffer(-T_WALL, join_style=2)
@@ -238,11 +238,12 @@ def plan(b, info, openings, gz):
             # ensuite on préfère un vrai palier en bas de l'escalier (on arrive face à la 1re marche, pas collé au mur)
             found.append(((hide > 0.05, -gap, hide, len(found)), dict(s=s, d=d, end=end, st=st, gap=gap, xc=hit, band=band, y_b=y_b)))
     if not found:
-        REJECT[kind + ":escalier"] += 1
-        return None
+        # pas la place pour un escalier avec palier : la maison s'ouvre de plain-pied (étages fermés)
+        REJECT[kind + ":escalier -> plain-pied"] += 1
+        return plan(b, info, openings, gz, force="plainpied")
     found.sort(key=lambda f: f[0])
 
-    def spiral_for(best):
+    def spiral_for(best, clear):
         # colimaçon dans un angle de la chambre (au fond), sinon contre la cloison de la salle de bain, côté mur plein
         far = -best["end"]
         dd, ss = best["d"], best["s"]
@@ -264,7 +265,7 @@ def plan(b, info, openings, gz):
             if not any(o["floor"] in (1, 2) and o["side"] == sd_ and overlaps(*o["span"], lo_, hi_, 0.05)
                        and ("Porte" in o["type"] or o["z0"] < pl_lv(o["floor"]) + 0.5)
                        for sd_, lo_, hi_ in walls_ for o in locs):
-                if abs(far - best["xc"]) >= SPIRAL + 2.4:
+                if abs(far - best["xc"]) >= SPIRAL + clear:
                     return (sx_, sy_, dxr, dyr)
                 return None
         return None
@@ -273,10 +274,14 @@ def plan(b, info, openings, gz):
     spiral = None
     if nlev == 3:
         # le colimaçon passe avant le palier de départ : on prend le 1er escalier droit qui lui laisse la place
-        for k_, b_ in found:
-            spiral = spiral_for(b_)
+        # chambre de 2,4 m à côté du colimaçon de préférence, 1,9 m au minimum
+        for clear in (2.4, 1.9):
+            for k_, b_ in found:
+                spiral = spiral_for(b_, clear)
+                if spiral:
+                    key, best = k_, b_
+                    break
             if spiral:
-                key, best = k_, b_
                 break
         if spiral is None:
             REJECT["maison:pas de colimaçon"] += 1

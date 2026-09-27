@@ -315,7 +315,7 @@ def spikes(at, q, rng, stem_cols, flower_cols, n=26, flower_frac=0.3):
             taper = 0.55 + 0.45 * min(1.0, k / 3.0)            # pointe plus fine
             rr = rng.uniform(3.6, 5.0) * SS * taper
             shade = 1.0 - 0.3 * (k / nw)
-            at.dc.ellipse([px_ - rr * 1.1, py_ - rr * 0.2, px_ + rr * 1.1, py_ + rr * 0.9], fill=(45, 17, 111, 255))
+            at.dc.ellipse([px_ - rr * 1.1, py_ - rr * 0.2, px_ + rr * 1.1, py_ + rr * 0.9], fill=(84, 48, 150, 255))
             # fleurettes : petits tubes violets qui dépassent de part et d'autre, teintes variées
             for f_ in range(rng.integers(4, 7)):
                 ex = px_ + rng.uniform(-1.3, 1.3) * rr
@@ -326,7 +326,7 @@ def spikes(at, q, rng, stem_cols, flower_cols, n=26, flower_frac=0.3):
                 at.dc.ellipse([ex - fr_, ey - fr_ * 1.2, ex + fr_, ey + fr_ * 0.9], fill=col)
                 at.dh.ellipse([ex - fr_, ey - fr_, ex + fr_, ey + fr_], fill=255)
                 if rng.random() < 0.18:
-                    hc = (172, 125, 238, 255) if rng.random() < 0.6 else (194, 148, 249, 255)
+                    hc = (190, 146, 246, 255) if rng.random() < 0.6 else (210, 170, 252, 255)
                     at.dc.ellipse([ex - fr_ * 0.45, ey - fr_ * 0.9, ex + fr_ * 0.35, ey - fr_ * 0.2], fill=hc)
 
 
@@ -435,7 +435,7 @@ def build():
     at = Atlas(1024)
     for q in range(4):
         # couleurs relevées sur une photo de lavande vraie en fleur (violet bleuté soutenu, reflets mauves)
-        spikes(at, q, rng, [(110, 138, 108), (100, 128, 98), (122, 147, 120)], [(76, 48, 152), (100, 66, 178), (113, 78, 190), (130, 90, 205), (88, 56, 165)],
+        spikes(at, q, rng, [(110, 138, 108), (100, 128, 98), (122, 147, 120)], [(132, 88, 206), (148, 100, 222), (120, 80, 196), (160, 112, 232), (140, 92, 214)],
                n=70, flower_frac=0.36)
     at.save("Lavande", (100, 70, 170))
     # Herbes sèches (été provençal)

@@ -653,33 +653,50 @@ def t_bark_plane(n, size):
     return dict(albedo=alb, height=h, rough=np.full((n, n), 0.75, F32))
 
 
+def _nz(a):
+    return (a - a.mean()) / (a.std() + 1e-6)
+
+
+def _warp(a, dx, dy):
+    from scipy.ndimage import map_coordinates
+    n = a.shape[0]
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32)
+    return map_coordinates(a, [yy + dy, xx + dx], order=1, mode="grid-wrap").astype(F32)
+
+
 @register("EcorceOlivier", 1.0, 1024)
 def t_bark_olive(n, size):
-    """Olivier : écorce gris argenté, sillons profonds et torsadés, bourrelets et trous de nœuds, lichens."""
+    """Olivier (d'après photos de vieux troncs) : écorce gris-brun très rugueuse, sillons profonds et irréguliers
+    qui suivent la torsion du tronc, crêtes cassées en blocs, grain fin, lichens gris-vert et jaunes."""
     s = 1851
-    yy, xx = np.mgrid[0:n, 0:n].astype(F32) / n
-    swirl = band(n, n / 1.5, s + 2) * 0.03 + band(n, n / 5, s + 7) * 0.006
-    u = (xx + swirl) % 1.0
-    ridges = np.sin(u * 2 * np.pi * 9 + band(n, n / 4, s + 8) * 1.2)
-    fine = band(n, 5, s + 1, aniso=0.2)
-    fib = ridges * 0.85 + fine * 0.15 + band(n, n / 30, s + 13, aniso=0.2) * 0.25
-    groove = smooth(-0.2, -0.85, fib)
-    alb = hex2rgb("#a39e91") * (0.9 + 0.14 * fib)[..., None] * (1 + 0.07 * band(n, 6, s + 9))[..., None]
-    alb = lerp(alb, hex2rgb("#3a352d"), groove[..., None] * 0.65)
-    rng = np.random.default_rng(s + 10)
-    holes = np.zeros((n, n), F32)
-    for _ in range(4):
-        cx, cy, rr = rng.uniform(0, 1), rng.uniform(0, 1), rng.uniform(0.02, 0.05)
-        dd = np.sqrt(((xx - cx + 0.5) % 1 - 0.5) ** 2 + (((yy - cy + 0.5) % 1 - 0.5) * 0.7) ** 2)
-        holes = np.maximum(holes, smooth(rr, rr * 0.5, dd))
-        alb = lerp(alb, hex2rgb("#6b665c"), (smooth(rr * 1.8, rr, dd) * (1 - smooth(rr, rr * 0.5, dd)))[..., None] * 0.5)
-    alb = lerp(alb, hex2rgb("#1e1b17"), holes[..., None])
-    lich = smooth(1.7, 2.3, noise(n, n / 18, s + 3) + 0.5 * band(n, 10, s + 11))
-    alb = lerp(alb, hex2rgb("#b8b89c"), lich[..., None] * 0.55)
-    lich2 = smooth(2.2, 2.6, noise(n, n / 30, s + 12))
-    alb = lerp(alb, hex2rgb("#c9a94a"), lich2[..., None] * 0.5)
-    h = fib * 0.004 - groove * 0.008 - holes * 0.012
-    return dict(albedo=alb, height=h, rough=np.clip(0.8 + 0.1 * groove, 0, 1).astype(F32))
+    # torsion lente + ondulation irrégulière des sillons
+    yy = np.mgrid[0:n, 0:n][0].astype(F32) / n
+    dx = n * 0.06 * np.sin(2 * np.pi * yy) + _nz(band(n, n / 4, s + 1)) * n * 0.025 + _nz(band(n, n / 16, s + 2)) * n * 0.006
+    ridge = _nz(band(n, n / 11, s + 3, aniso=7.0)) + 0.45 * _nz(band(n, n / 26, s + 4, aniso=5.0)) + 0.15 * _nz(band(n, n / 70, s + 11, aniso=3.0))
+    ridge = _warp(ridge, dx, 0 * dx)
+    ridge = _nz(ridge)
+    furrow = smooth(-0.55, -1.25, ridge)                   # sillons profonds
+    crest = smooth(0.0, 1.4, ridge)
+    # cassures transversales : les crêtes se découpent en blocs
+    cr = _nz(band(n, n / 14, s + 5, aniso=0.12))
+    crack = smooth(1.2, 1.9, cr) * crest
+    grain = _nz(band(n, 5, s + 6, aniso=2.5))
+    low = _nz(band(n, n / 3, s + 7))
+    base = lerp(hex2rgb("#8a8375"), hex2rgb("#a59e90"), smooth(-1.2, 1.2, low)[..., None])
+    alb = base * (0.82 + 0.22 * crest + 0.05 * grain)[..., None]
+    alb = lerp(alb, hex2rgb("#5f574b"), smooth(-0.1, -0.7, ridge)[..., None] * 0.45)
+    alb = lerp(alb, hex2rgb("#221f1a"), furrow[..., None] * 0.85)
+    alb = lerp(alb, hex2rgb("#2e2a24"), crack[..., None] * 0.7)
+    # lichens et mousse
+    l1 = smooth(1.0, 1.8, _nz(noise(n, n / 12, s + 8)) + 0.4 * grain) * (1 - furrow)
+    alb = lerp(alb, hex2rgb("#aeb09a"), l1[..., None] * 0.55)
+    l2 = smooth(2.0, 2.6, _nz(noise(n, n / 30, s + 9)) + 0.3 * grain) * (1 - furrow)
+    alb = lerp(alb, hex2rgb("#b58e3c"), l2[..., None] * 0.5)
+    moss = smooth(0.8, 1.6, _nz(band(n, n / 8, s + 10))) * furrow
+    alb = lerp(alb, hex2rgb("#3c4629"), moss[..., None] * 0.45)
+    h = ridge * 0.006 + crest * 0.004 - furrow * 0.012 - crack * 0.005 + grain * 0.0005
+    rough = np.clip(0.84 + 0.08 * furrow - 0.05 * l1, 0, 1).astype(F32)
+    return dict(albedo=alb, height=h, rough=rough, ao_depth=0.01)
 
 
 @register("EcorcePin", 1.0, 1024)

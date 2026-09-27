@@ -5,6 +5,10 @@ cd "$(dirname "$0")"
 python fetch_data.py                 # données réelles (Overture Maps + Copernicus)
 python plan_terrain.py               # relief corrigé, parcelles, routes, couches du sol
 python textures.py                   # textures PBR procédurales
+# écorce d'olivier recomposée à partir d'une vraie photo (photos/olivier_tronc.jpg), à la place de la version procédurale
+python photo_texture.py photos/olivier_tronc.jpg EcorceOlivier --taille 1.0 --resolution 1024 \
+    --morceaux 2721 3170 2990 3400 2721 3202 2901 3472 --px-par-m 1400 --relief 0.004 --rugosite 0.7 0.9 \
+    --taches 0.6 --mousse 0.3 --albedo 0.52 --saturation 0.7
 python foliage_tex.py                # atlas de feuillage
 python signs_tex.py                  # enseignes, plaques de rue, panneaux
 python zombie_tex.py                 # inscriptions à la bombe, traces de sang

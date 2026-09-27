@@ -37,6 +37,50 @@ SPECIES = {
 }
 
 
+def gnarled_trunk(mb, mat, pts, radii, segs, cols, rng, seed):
+    """Tronc d'olivier (d'après photo) : cannelures qui tournent, bourrelets autour des anciennes branches,
+    pied évasé en contreforts. Tube ordinaire dont chaque sommet est poussé le long du rayon."""
+    pts = np.asarray(pts, np.float64)
+    radii = np.asarray(radii, np.float64)
+    # sous-échantillonnage : plus d'anneaux pour que les bourrelets soient ronds
+    m = (len(pts) - 1) * 3 + 1
+    t_old = np.linspace(0, 1, len(pts))
+    t = np.linspace(0, 1, m)
+    P = np.column_stack([np.interp(t, t_old, pts[:, k]) for k in range(3)])
+    R = np.interp(t, t_old, radii)
+    C = [cols[min(len(cols) - 1, int(round(ti * (len(cols) - 1))))] for ti in t]
+    tube(mb, mat, P, np.maximum(R, 0.012), segs=segs, cols=C, u_tile=1.0, v_tile=1.0)
+    blk = mb.parts[mat]
+    Pv, Nv = blk["P"][-1].astype(np.float64), blk["N"][-1].astype(np.float64)
+    ring = segs + 1
+    ph = rng.uniform(0, 2 * np.pi, 4)
+    burls = [(rng.uniform(0.15, 0.95), rng.uniform(0, 2 * np.pi), rng.uniform(0.2, 0.45), rng.uniform(0.05, 0.1)) for _ in range(rng.integers(3, 6))]
+    H = np.linalg.norm(P[-1] - P[0]) + 1e-6
+    for i in range(m):
+        ang = 2 * np.pi * np.arange(ring) / segs
+        ti = t[i]
+        z = ti * H
+        f = 0.16 * np.sin(3 * ang + 2.8 * ti * 2 * np.pi * 0.35 + ph[0]) + 0.07 * np.sin(5 * ang - 5.0 * ti + ph[1])
+        for tb, ab, amp, wdt in burls:
+            da = np.angle(np.exp(1j * (ang - ab)))
+            f = f + amp * np.exp(-((ti - tb) / wdt) ** 2 - (da / 0.6) ** 2)
+        flare = 0.45 * np.exp(-z / 0.3) * (1 + 0.4 * np.sin(4 * ang + ph[2]))
+        f = f + flare
+        sl = slice(i * ring, (i + 1) * ring)
+        Pv[sl] += Nv[sl] * (R[i] * f)[:, None]
+    # normales recalculées sur la surface déformée
+    I = blk["I"][-1]
+    fn = np.cross(Pv[I[:, 1]] - Pv[I[:, 0]], Pv[I[:, 2]] - Pv[I[:, 0]])
+    Nn = np.zeros_like(Pv)
+    for k in range(3):
+        np.add.at(Nn, I[:, k], fn)
+    Nn = nrm(Nn)
+    if np.mean(np.sum(Nn * Nv, axis=1)) < 0:
+        Nn = -Nn
+    blk["P"][-1] = Pv.astype(np.float32)
+    blk["N"][-1] = Nn.astype(np.float32)
+
+
 def make_tree(species, seed, lod=0):
     sp = SPECIES[species]
     rng = np.random.default_rng(seed)
@@ -44,7 +88,7 @@ def make_tree(species, seed, lod=0):
     mb = MB()
     branches = []  # (pts, radii, level)
     tips = []  # (point, direction, level)
-    lean = rng.normal(0, 0.06 if species not in ("Pin",) else 0.14, 2)
+    lean = rng.normal(0, {"Pin": 0.14, "Olivier": 0.22}.get(species, 0.06), 2)
     # tronc
     th = H * sp["trunk_h"] * rng.uniform(0.85, 1.15)
     n = 8
@@ -114,7 +158,10 @@ def make_tree(species, seed, lod=0):
             continue
         sway = np.clip(np.linalg.norm(pts[:, :2], axis=1) / max(rx, 1) * 90, 0, 90).astype(int)
         cols = [(255, 255, 255, int(s * (0.3 if level == 0 else 1))) for s in sway]
-        tube(mb, sp["bark"], pts, np.maximum(rr, 0.012), segs=segs[min(level, 3)], cols=cols, u_tile=1.0, v_tile=1.0)
+        if level == 0 and sp.get("twist"):
+            gnarled_trunk(mb, sp["bark"], pts, rr, {0: 20, 1: 12, 2: 7}[lod], cols, rng, seed)
+        else:
+            tube(mb, sp["bark"], pts, np.maximum(rr, 0.012), segs=segs[min(level, 3)], cols=cols, u_tile=1.0, v_tile=1.0)
     # feuillage : l'enveloppe réelle est celle des extrémités de branches
     if tips:
         tp = np.array([t_[0] for t_ in tips])

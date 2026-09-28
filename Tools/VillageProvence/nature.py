@@ -33,7 +33,7 @@ for r in V["roads"]:
     blocked_geoms.append(r["line"].buffer(r["width"] / 2 + extra))
 blocked_geoms += [p.buffer(1.0) for p in V["pools"]] + V["plaza"] + [p.buffer(0.5) for p in V["parking"]]
 if V.get("river_poly") is not None:
-    blocked_geoms.append(V["river_poly"].buffer(1.5))
+    blocked_geoms.append((V.get("river_rim") or V["river_poly"]).buffer(1.0))
     blocked_geoms += [b["line"].buffer(b["width"] / 2 + 2.0) for b in V.get("bridges", [])]
 BLOCK = raster1(blocked_geoms)
 print("masque %.0fs" % (time.time() - T0), flush=True)
@@ -509,21 +509,21 @@ for sp in ("Arbre_Chene", "Arbre_Pin", "Arbre_PinParasol", "Arbre_Fruitier"):
             put_variants("Arbre_Cypres", 4, ex, scale=(0.6, 0.95), sink=0.1)
 print("cyprès dans le village : %d" % n_cyp, flush=True)
 
-# ------------------------------------------------------------------ ripisylve : platanes, peupliers (cyprès), lauriers-roses et roseaux
-# le long des berges de la rivière des Ocres
+# ------------------------------------------------------------------ au bord des gorges de la rivière des Ocres : platanes, cyprès, chênes,
+# lauriers-roses et garrigue (les falaises restent nues)
 if V.get("river_poly") is not None:
-    rp = V["river_poly"]
-    bank = rp.buffer(14.0).difference(rp.buffer(3.0)).difference(unary_union([V["core"].buffer(5)]))
+    rp = V.get("river_rim") or V["river_poly"]          # en haut des falaises des gorges
+    bank = rp.buffer(16.0).difference(rp.buffer(2.0)).difference(unary_union([V["core"].buffer(5)]))
     T_ = jitter_grid(bank, 11.0, keep=0.55)
     tv = rng.random(len(T_))
     put_variants("Arbre_Platane", 3, T_[tv < 0.55], scale=(0.8, 1.15))
     put_variants("Arbre_Cypres", 4, T_[(tv >= 0.55) & (tv < 0.7)], scale=(0.9, 1.2), sink=0.1)
     put_variants("Arbre_Chene", 4, T_[tv >= 0.7], scale=(0.7, 1.0))
-    edge = rp.buffer(4.5).difference(rp.buffer(1.0))
-    Lr = jitter_grid(edge, 4.0, keep=0.5)
+    edge = rp.buffer(6.0).difference(rp.buffer(1.5))
+    Lr = jitter_grid(edge, 5.0, keep=0.5)
     put_variants("Buisson_LaurierRose", 2, Lr, scale=(0.8, 1.2))
-    Rs = jitter_grid(edge, 1.8, keep=0.5)
-    put_variants("Herbe_Verte", 3, Rs, scale=(1.0, 1.8))
+    Rs = jitter_grid(edge, 3.0, keep=0.5)
+    put_variants("Buisson_Garrigue", 4, Rs, scale=(0.8, 1.4))
     print("berges : %d arbres, %d lauriers-roses  %.0fs" % (len(T_), len(Lr), time.time() - T0), flush=True)
 
 INST = {k: np.concatenate(v).astype(np.float32) for k, v in INST.items()}

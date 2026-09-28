@@ -9,9 +9,10 @@ from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import unary_union, nearest_points, substring
 from common import ZONE, RES, polys_of, lines_of, grid_sample, rasterize
 
-W_SRC, W_MAX = 12.0, 26.0      # largeur du lit à la source et en aval (m)
-DEPTH = 1.8                    # profondeur d'eau au milieu du lit
-BANK = 0.75                    # pente des berges (dénivelé par mètre)
+W_SRC, W_MAX = 20.0, 30.0      # largeur de l'eau en amont et en aval (m)
+DEPTH = 6.0                    # profondeur d'eau au milieu du lit
+DROP = 10.0                    # l'eau coule au moins 10 m sous les rives
+BANK = 3.0                     # parois des gorges : 3 m de dénivelé par mètre (~72°)
 
 
 def _chaikin(pts, it=3):
@@ -57,7 +58,8 @@ def _dijkstra(cost, start, goal_mask):
 
 
 def trace(V, ground, village, quarter_hill, blds, rng):
-    """Tracé de la rivière : source en haut du ravin d'ocre -> fond du ravin -> entre les deux villages -> plaine au nord."""
+    """Tracé de la rivière, d'un bord à l'autre de la carte : du sud jusqu'au ravin d'ocre, qu'elle entaille en gorges,
+    entre les deux villages, puis vers la plaine au nord. Les deux villages sont sur des rives opposées."""
     center = Point(-10.0, 0.0)
     ochre = [g for g in V["sand"] + V["rock"] if g.distance(center) < 700] + [l.buffer(10) for l in V["cliffs"] if l.distance(center) < 700]
     oc = unary_union(ochre)
@@ -95,6 +97,27 @@ def trace(V, ground, village, quarter_hill, blds, rng):
     sj, si = int((gap[1] - ZONE["ymin"]) / step), int((gap[0] - ZONE["xmin"]) / step)
     path = _dijkstra(cost, (sj, si), goal)
     down = [np.array([xs[i], ys[j]]) for j, i in path[1:]]
+    # amont : du haut du ravin d'ocre jusqu'au bord sud (ou est) de la carte, par les terrains les plus bas
+    cu = 1.0 + 0.1 * np.clip(Z - Z.min(), 0, None)
+    cu[nb_mask] += 80.0
+    cu[shapely.contains_xy(hill_out.buffer(40), X, Y)] += 400.0
+    cu[shapely.contains_xy(village.buffer(60), X, Y)] += 400.0
+    cu *= 1.0 + 1.6 * np.clip(noise / (noise.std() + 1e-9), -1.5, 1.5) ** 2
+    gu = np.zeros_like(cu, bool)
+    gu[0, :] = True                              # bord sud
+    gu[: int((src[1] - ZONE["ymin"]) / step), -1] = True   # bord est, au sud du ravin
+    sj2, si2 = int((src[1] - ZONE["ymin"]) / step), int((src[0] - ZONE["xmin"]) / step)
+    up = [np.array([xs[i], ys[j]]) for j, i in _dijkstra(cu, (sj2, si2), gu)[1:]][::-1]
+    ul = LineString(up + [src]).simplify(12.0)
+    uu = []
+    ph2 = rng.uniform(0, 2 * math.pi)
+    for t in np.arange(0.0, ul.length, 20.0):
+        p0 = np.array(ul.interpolate(t).coords[0])
+        p1 = np.array(ul.interpolate(min(ul.length, t + 5.0)).coords[0])
+        tg = (p1 - p0) / (np.linalg.norm(p1 - p0) + 1e-9)
+        amp = 45.0 * np.clip((ul.length - t - 250.0) / 600.0, 0, 1)
+        off = amp * math.sin(2 * math.pi * t / 310.0 + ph2)
+        uu.append(p0 + np.array([-tg[1], tg[0]]) * off)
     # en aval du passage : méandres de plus en plus amples à mesure que la vallée s'ouvre
     dl = LineString([gap] + down).simplify(12.0)
     dd = []
@@ -109,7 +132,7 @@ def trace(V, ground, village, quarter_hill, blds, rng):
     # points du ravin situés avant le passage seulement (sinon le lit ferait un aller-retour)
     dg = np.linalg.norm(gap - src)
     rav_ok = [p for p in rav[1:] if np.linalg.norm(p - src) < dg - 40.0]
-    ctrl = [src] + rav_ok + dd[::2] + [dd[-1]]
+    ctrl = [uu[0]] + uu[2:-2:2] + [src] + rav_ok + dd[::2] + [dd[-1]]
     P = _chaikin(ctrl, 4)
     line = LineString(P).simplify(0.8)
     return line, dict(src=src, gap=gap)
@@ -123,13 +146,13 @@ def carve(ground, Xg, Yg, line, rng):
     # niveau de l'eau : sous le sol le long du tracé, toujours descendant vers l'aval
     gz = grid_sample(ground, cen[:, 0], cen[:, 1])
     gz = ndimage.minimum_filter1d(gz, 5)
-    lvl = np.minimum.accumulate(gz - 2.2)
+    lvl = np.minimum.accumulate(gz - DROP)
     lvl = lvl - np.linspace(0, 0.002 * L, len(lvl))          # pente minimale : l'eau coule
     lvl = np.minimum.accumulate(ndimage.uniform_filter1d(lvl, 9))
-    width = W_SRC + (W_MAX - W_SRC) * np.clip(ss / 900.0, 0, 1) + 3.0 * np.sin(ss / 97.0 + rng.uniform(0, 6))
+    width = W_SRC + (W_MAX - W_SRC) * np.clip(ss / L, 0, 1) + 3.0 * np.sin(ss / 97.0 + rng.uniform(0, 6))
     prof = dict(s=ss, level=lvl.astype(np.float32), width=width.astype(np.float32), xy=cen.astype(np.float32))
     # cellules proches du tracé
-    corridor = line.buffer(W_MAX / 2 + 90.0)
+    corridor = line.buffer(W_MAX / 2 + 110.0)
     x0, y0, x1, y1 = corridor.bounds
     jx = (Xg[0] >= x0) & (Xg[0] <= x1)
     jy = (Yg[:, 0] >= y0) & (Yg[:, 0] <= y1)
@@ -140,14 +163,44 @@ def carve(ground, Xg, Yg, line, rng):
     s_at = shapely.line_locate_point(line, pts).reshape(Xs.shape)
     lv = np.interp(s_at, ss, lvl)
     hw = np.interp(s_at, ss, width) / 2
-    bed = lv - DEPTH * np.clip(1 - (r / hw) ** 2, 0, 1) - 0.2
-    bank = lv + 0.35 + np.clip(r - hw, 0, None) * BANK
+    bed = lv - DEPTH * np.clip(1 - (r / hw) ** 6, 0, 1) - 0.3
+    # parois des gorges : falaises irrégulières (ressauts, surplombs adoucis), un peu moins raides en haut
+    rough = ndimage.gaussian_filter(np.random.default_rng(5).normal(0, 1, r.shape), 2.0)
+    rough *= 1.2 / (rough.std() + 1e-6)
+    rr = np.clip(r - hw + rough, 0, None)
+    bank = lv + 0.35 + rr * BANK * (1.0 - 0.25 * np.clip(rr / 40.0, 0, 1))
     new = np.where(r < hw, bed, bank)
     g = ground[sub]
     carved = np.minimum(g, new)
     ground = ground.copy()
     ground[sub] = carved
+    # bord des gorges (distance au milieu du lit, de chaque côté) : là où le terrain n'est plus entaillé
+    dig = np.zeros_like(ground)
+    dig[sub] = g - carved
+    d = np.gradient(cen, axis=0)
+    d /= np.linalg.norm(d, axis=1, keepdims=True) + 1e-9
+    n = np.column_stack([-d[:, 1], d[:, 0]])
+    offs = np.arange(0.0, 125.0, 1.5)
+    for key, sg in (("rim_l", 1.0), ("rim_r", -1.0)):
+        rim = np.zeros(len(cen))
+        for i in range(len(cen)):
+            P = cen[i] + n[i] * sg * offs[:, None]
+            dv = grid_sample(dig, P[:, 0], P[:, 1])
+            k = np.nonzero((offs > width[i] / 2) & (dv < 0.3))[0]
+            rim[i] = offs[k[0]] if len(k) else offs[-1]
+        prof[key] = ndimage.maximum_filter1d(rim, 3).astype(np.float32)
     return ground, prof
+
+
+def river_rim(prof, extra=0.0):
+    """Emprise des gorges (jusqu'au bord des falaises), élargie de extra."""
+    xy = prof["xy"]
+    d = np.gradient(xy, axis=0)
+    d /= np.linalg.norm(d, axis=1, keepdims=True) + 1e-9
+    n = np.column_stack([-d[:, 1], d[:, 0]])
+    left = xy + n * (prof["rim_l"][:, None] + extra)
+    right = xy - n * (prof["rim_r"][:, None] + extra)
+    return Polygon(np.vstack([left, right[::-1]])).buffer(0).buffer(2.0).buffer(-2.0)
 
 
 def river_polygon(prof, extra=0.0):
@@ -216,7 +269,7 @@ def bridges(roads, prof, ground_before, ground_after, grand_line=None):
 def grand_bridge(roads, blds_old, q_roads, ground, prof, gap, summit, width=6.5):
     """Grand pont presque horizontal : il part d'une rue du vieux village et se pose à flanc de colline, à la même
     altitude, puis une Grand-Rue monte jusqu'au premier anneau du quartier. Renvoie (pont, routes d'accès)."""
-    wet = river_polygon(prof, 0.0)
+    wet = river_rim(prof, 0.0)
     zg = lambda x, y: float(grid_sample(ground, [x], [y])[0])
     old_rd = [r["line"] for r in roads if r["surface"] in ("asphalt", "stone") and r["cls"] not in ("footway", "path")]
     old_rd = [l for l in old_rd if l.distance(Point(*gap)) < 260]
@@ -248,7 +301,7 @@ def grand_bridge(roads, blds_old, q_roads, ground, prof, gap, summit, width=6.5)
             dep = np.nonzero(gz[:k_in] >= za - 1.0)[0]
             k0 = int(dep[-1]) if len(dep) else 0
             span = ts[kL] - ts[k0]
-            if not 50.0 <= span <= 170.0:
+            if not 50.0 <= span <= 240.0:
                 continue
             seg = LineString([a, P[kL]])
             if seg.intersects(bl.difference(Point(*a).buffer(3))):
@@ -327,3 +380,18 @@ def ramps(ground, Xg, Yg, br, roads, prof, slope=0.08):
         ground = ground.copy()
         ground[sub] = new
     return ground
+
+
+def cut_roads(roads, rim):
+    """Les routes s'arrêtent au bord des gorges (on ne garde que les tronçons hors des gorges)."""
+    zone = rim.buffer(2.0)
+    out = []
+    for r in roads:
+        ln = r["line"]
+        if not ln.intersects(zone):
+            out.append(r)
+            continue
+        for part in lines_of(ln.difference(zone)):
+            if part.length > 4.0:
+                out.append(dict(r, line=part))
+    return out

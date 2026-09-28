@@ -551,18 +551,26 @@ print("petit patrimoine : %d murets de pierre sèche (%.1f km), %d bories, %d pu
 
 # routes : profil en long lissé + pente maximale (déblais / remblais) + aplanissement transversal
 GRADE = {"asphalt": 0.14, "stone": 0.20, "gravel": 0.16, "dirt": 0.20, "path": 0.30, "steps": 1.0}
-roads.sort(key=lambda r: r["prio"])
+# les routes principales d'abord ; les suivantes se raccordent à leur niveau aux carrefours sans retoucher la chaussée déjà posée
+roads.sort(key=lambda r: -r["prio"])
 SHOULDER = {"asphalt": 3.5, "stone": 1.2, "gravel": 2.5, "dirt": 2.5, "path": 1.5, "steps": 1.0}
 SIG = {"asphalt": 9.0, "stone": 3.0, "gravel": 6.0, "dirt": 5.0, "path": 3.0, "steps": 1.5}
+claimed = np.zeros(ground.shape, bool)
 for rd in roads:
     ln = rd["line"]
     n = max(2, int(ln.length / 2.0) + 1)
     ss = np.linspace(0, ln.length, n)
     pp = shapely.line_interpolate_point(ln, ss)
-    zz = grid_sample(ground, shapely.get_x(pp), shapely.get_y(pp), order=1)
+    px_, py_ = shapely.get_x(pp), shapely.get_y(pp)
+    zz = grid_sample(ground, px_, py_, order=1)
+    ci = np.clip(np.round((px_ - ZONE["xmin"]) / RES).astype(int), 0, NX - 1)
+    cj = np.clip(np.round((py_ - ZONE["ymin"]) / RES).astype(int), 0, NY - 1)
+    pinned = claimed[cj, ci]                      # points déjà sur une chaussée (carrefours) : niveau imposé
+    zpin = zz.copy()
     sig = SIG[rd["surface"]] / 2.0
     if n > 3:
         zz = ndimage.gaussian_filter1d(zz, sig, mode="nearest")
+        zz[pinned] = zpin[pinned]
         # pente maximale : on répartit l'excès entre les deux points (déblai en haut, remblai en bas)
         gmax = GRADE[rd["surface"]] * (ss[1] - ss[0])
         for _ in range(3000):
@@ -572,6 +580,7 @@ for rd in roads:
                 break
             zz[:-1] += 0.5 * ex
             zz[1:] -= 0.5 * ex
+            zz[pinned] = zpin[pinned]
     rd["prof_s"], rd["prof_z"] = ss.astype(np.float32), zz.astype(np.float32)
     half = rd["width"] / 2.0
     D = half + SHOULDER[rd["surface"]]
@@ -590,8 +599,13 @@ for rd in roads:
     rz = np.interp(sl, ss, zz)
     w = smoothstep(half - 0.2, D, d[m])
     sub = ground[j0:j1, i0:i1].ravel()
+    cl = claimed[j0:j1, i0:i1].ravel()
+    w = np.where(cl[m], 1.0, w)                 # chaussées déjà posées : intactes
     sub[m] = rz * (1 - w) + sub[m] * w
     ground[j0:j1, i0:i1] = sub.reshape(sx.shape)
+    cl_m = cl.copy()
+    cl_m[np.nonzero(m)[0][d[m] < half]] = True
+    claimed[j0:j1, i0:i1] = cl_m.reshape(sx.shape)
 # places : terrasses planes (pente maximale 3 %), raccord sur 4 m
 plaza_planes = []
 for p in V["plaza"]:

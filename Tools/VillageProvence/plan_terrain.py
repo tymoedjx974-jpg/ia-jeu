@@ -565,7 +565,7 @@ for rd in roads:
         zz = ndimage.gaussian_filter1d(zz, sig, mode="nearest")
         # pente maximale : on répartit l'excès entre les deux points (déblai en haut, remblai en bas)
         gmax = GRADE[rd["surface"]] * (ss[1] - ss[0])
-        for _ in range(120):
+        for _ in range(3000):
             dz = np.diff(zz)
             ex = np.clip(np.abs(dz) - gmax, 0, None) * np.sign(dz)
             if not np.any(ex):

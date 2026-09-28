@@ -447,7 +447,7 @@ def make_tall_grass(seed, lod=0):
     """Haute herbe sèche (graminées de 0,6 à 1 m, épis) : touffe de cartes croisées, plus fournie que l'herbe rase."""
     rng = np.random.default_rng(seed)
     mb = MB()
-    n = {0: 7, 1: 4, 2: 3}[lod]
+    n = {0: 14, 1: 8, 2: 4}[lod]
     h0 = rng.uniform(0.6, 1.0)
     for i in range(n):
         a = math.pi * i / n + rng.uniform(-0.25, 0.25)
@@ -455,7 +455,7 @@ def make_tall_grass(seed, lod=0):
         right = np.array([math.cos(a), math.sin(a), 0.0])
         lean = np.array([rng.normal(0, 0.12), rng.normal(0, 0.12), 0.0])
         s = h * 0.35
-        c = np.array([rng.normal(0, 0.08), rng.normal(0, 0.08), 0])
+        c = np.array([rng.normal(0, 0.22), rng.normal(0, 0.22), 0])       # bouquet d'environ 1 m
         p0, p1 = c - right * s, c + right * s
         p2, p3 = p1 + UP * h + lean, p0 + UP * h + lean
         q = rng.integers(4)
@@ -466,22 +466,45 @@ def make_tall_grass(seed, lod=0):
     return mb, h0, h0 * 0.4
 
 
+def make_grass_clump(seed, lod=0):
+    """Touffe d'herbe rase et verte, large (~0,8 m) : une dizaine de cartes réparties, hauteurs variées."""
+    rng = np.random.default_rng(seed)
+    mb = MB()
+    n = {0: 12, 1: 7, 2: 4}[lod]
+    for i in range(n):
+        a = rng.uniform(0, math.pi)
+        h = rng.uniform(0.18, 0.42)
+        right = np.array([math.cos(a), math.sin(a), 0.0])
+        s = h * 0.8
+        c = np.array([rng.normal(0, 0.2), rng.normal(0, 0.2), 0])
+        p0, p1 = c - right * s, c + right * s
+        p2, p3 = p1 + UP * h, p0 + UP * h
+        q = rng.integers(4)
+        u0, v0 = (q % 2) * 0.5, (q // 2) * 0.5
+        t = (int(rng.uniform(210, 255)), int(rng.uniform(220, 255)), int(rng.uniform(200, 245)))
+        mb.add("HerbeVerte", [p0, p1, p2, p3], [UP * 0.8 + nrm(np.cross(right, UP)) * 0.2], [(u0, v0 + 0.5), (u0 + 0.5, v0 + 0.5), (u0 + 0.5, v0), (u0, v0)],
+               [t + (0,), t + (0,), t + (255,), t + (255,)], [[0, 1, 2], [0, 2, 3]])
+    return mb, 0.42, 0.45
+
+
 def make_pebbles(seed, lod=0):
     """Petits graviers : une poignée de cailloux calcaires (2 à 8 cm) à demi enfoncés, sur ~0,7 m."""
     rng = np.random.default_rng(seed)
     P0, F0 = _icosphere(0)
     mb = MB()
-    k = {0: 12, 1: 7, 2: 4}[lod]
+    k = {0: 26, 1: 14, 2: 6}[lod]
     for _ in range(k):
-        r = rng.uniform(0.012, 0.045)
+        r = rng.uniform(0.015, 0.06)
         P = P0 * np.array([r * rng.uniform(1.0, 1.6), r * rng.uniform(0.8, 1.3), r * rng.uniform(0.5, 0.9)])
         a = rng.uniform(0, 2 * math.pi)
         R = np.array([[math.cos(a), -math.sin(a), 0], [math.sin(a), math.cos(a), 0], [0, 0, 1]])
-        P = P @ R.T + np.array([rng.normal(0, 0.2), rng.normal(0, 0.2), -r * 0.35])
+        P = P @ R.T + np.array([rng.normal(0, 0.32), rng.normal(0, 0.32), -r * 0.35])
         N = nrm(P - P.mean(axis=0))
-        g = int(rng.uniform(185, 255))
-        C = np.tile(np.array([g, int(g * rng.uniform(0.93, 1.0)), int(g * rng.uniform(0.85, 0.97)), 0], np.uint8), (len(P), 1))
-        mb.add("Rocher", P, N, P[:, :2] * 4.0, C, F0)
+        g = int(rng.uniform(225, 255))
+        C = np.tile(np.array([g, int(g * rng.uniform(0.95, 1.0)), int(g * rng.uniform(0.88, 0.97)), 0], np.uint8), (len(P), 1))
+        # calcaire clair : on échantillonne une zone unie de la texture de roche (pas les fissures sombres)
+        uv = P[:, :2] * 0.6 + rng.uniform(0, 1, 2)
+        mb.add("PierreTaille", P, N, uv, C, F0)
     return mb, 0.05, 0.4
 
 
@@ -545,6 +568,7 @@ def catalog():
         C[f"Herbe_Seche_{v}"] = (lambda lod, v=v: make_grass(700 + v, "HerbeSeche", lod))
         C[f"Herbe_Verte_{v}"] = (lambda lod, v=v: make_grass(800 + v, "HerbeVerte", lod, (0.2, 0.4)))
         C[f"Herbe_Haute_{v}"] = (lambda lod, v=v: make_tall_grass(850 + v, lod))
+        C[f"Herbe_Touffe_{v}"] = (lambda lod, v=v: make_grass_clump(870 + v, lod))
         C[f"Gravillons_{v}"] = (lambda lod, v=v: make_pebbles(1400 + v, lod))
         C[f"Motte_Terre_{v}"] = (lambda lod, v=v: make_clod(1450 + v, lod))
     for v in range(3):

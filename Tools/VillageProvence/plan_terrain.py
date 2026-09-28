@@ -579,10 +579,10 @@ open_ = (~paved) & (ochre < 0.3) & (rockm < 0.5) & (dirt < 0.5)
 coreb = blur(rasterize([core]), 2.0)
 _nz = [np.clip(_norm(fbm((NY, NX), 3, 2, seed=s_)) * 0.9, -2.5, 2.5) for s_ in (51, 52, 53, 54)]
 w_cov = np.stack([
-    (0.5 + 1.2 * cult + 0.6 * forest + 0.8 * coreb + 0.4 * farm) * np.exp(_nz[0]),                          # terre
+    (0.3 + 1.1 * cult + 0.6 * forest + 0.7 * coreb + 0.4 * farm) * np.exp(_nz[0]),                          # terre
     (0.35 + 0.7 * cult + 0.9 * coreb + 0.5 * sh + 0.6 * smoothstep(12.0, 25.0, slope)) * np.exp(_nz[1]),    # petits graviers
-    (0.5 + 1.2 * lawn + 0.7 * mead + 0.4 * resid + 0.3 * forest) * np.exp(_nz[2]),                          # herbe
-    (0.4 + 1.1 * mead + 1.0 * scrub + 0.3 * farm) * np.exp(_nz[3]) * (1.0 - 0.7 * coreb),                  # hautes herbes
+    (0.8 + 1.2 * lawn + 0.8 * mead + 0.5 * resid + 0.3 * forest) * np.exp(_nz[2]),                          # herbe
+    (0.6 + 1.1 * mead + 1.0 * scrub + 0.3 * farm) * np.exp(_nz[3]) * (1.0 - 0.7 * coreb),                  # hautes herbes
 ])
 cover = (np.argmax(w_cov, axis=0) + 1).astype(np.uint8)
 cover[~open_] = 0

@@ -177,7 +177,7 @@ for name, fn in ALL_MODULES.items():
     manifest["meshes"].append(dict(name=f"Mod_{name}", file=f"Meshes/Mod_{name}.pvm", nanite=True, collision=ctype,
                                    collision_dims=cdims, folder=folder, tintable=True, tags=TAGS.get(name, [])))
 C = catalog()
-VEG_CULL = {"Rocher_Eboulis": 15000, "Gravillons": 4000, "Motte_Terre": 6000, "Herbe_Haute": 9000, "Herbe": 7000, "Lavande_": 25000, "Buisson_Romarin": 18000, "Buisson_Garrigue": 30000, "Vigne_Rang": 40000, "Lavande_Rang": 50000, "Balle": 60000}
+VEG_CULL = {"Rocher_Eboulis": 15000, "Gravillons": 4000, "Motte_Terre": 6000, "Herbe_Haute": 9000, "Herbe_Touffe": 7000, "Herbe": 7000, "Lavande_": 25000, "Buisson_Romarin": 18000, "Buisson_Garrigue": 30000, "Vigne_Rang": 40000, "Lavande_Rang": 50000, "Balle": 60000}
 for name, fn in C.items():
     lods = []
     for lod in range(3):

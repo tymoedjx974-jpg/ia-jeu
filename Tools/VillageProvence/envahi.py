@@ -549,6 +549,23 @@ if V.get("river_rim") is not None:
         if len(a):
             keep = ~shapely.contains_xy(_rim, a[:, 0], a[:, 1])
             inst[k] = [tuple(x) for x in a[keep]]
+# château : rien dans les murs, les tours et les bâtiments ; une garnison de zombies dans les deux cours
+if V.get("chateau") is not None:
+    _cs = V["chateau"]["solids"].buffer(1.0)
+    spawns = [s_ for s_ in spawns if not _cs.contains(Point(s_[0], s_[1]))]
+    for k in list(inst):
+        a = np.array(inst[k], np.float64)
+        if len(a):
+            inst[k] = [tuple(x) for x in a[~shapely.contains_xy(V["chateau"]["enc"].buffer(4.0), a[:, 0], a[:, 1])]]
+    _rs = np.random.default_rng(404)
+    _cour = V["chateau"]["enc"].buffer(-4.0).difference(_cs)
+    _x0, _y0, _x1, _y1 = _cour.bounds
+    _n = 0
+    while _n < 16:
+        x, y = _rs.uniform(_x0, _x1), _rs.uniform(_y0, _y1)
+        if _cour.contains(Point(x, y)):
+            spawns.append((float(x), float(y), float(V["chateau"]["Z0"]) + 0.1))
+            _n += 1
 print("points d'apparition des zombies :", len(spawns), flush=True)
 
 out = dict(inst={k: np.array(v, np.float32) for k, v in inst.items()}, spawns=spawns, route=route)

@@ -259,6 +259,15 @@ ground = ground + micro.astype(np.float32)
 # (corrigé de la canopée réelle) ne change pas.
 LAV_W, FOREST_W = 500.0, 600.0
 MAX_MAS = 10          # maisons isolées gardées dans les champs de lavande
+# à l'ouest et au nord-ouest du vieux village, pas de lavande : la campagne d'origine (vignes, champs, prés, oliveraies,
+# garrigue) va du village jusqu'à la forêt
+NOLAV = Polygon([(-1090, 950), (-1090, 1020), (-1061, 1039), (-1040, 1150), (-950, 1210), (-830, 1210), (-689, 1130), (-550, 1130),
+                 (-491, 1096), (-450, 1110), (-390, 1060), (-260, 890), (-227, 815), (0, 530), (-19, 479), (30, 460), (90, 330),
+                 (100, 260), (50, 180), (-20, 230), (-35, 297), (-69, 291), (-49, 169), (0, 100), (0, 40), (-20, 20), (-90, 30),
+                 (-201, 80), (-230, 70), (-296, 91), (-310, 76), (-263, -17), (-82, -109), (-30, -110), (90, -190), (110, -280),
+                 (80, -410), (-168, -420), (-180, -470), (-220, -490), (-340, -500), (-520, -420), (-590, -370), (-735, -213),
+                 (-798, -171), (-860, -160), (-910, -110), (-960, -50), (-1020, 130), (-1020, 180), (-990, 247), (-1020, 320),
+                 (-1021, 391), (-1080, 500), (-1050, 836), (-1090, 950)])
 _near = [b["poly"] for b in blds if b["poly"].centroid.distance(CENTER) < 500]
 _blob = unary_union([p_.buffer(15.0) for p_ in _near])
 village = unary_union([p_ for p_ in polys_of(_blob) if p_.intersects(core.buffer(30.0))])
@@ -337,6 +346,8 @@ V["quartier"] = quarter
 print("quartier des Ocres : colline de %.0f x %.0f m (pied à %.1f m), %d maisons, %d rues, %.1f ha" %
       (2 * hill.Ra, 2 * hill.Rb, hill_base, len(q_blds), len(q_roads), quarter.area / 1e4))
 ring_all = village.buffer(LAV_W).difference(village).intersection(ZB)
+ring_lav = ring_all.difference(NOLAV)          # la ceinture de lavande proprement dite
+ring_nat = ring_all.intersection(NOLAV)        # la campagne sans lavande
 band_all = village.buffer(LAV_W + FOREST_W).difference(village.buffer(LAV_W)).intersection(ZB)
 
 
@@ -372,11 +383,32 @@ water = unary_union(V["ponds"] + V["pools"])
 
 # on vide la ceinture de ses anciennes cultures, et la bande de forêt de ses champs et garrigues
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest"):
-    _cut(key, ring_all)
+    _cut(key, ring_lav)
+_cut("lavender", ring_nat)
+# campagne sans lavande : on garde les cultures d'origine et on comble les vides (anciennes maisons, dessertes) de prés,
+# champs, garrigue et oliveraies en parcelles irrégulières
+_cult = unary_union([p_ for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "scrub", "lc_shrub", "grass_nat", "forest",
+                                    "lc_forest", "lawn", "residential") for p_ in V[key] if p_.intersects(ring_nat)])
+_gap = ring_nat.difference(_cult).difference(ochre_keep).difference(river_polygon(riv, 8.0)).buffer(-0.5).buffer(0.5)
+_sd = []
+_bx0, _by0, _bx1, _by1 = _gap.bounds if not _gap.is_empty else (0, 0, 0, 0)
+for _x in np.arange(_bx0, _bx1, 60.0):
+    for _y in np.arange(_by0, _by1, 60.0):
+        _sd.append((_x + rng.uniform(-24, 24), _y + rng.uniform(-24, 24)))
+_nfill = collections.Counter()
+if len(_sd) > 3:
+    for c_ in polys_of(shapely.voronoi_polygons(shapely.MultiPoint(_sd), extend_to=_gap.envelope.buffer(60))):
+        for q in polys_of(c_.intersection(_gap)):
+            if q.area < 80:
+                continue
+            key = str(rng.choice(["meadow", "farmland", "scrub", "olive", "grass_nat"], p=[0.3, 0.22, 0.22, 0.14, 0.12]))
+            V[key].append(q)
+            _nfill[key] += 1
+print("campagne sans lavande : %.0f ha, parcelles ajoutées %s" % (ring_nat.area / 1e4, dict(_nfill)))
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "lawn"):
     _cut(key, band_all)
 gardens = unary_union(V["lawn"] + [p_ for ps, _ in V["pitch"] for p_ in ps] + V["cemetery"] + V["farmyard"])
-ring = ring_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(gardens.buffer(2.0)).difference(river_polygon(riv, 8.0))
+ring = ring_lav.difference(ochre_keep).difference(water.buffer(3.0)).difference(gardens.buffer(2.0)).difference(river_polygon(riv, 8.0))
 # parcelles de lavande irrégulières (Voronoï, ~45 m) : chacune a ses rangs dans sa propre direction
 _seeds = []
 _bx0, _by0, _bx1, _by1 = ring.bounds
@@ -388,6 +420,23 @@ lav = [q for c_ in polys_of(_cells) for q in polys_of(c_.intersection(ring)) if 
 V["lavender"] += lav
 V["lavender_ring"] = polys_of(ring)
 dense = band_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(river_polygon(riv, 8.0))
+# château des Ocres : très grande forteresse sur une butte de la forêt dense, du côté du quartier perché
+from chateau import pick_site, layout as castle_layout, shape_ground as castle_ground, MOAT_IN, MOAT_OUT
+_gat = lambda xs, ys: grid_sample(ground, np.asarray(xs, float), np.asarray(ys, float))
+_site = pick_site(dense, riv_rim, _gat, CENTER, Point(*hill.C), rng)
+CH = None
+if _site is not None:
+    CH = castle_layout(_site, Point(*hill.C), _gat)
+    _clear = CH["enc"].buffer(55.0)
+    dense = dense.difference(_clear)
+    for key in ("forest", "lc_forest", "scrub", "lc_shrub", "farmland", "meadow", "vineyard", "orchard", "olive", "lavender"):
+        _cut(key, _clear)
+    V["grass_nat"] += polys_of(_clear.difference(CH["enc"].buffer(MOAT_OUT)))
+    blds = [b for b in blds if not b["poly"].intersects(_clear)]
+    roads = [r for r in roads if not r["line"].intersects(CH["enc"].buffer(MOAT_OUT))]
+    print("château des Ocres : centre (%.0f, %.0f), plate-forme à %.1f m, enceinte %.1f ha, %d tours" %
+          (_site.x, _site.y, CH["Z0"], CH["enc"].area / 1e4, len(CH["towers"])))
+V["chateau"] = CH
 V["forest_dense"] = polys_of(dense)
 V["forest"] += V["forest_dense"]
 forest_all = V["forest"] + V["lc_forest"]
@@ -445,6 +494,24 @@ for ln in V["cliffs"]:
     along = smoothstep(0, 18, s) * smoothstep(0, 18, ln.length - s)
     off = 0.5 * drop * side * smoothstep(0.0, 1.6, d) * (1 - smoothstep(4.0, D, d)) * along
     ground[j0:j1, i0:i1] += off.reshape(sx.shape).astype(np.float32)
+
+# château : plate-forme, fossé sec, butte et levée de terre
+if CH is not None:
+    ground = castle_ground(ground, Xg, Yg, CH)
+    # allée du château : de la levée de terre au grand anneau du quartier, en lacets sur le flanc de la butte
+    from chateau import route as castle_route
+    _end = CH["frame"].P(90 + MOAT_OUT + 12, 0)
+    _ring = [r["line"] for r in roads if r["surface"] == "asphalt" and quarter.buffer(20).contains(r["line"].interpolate(0.5, normalized=True))]
+    _forbid = unary_union([riv_rim.buffer(15.0), CH["enc"].buffer(MOAT_OUT + 6).difference(CH["causeway"].buffer(5.0)),
+                           CH["enc"]])
+    _costly = unary_union([b["poly"].buffer(3.0) for b in blds if b["poly"].distance(Point(*_end)) < 1500] or [Point(0, 0).buffer(0.1)])
+    _al = castle_route(ground, XS, YS, _end, _ring, _forbid, _costly) if _ring else None
+    if _al is not None:
+        _al = LineString([CH["frame"].P(90 + MOAT_OUT - 2, 0)] + list(_al.coords))
+        roads.append(dict(cls="unclassified", surface="gravel", width=5.0, prio=26, name="Allée du Château", line=_al))
+        print("château : allée de %.0f m" % _al.length)
+    else:
+        print("château : pas d'allée trouvée")
 
 # ---------------------------------------------------------------- nettoyage des incohérences avant l'aplanissement
 _bl_u = unary_union([b["poly"] for b in blds])
@@ -744,6 +811,16 @@ W[L["grass"]] += 2.0 * rivw * (1 - och_near) * (0.4 + 0.6 * _mott)
 W[L["dry"]] += 0.6 * rivw * (1 - och_near) * (1 - _mott)
 W[L["dirt"]] += 0.6 * rivw * (1 - och_near) * _ledge
 W[L["dirt"]] += 0.3 * rivb
+# château : cour en terre battue et gravier, fossé herbeux semé de pierres
+if CH is not None:
+    _cm = blur(rasterize([CH["enc"].buffer(1.0)]), 1.0)
+    W *= (1.0 - 0.9 * _cm)[None]
+    W[L["dirt"]] += 0.55 * _cm
+    W[L["dry"]] += 0.35 * _cm
+    _mo = blur(rasterize([CH["enc"].buffer(MOAT_OUT).difference(CH["enc"].buffer(MOAT_IN))]), 1.5)
+    W *= (1.0 - 0.7 * _mo)[None]
+    W[L["grass"]] += 0.7 * _mo
+    W[L["rock"]] += 0.25 * _mo
 W = np.clip(W, 0, None)
 W /= W.sum(axis=0, keepdims=True) + 1e-6
 splat = np.round(W.transpose(1, 2, 0) * 255).astype(np.uint8)

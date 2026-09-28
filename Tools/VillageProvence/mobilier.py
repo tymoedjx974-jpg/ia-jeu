@@ -128,6 +128,11 @@ if V.get("quartier") is not None:
             placed.append(("fontaine", c_)) if "placed" in dir() else None
 for (x_, y_) in V.get("puits", []):
     puits(x_, y_)
+# château des Ocres
+if V.get("chateau") is not None:
+    from chateau import build as build_castle
+    build_castle(mb_at, V["chateau"], zat, inst)
+    print("château construit  %.0fs" % (time.time() - T0))
 print("bories: %d, puits: %d" % (len(V.get("bories", [])), len(V.get("puits", []))))
 
 

@@ -648,6 +648,15 @@ for k in list(INST):
     m = shapely.contains_xy(_hard, a[:, 0], a[:, 1])
     _n_bad += int(m.sum())
     INST[k] = a[~m]
+# château : cour nette, pas d'arbre dans le fossé ni au pied des murs
+if V.get("chateau") is not None:
+    _chc = V["chateau"]["enc"].buffer(4.0)
+    _cht = V["chateau"]["enc"].buffer(24.0).union(V["chateau"]["causeway"].buffer(7.0))
+    for k in list(INST):
+        a = INST[k]
+        zone_ = _cht if k.startswith(("Arbre_", "Buisson_")) else _chc
+        m = shapely.contains_xy(zone_, a[:, 0], a[:, 1])
+        INST[k] = a[~m]
 # arbres empilés : deux troncs à moins de 2,2 m -> on n'en garde qu'un (le premier posé)
 _big = [k for k in INST if k.startswith("Arbre_") and not k.startswith("Arbre_Cypres")]
 _occ = {}

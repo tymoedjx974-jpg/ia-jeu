@@ -637,7 +637,7 @@ if V.get("river_rim") is not None:
 # cohérence : aucun arbre, buisson ni rang dans une maison, sur une route ou une place
 _hard = unary_union([b["poly"].buffer(0.4) for b in V["buildings"]]
                     + [r["line"].buffer(r["width"] / 2 - 0.2) for r in V["roads"] if r["surface"] in ("asphalt", "stone", "gravel") and r["width"] > 0.8]
-                    + list(V["plaza"]) + list(V["pools"])
+                    + list(V["pools"])
                     + [m_.buffer(0.6) for m_ in V.get("murets", [])]
                     + [Point(b_[0], b_[1]).buffer(3.2) for b_ in V.get("bories", [])] + [Point(*p_).buffer(1.0) for p_ in V.get("puits", [])])
 _n_bad = 0

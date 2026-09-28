@@ -94,7 +94,7 @@ def borie(x, y, yaw):
     z = min(zat(x + 2.2 * math.cos(a), y + 2.2 * math.sin(a)) for a in np.linspace(0, 2 * math.pi, 8, endpoint=False)) - 0.1
     mb = mb_at(x, y)
     prof = [(2.35, -0.4), (2.3, 0.0), (2.2, 1.4), (2.0, 2.1), (1.65, 2.8), (1.2, 3.4), (0.7, 3.85), (0.3, 4.1), (0.0, 4.2)]
-    revolve(mb, "PierreMoellons", prof, (x, y, z), segs=18, u_tile=3.0, v_tile=3.0)
+    revolve(mb, "PierreMoellons", prof, (x, y, z), segs=24, u_tile=1.1, v_tile=1.1)     # petites lauzes
     # porte : ouverture sombre et linteau de pierre, côté yaw
     d = np.array([math.cos(yaw), math.sin(yaw)])
     n_ = np.array([-d[1], d[0]])
@@ -119,6 +119,13 @@ def puits(x, y):
 
 for (x_, y_, yw_) in V.get("bories", []):
     borie(x_, y_, yw_)
+# fontaine sur la placette du sommet du quartier perché
+if V.get("quartier") is not None:
+    for pz_ in V["plaza"]:
+        if V["quartier"].contains(pz_.centroid):
+            c_ = pz_.centroid
+            fountain(c_.x, c_.y, 1.8)
+            placed.append(("fontaine", c_)) if "placed" in dir() else None
 for (x_, y_) in V.get("puits", []):
     puits(x_, y_)
 print("bories: %d, puits: %d" % (len(V.get("bories", [])), len(V.get("puits", []))))

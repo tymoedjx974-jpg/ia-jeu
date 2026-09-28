@@ -146,7 +146,7 @@ def new_quarter(V, roads, ochre_keep, village, slope_at, rng, hill):
             and r["line"].intersection(zone).length > 0.5 * r["line"].length]
 
     # ---------------- placette au sommet
-    placette = hill.outline(0.13).intersection(zone)
+    placette = hill.outline(0.09).intersection(zone)
 
     # ---------------- maisons : alignées sur les rues, mitoyennes, serrées au centre, plus lâches en bordure
     drop_ids = {id(r) for r in drop}

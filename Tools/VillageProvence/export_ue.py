@@ -240,6 +240,8 @@ print("instances :", count, "en", ngroups, "groupes, %.1f Mo" % (len(comp) / 1e6
 T = np.load("terrain.npz")
 g = T["ground"].astype(np.float64)
 sp = T["splat"]
+if "shade" in T.files:     # ombre des gorges : couches moins intenses = sol plus sombre
+    sp = np.round(sp.astype(np.float32) * T["shade"].astype(np.float32)[..., None]).astype(np.uint8)
 zmin, zmax = float(g.min()) - 1.0, float(g.max()) + 1.0
 q = np.round((g - zmin) / (zmax - zmin) * 65535).astype("<u2")
 hb = zlib.compress(q.tobytes(), 6)

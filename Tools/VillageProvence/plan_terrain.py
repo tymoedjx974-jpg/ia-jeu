@@ -747,10 +747,20 @@ W[L["dirt"]] += 0.3 * rivb
 W = np.clip(W, 0, None)
 W /= W.sum(axis=0, keepdims=True) + 1e-6
 splat = np.round(W.transpose(1, 2, 0) * 255).astype(np.uint8)
+# ombre des gorges : la roche s'assombrit en descendant vers l'eau (moins de lumière, suintements, patine noire
+# et mousses), par taches ; appliquée à l'export en baissant l'intensité des couches (le splat reste normalisé)
+_top = ndimage.gaussian_filter(ndimage.maximum_filter(ground, size=61), 10.0)
+_deep = smoothstep(4.0, 85.0, np.clip(_top - ground, 0, None))
+_gz = blur(rasterize([river_rim(riv, 1.0).buffer(6.0)]), 3.0)
+_var = np.clip(0.5 + 0.5 * _norm(fbm((NY, NX), 3, 2, seed=77)), 0, 1)       # coulées sombres de quelques mètres
+shade = 1.0 - _gz * (0.36 + 0.4 * _deep + 0.12 * och_near) * (0.75 + 0.4 * _var) * (0.85 + 0.25 * _mott)
+shade = np.clip(shade, 0.28, 1.0)
+print("ombre des gorges : %.0f %% de la carte, facteur mini %.2f" % (100.0 * (shade < 0.97).mean(), shade.min()))
 print("couches %.0f s" % (time.time() - t0))
 
 np.savez_compressed("terrain.npz", ground=ground.astype(np.float32), splat=splat, slope=slope.astype(np.float16),
-                    outcrop=OUTCROP.astype(np.float16), nat=NAT.astype(np.float16), cover=cover)
+                    outcrop=OUTCROP.astype(np.float16), nat=NAT.astype(np.float16), cover=cover,
+                    shade=shade.astype(np.float16))
 V = dict(V)
 V["roads"] = roads
 V["buildings"] = blds

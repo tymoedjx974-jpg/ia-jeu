@@ -290,6 +290,38 @@ def _terrain_material(nt, bsdf):
             nt.links.new(acc_n, nn.inputs[6])
             nt.links.new(wn.outputs[2], nn.inputs[7])
             acc_n = nn.outputs[2]
+    # ombre des gorges : les poids ne somment plus à 1 ; on complète normale (plate) et rugosité pour ne garder que
+    # l'assombrissement de la couleur
+    ws = weights[0]
+    for w_ in weights[1:]:
+        m_ = nt.nodes.new("ShaderNodeMath")
+        m_.operation = "ADD"
+        nt.links.new(ws, m_.inputs[0])
+        nt.links.new(w_, m_.inputs[1])
+        ws = m_.outputs[0]
+    rest = nt.nodes.new("ShaderNodeMath")
+    rest.operation = "SUBTRACT"
+    rest.use_clamp = True
+    rest.inputs[0].default_value = 1.0
+    nt.links.new(ws, rest.inputs[1])
+    fl = nt.nodes.new("ShaderNodeMix")
+    fl.data_type = "RGBA"
+    nt.links.new(rest.outputs[0], fl.inputs["Factor"])
+    fl.inputs[6].default_value = (0, 0, 0, 1)
+    fl.inputs[7].default_value = (0.5, 0.5, 1.0, 1)
+    nn = nt.nodes.new("ShaderNodeMix")
+    nn.data_type = "RGBA"
+    nn.blend_type = "ADD"
+    nn.inputs["Factor"].default_value = 1.0
+    nt.links.new(acc_n, nn.inputs[6])
+    nt.links.new(fl.outputs[2], nn.inputs[7])
+    acc_n = nn.outputs[2]
+    rr = nt.nodes.new("ShaderNodeMath")
+    rr.operation = "MULTIPLY_ADD"
+    nt.links.new(rest.outputs[0], rr.inputs[0])
+    rr.inputs[1].default_value = 0.8
+    nt.links.new(acc_r, rr.inputs[2])
+    acc_r = rr.outputs[0]
     macm = nt.nodes.new("ShaderNodeMapRange")
     macm.inputs["To Min"].default_value = 0.82
     macm.inputs["To Max"].default_value = 1.12

@@ -18,6 +18,8 @@ def terrain_region(x0, y0, x1, y1, step=1, name="Terrain", skirt=True):
     X, Y = np.meshgrid(XS[ii], YS[jj])
     Z = g[np.ix_(jj, ii)]
     W = sp[np.ix_(jj, ii)].astype(np.float32) / 255.0
+    if "shade" in d.files:
+        W *= d["shade"][np.ix_(jj, ii)].astype(np.float32)[..., None]
     ny, nx = Z.shape
     P = np.column_stack([X.ravel(), Y.ravel(), Z.ravel()]).astype(np.float32)
     gy, gx = np.gradient(Z, RES * step)

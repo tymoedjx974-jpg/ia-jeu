@@ -5,7 +5,7 @@ from common import *
 from geo import load
 from dem import sample_xy
 from scipy import ndimage
-from shapely.ops import linemerge
+from shapely.ops import linemerge, nearest_points
 
 t0 = time.time()
 rng = np.random.default_rng(42)
@@ -269,14 +269,46 @@ water = unary_union(V["ponds"] + V["pools"])
 from quartier import make_hill, shape_ground, new_quarter
 hill = make_hill(V, CENTER, rng)
 ground, hill_base = shape_ground(ground, Xg, Yg, hill, ochre_keep, village)
+# rivière des Ocres : source en haut du ravin d'ocre, canyon dans l'ocre, passage entre les deux villages, plaine au nord
+from riviere import trace, carve, river_polygon, bridges
+_keep_b = [b for b in blds if village.buffer(5.0).contains(b["poly"].centroid) or not village.buffer(LAV_W).contains(b["poly"].centroid)]
+riv_line, riv_info = trace(V, ground, village, hill, _keep_b, rng)
+ground_pre = ground.copy()
+ground, riv = carve(ground, Xg, Yg, riv_line, rng)
+riv_wet = river_polygon(riv, 0.0)
+riv_corr = river_polygon(riv, 14.0)
+blds = [b for b in blds if not b["poly"].intersects(river_polygon(riv, 6.0))]
 _gy, _gx = np.gradient(ground, RES)
 _slope = np.degrees(np.arctan(np.hypot(_gx, _gy))).astype(np.float32)
-quarter, q_blds, q_roads, q_plaza, q_drop = new_quarter(V, roads, ochre_keep, village,
+quarter, q_blds, q_roads, q_plaza, q_drop = new_quarter(V, roads, unary_union([ochre_keep, riv_corr]), village,
                                                         lambda x, y: float(grid_sample(_slope, [x], [y])[0]), rng, hill)
 _drop = {id(r) for r in q_drop}
 roads = [r for r in roads if id(r) not in _drop]
 blds = [b for b in blds if not quarter.contains(b["poly"].centroid)] + q_blds
+# les raccords du quartier ne franchissent pas la rivière : c'est le rôle du grand pont
+q_roads = [r for r in q_roads if not (len(r["line"].coords) == 2 and r["line"].intersects(riv_wet))]
 roads += q_roads
+# le grand pont : presque horizontal, du vieux village jusqu'au flanc de la colline, puis la Grand-Rue monte dans le quartier
+from riviere import grand_bridge, ramps
+_old_b = [b for b in blds if not b["id"].startswith("quartier")]
+g_br, g_acc = grand_bridge(roads, _old_b, q_roads, ground, riv, riv_info["gap"], hill.C)
+if g_br is not None:
+    _cor = unary_union([g_br["line"].buffer(g_br["width"] / 2 + 1.5)] + [r["line"].buffer(r["width"] / 2 + 1.0) for r in g_acc])
+    blds = [b for b in blds if not b["poly"].intersects(_cor)]
+grand_line = g_br["line"] if g_br is not None else None
+roads, V["bridges"] = bridges(roads, riv, ground_pre, ground, None)
+for _b in V["bridges"]:
+    ground = ramps(ground, Xg, Yg, _b, roads, riv)
+if g_br is not None:
+    V["bridges"].append(g_br)
+    roads += g_acc
+V["river"] = riv
+V["river_poly"] = riv_wet
+_rp = river_polygon(riv, 3.0)
+for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest", "lawn", "residential"):
+    V[key] = [q for p_ in V[key] for q in polys_of(p_.difference(_rp)) if q.area > 20]
+print("rivière : %.0f m, %d ponts (grand pont %.0f m)" % (riv_line.length, len(V["bridges"]),
+      max([b_["line"].length for b_ in V["bridges"] if b_["grand"]] or [0])))
 V["plaza"] += q_plaza
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest", "lawn"):
     V[key] = [q for p_ in V[key] for q in polys_of(p_.difference(quarter)) if q.area > 20]
@@ -297,7 +329,7 @@ def _cut(key, g):
 # une mer de lavande : seules une dizaine de maisons bien espacées restent dans la ceinture (avec leur jardin), les autres
 # constructions et leurs dessertes disparaissent
 _in_ring = [b for b in blds if ring_all.contains(b["poly"].centroid)]
-_cands = [b for b in _in_ring if 70 <= b["poly"].area <= 320 and b["poly"].distance(village) > 60
+_cands = [b for b in _in_ring if 70 <= b["poly"].area <= 320 and b["poly"].distance(village) > 60 and b["poly"].distance(riv_wet) > 50
           and b["poly"].centroid.distance(village.buffer(LAV_W).exterior if village.buffer(LAV_W).geom_type == "Polygon" else village.buffer(LAV_W).boundary) > 40]
 rng.shuffle(_cands)
 mas = []
@@ -326,7 +358,7 @@ for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "s
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "lawn"):
     _cut(key, band_all)
 gardens = unary_union(V["lawn"] + [p_ for ps, _ in V["pitch"] for p_ in ps] + V["cemetery"] + V["farmyard"])
-ring = ring_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(gardens.buffer(2.0))
+ring = ring_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(gardens.buffer(2.0)).difference(riv_corr)
 # parcelles de lavande irrégulières (Voronoï, ~45 m) : chacune a ses rangs dans sa propre direction
 _seeds = []
 _bx0, _by0, _bx1, _by1 = ring.bounds
@@ -337,7 +369,7 @@ _cells = shapely.voronoi_polygons(shapely.MultiPoint(_seeds), extend_to=ring.env
 lav = [q for c_ in polys_of(_cells) for q in polys_of(c_.intersection(ring)) if q.area > 60]
 V["lavender"] += lav
 V["lavender_ring"] = polys_of(ring)
-dense = band_all.difference(ochre_keep).difference(water.buffer(3.0))
+dense = band_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(river_polygon(riv, 8.0))
 V["forest_dense"] = polys_of(dense)
 V["forest"] += V["forest_dense"]
 forest_all = V["forest"] + V["lc_forest"]
@@ -349,7 +381,8 @@ def _norm(a):
     return (a - a.mean()) / (a.std() + 1e-6)
 b_dist = ndimage.distance_transform_edt(Bm < 0.5) * RES
 core_m = ndimage.gaussian_filter(rasterize([core.buffer(40.0)]).astype(np.float32) / 255.0, 8.0)
-NAT = (smoothstep(12.0, 70.0, b_dist) * (1.0 - core_m)).astype(np.float32)
+riv_m = ndimage.gaussian_filter(rasterize([river_polygon(riv, 30.0)]).astype(np.float32) / 255.0, 5.0)
+NAT = (smoothstep(12.0, 70.0, b_dist) * (1.0 - core_m) * (1.0 - riv_m)).astype(np.float32)
 h_hill = _norm(fbm((NY, NX), 70, 3, seed=21))       # ~140 m
 h_mound = _norm(fbm((NY, NX), 12, 2, seed=22))      # ~25 m
 h_bump = _norm(fbm((NY, NX), 3, 2, seed=23))        # ~6 m
@@ -518,6 +551,11 @@ W[L["dirt"]] += 0.7 * farmyard
 var = fbm((NY, NX), 18, 3, seed=9)
 W[L["dry"]] *= 1.0 + 0.5 * var
 W[L["grass"]] *= 1.0 - 0.4 * var
+# lit et berges de la rivière : galets et terre nue
+rivb = blur(rasterize([river_polygon(riv, 5.0)]), 1.0)
+W *= (1.0 - 0.85 * rivb)[None]
+W[L["rock"]] += 1.2 * rivb
+W[L["dirt"]] += 0.9 * rivb
 W = np.clip(W, 0, None)
 W /= W.sum(axis=0, keepdims=True) + 1e-6
 splat = np.round(W.transpose(1, 2, 0) * 255).astype(np.uint8)

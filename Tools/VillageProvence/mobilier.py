@@ -226,6 +226,31 @@ for r in V["roads"]:
         signs_done += 1
 print("panneaux d'entrée:", signs_done, " réverbères:", len(lamp_pts), " %.0fs" % (time.time() - T0))
 
+# ------------------------------------------------------------------ rivière des Ocres et ponts de pierre
+if V.get("river"):
+    from ponts import water, bridge
+    water(mb_at, V["river"])
+    rv = V["river"]
+    for br in V.get("bridges", []):
+        m = br["line"].interpolate(0.5, normalized=True)
+        k = int(np.argmin(np.hypot(rv["xy"][:, 0] - m.x, rv["xy"][:, 1] - m.y)))
+        z0, z1 = br.get("z0"), br.get("z1")
+        A = np.array(br["line"].coords[0]); L_ = br["line"].length
+        zfun = (lambda x, y, A=A, L_=L_, z0=z0, z1=z1, br=br: zat(x, y)) if z0 is None else None
+        if z0 is not None:
+            # culées au niveau prévu pour le tablier ; sous le pont, le vrai sol
+            def zfun(x, y, A=A, L_=L_, z0=z0, z1=z1):
+                t = float(np.hypot(x - A[0], y - A[1]))
+                if t < 0.05:
+                    return z0
+                if t > L_ - 0.05:
+                    return z1
+                return zat(x, y)
+        lamps = bridge(mb_at(m.x, m.y), br, zfun, water_level=float(rv["level"][k]))
+        for (x, y, z, yaw) in lamps or []:
+            inst["Lampadaire"].append((x, y, z, yaw, 1, 1, 1, 255, 255, 255))
+    print("rivière et %d ponts  %.0fs" % (len(V.get("bridges", [])), time.time() - T0))
+
 with open("mobilier_out.pkl", "wb") as f:
     pickle.dump(dict(chunks={k: v.arrays() for k, v in chunks.items()}, inst={k: np.array(v, np.float32) for k, v in inst.items()},
                      places=[(n, c.x, c.y, zat(c.x, c.y)) for n, c in placed]), f)

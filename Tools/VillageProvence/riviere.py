@@ -205,9 +205,9 @@ def carve(ground, Xg, Yg, line, rng):
     rough *= 1.2 / (rough.std() + 1e-6)
     rr = np.clip(r - hw + rough, 0, None)
     # parois en gradins : ressauts presque verticaux (~8 m) séparés par des vires de 1 à 2,5 m où s'accroche la végétation
-    STEP = 8.0
-    lw = 1.5 + 0.8 * np.clip(ndimage.gaussian_filter(np.random.default_rng(6).normal(0, 1, r.shape), 4.0) * 4.0, -1, 1)
-    rise_w = STEP / 5.0
+    STEP = 12.0
+    lw = 3.0 + 1.2 * np.clip(ndimage.gaussian_filter(np.random.default_rng(6).normal(0, 1, r.shape), 4.0) * 4.0, -1, 1)
+    rise_w = STEP / 6.0
     P_ = rise_w + lw
     q = rr / P_
     k = np.floor(q)

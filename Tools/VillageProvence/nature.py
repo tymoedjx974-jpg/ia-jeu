@@ -543,22 +543,34 @@ if V.get("river_rim") is not None:
         Y_ = Y_.ravel() + rng.uniform(-0.45, 0.45, Y_.size) * spacing
         m = shapely.contains_xy(wall, X_, Y_) & (rng.random(X_.size) < keep)
         sl_ = grid_sample(SLOPE_W, X_, Y_)
-        m &= (sl_ > 45.0) if steep else ((sl_ > 12.0) & (sl_ < 45.0))   # ressauts ou vires
+        if steep is not None:
+            m &= (sl_ > 45.0) if steep else ((sl_ > 12.0) & (sl_ < 45.0))   # ressauts ou vires
         return np.column_stack([X_[m], Y_[m]])
-    wb = wall_pts(5.0, 0.5, steep=True)
-    put_variants("Rocher_Bloc", 4, wb, scale=(1.2, 3.0), zscale=(0.6, 1.1), sink=0.4)
-    we = wall_pts(3.5, 0.5, steep=False)
-    put_variants("Rocher_Eboulis", 3, we, scale=(1.0, 2.2), sink=0.1)
-    wg = wall_pts(2.6, 0.6, steep=False)                          # buissons sur les vires
-    put_variants("Buisson_Garrigue", 4, wg, scale=(0.9, 1.6), sink=0.1)
-    wr = wall_pts(3.5, 0.4, steep=False)
-    put_variants("Buisson_Romarin", 2, wr, scale=(0.9, 1.4), sink=0.1)
-    wt = wall_pts(7.0, 0.45, steep=False)                         # chênes verts accrochés
-    put_variants("Arbre_Chene", 4, wt, scale=(0.4, 0.75), sink=0.2)
-    wh = wall_pts(2.0, 0.5, steep=False)
+    # végétation en taches, comme sur les vraies parois : fissures et vires colonisées, dalles nues entre elles
+    from scipy import ndimage
+    WPATCH = ndimage.gaussian_filter(np.random.default_rng(63).normal(0, 1, G["slope"].shape).astype(np.float32), 5.0)
+    WPATCH /= WPATCH.std() + 1e-6
+
+    def patchy(p_, bias):
+        if not len(p_):
+            return p_
+        v_ = grid_sample(WPATCH, p_[:, 0], p_[:, 1])
+        return p_[rng.random(len(p_)) < np.clip(0.5 + 0.45 * v_ + bias, 0.05, 1.0)]
+    wb = wall_pts(6.0, 0.5, steep=True)
+    put_variants("Rocher_Bloc", 4, wb, scale=(1.5, 3.5), zscale=(0.6, 1.1), sink=0.5)
+    we = wall_pts(4.0, 0.45, steep=None)
+    put_variants("Rocher_Eboulis", 3, we, scale=(1.2, 2.5), sink=0.1)
+    wg = patchy(wall_pts(2.4, 0.8, steep=None), 0.1)              # garrigue accrochée sur toute la paroi
+    put_variants("Buisson_Garrigue", 4, wg, scale=(1.0, 1.8), sink=0.2)
+    wr = patchy(wall_pts(3.2, 0.6, steep=None), 0.0)
+    put_variants("Buisson_Romarin", 2, wr, scale=(1.0, 1.5), sink=0.1)
+    wt = patchy(wall_pts(6.0, 0.6, steep=None), -0.1)             # chênes verts accrochés
+    tv_ = rng.random(len(wt))
+    put_variants("Arbre_Chene", 4, wt[tv_ < 0.7], scale=(0.45, 0.85), sink=0.3)
+    put_variants("Arbre_Pin", 4, wt[tv_ >= 0.7], scale=(0.45, 0.8), sink=0.3)
+    wh = patchy(wall_pts(2.0, 0.5, steep=False), 0.1)
     put_variants("Herbe_Haute", 3, wh, scale=(0.8, 1.2))
-    print("parois des gorges : %d blocs, %d éboulis, %d buissons, %d chênes verts" % (len(wb), len(we), len(wg), len(wt)), flush=True)
-    _GORGE_KEEP = True
+    print("parois des gorges : %d blocs, %d éboulis, %d buissons, %d arbres accrochés" % (len(wb), len(we), len(wg) + len(wr), len(wt)), flush=True)
 
 # ------------------------------------------------------------------ sol en couches (hors routes, rues, places, bâtis, eau) : touffes d'herbe,
 # hautes herbes, petits graviers et mottes de terre, selon la mosaïque du sol ; denses autour des villages, clairsemés au loin

@@ -443,6 +443,65 @@ def make_rock(seed, lod=0, kind="bloc"):
     return mb, float(P[:, 2].max()), float(max(size[:2]) * 0.5)
 
 
+def make_tall_grass(seed, lod=0):
+    """Haute herbe sèche (graminées de 0,6 à 1 m, épis) : touffe de cartes croisées, plus fournie que l'herbe rase."""
+    rng = np.random.default_rng(seed)
+    mb = MB()
+    n = {0: 7, 1: 4, 2: 3}[lod]
+    h0 = rng.uniform(0.6, 1.0)
+    for i in range(n):
+        a = math.pi * i / n + rng.uniform(-0.25, 0.25)
+        h = h0 * rng.uniform(0.75, 1.1)
+        right = np.array([math.cos(a), math.sin(a), 0.0])
+        lean = np.array([rng.normal(0, 0.12), rng.normal(0, 0.12), 0.0])
+        s = h * 0.35
+        c = np.array([rng.normal(0, 0.08), rng.normal(0, 0.08), 0])
+        p0, p1 = c - right * s, c + right * s
+        p2, p3 = p1 + UP * h + lean, p0 + UP * h + lean
+        q = rng.integers(4)
+        u0, v0 = (q % 2) * 0.5, (q // 2) * 0.5
+        t = (int(rng.uniform(215, 255)), int(rng.uniform(205, 245)), int(rng.uniform(170, 220)))
+        mb.add("HerbeSeche", [p0, p1, p2, p3], [UP * 0.8 + nrm(np.cross(right, UP)) * 0.2], [(u0, v0 + 0.5), (u0 + 0.5, v0 + 0.5), (u0 + 0.5, v0), (u0, v0)],
+               [t + (0,), t + (0,), t + (255,), t + (255,)], [[0, 1, 2], [0, 2, 3]])
+    return mb, h0, h0 * 0.4
+
+
+def make_pebbles(seed, lod=0):
+    """Petits graviers : une poignée de cailloux calcaires (2 à 8 cm) à demi enfoncés, sur ~0,7 m."""
+    rng = np.random.default_rng(seed)
+    P0, F0 = _icosphere(0)
+    mb = MB()
+    k = {0: 12, 1: 7, 2: 4}[lod]
+    for _ in range(k):
+        r = rng.uniform(0.012, 0.045)
+        P = P0 * np.array([r * rng.uniform(1.0, 1.6), r * rng.uniform(0.8, 1.3), r * rng.uniform(0.5, 0.9)])
+        a = rng.uniform(0, 2 * math.pi)
+        R = np.array([[math.cos(a), -math.sin(a), 0], [math.sin(a), math.cos(a), 0], [0, 0, 1]])
+        P = P @ R.T + np.array([rng.normal(0, 0.2), rng.normal(0, 0.2), -r * 0.35])
+        N = nrm(P - P.mean(axis=0))
+        g = int(rng.uniform(185, 255))
+        C = np.tile(np.array([g, int(g * rng.uniform(0.93, 1.0)), int(g * rng.uniform(0.85, 0.97)), 0], np.uint8), (len(P), 1))
+        mb.add("Rocher", P, N, P[:, :2] * 4.0, C, F0)
+    return mb, 0.05, 0.4
+
+
+def make_clod(seed, lod=0):
+    """Motte de terre : petite bosse irrégulière (0,3 à 0,7 m de large, 6 à 15 cm de haut)."""
+    rng = np.random.default_rng(seed)
+    P, F = _icosphere((2, 1, 0)[lod])
+    freqs = [(rng.normal(size=3) * f, rng.uniform(0, 6.28), a) for f, a in ((2.5, 0.12), (6.0, 0.05))]
+    P = P * (1.0 + sum(a * np.sin(P @ k_ + ph) for k_, ph, a in freqs))[:, None]
+    w = rng.uniform(0.3, 0.7)
+    h = rng.uniform(0.06, 0.15)
+    P = P * np.array([w / 2, w / 2 * rng.uniform(0.7, 1.0), h])
+    P[:, 2] -= h * 0.35
+    N = nrm(P * np.array([1.0 / w, 1.0 / w, 1.0 / h]))
+    C = np.tile(np.array([255, 255, 255, 0], np.uint8), (len(P), 1))
+    mb = MB()
+    mb.add("Motte", P, N, P[:, :2] * 2.0, C, F)
+    return mb, h, w / 2
+
+
 def make_vine_row(seed, lod=0):
     """Segment de rang de vigne (4 ceps sur 4,8 m, le long de l'axe X) + piquet."""
     mb = MB()
@@ -485,6 +544,9 @@ def catalog():
         C[f"Vigne_{v}"] = (lambda lod, v=v: make_vine(600 + v, lod))
         C[f"Herbe_Seche_{v}"] = (lambda lod, v=v: make_grass(700 + v, "HerbeSeche", lod))
         C[f"Herbe_Verte_{v}"] = (lambda lod, v=v: make_grass(800 + v, "HerbeVerte", lod, (0.2, 0.4)))
+        C[f"Herbe_Haute_{v}"] = (lambda lod, v=v: make_tall_grass(850 + v, lod))
+        C[f"Gravillons_{v}"] = (lambda lod, v=v: make_pebbles(1400 + v, lod))
+        C[f"Motte_Terre_{v}"] = (lambda lod, v=v: make_clod(1450 + v, lod))
     for v in range(3):
         C[f"Vigne_Rang_{v}"] = (lambda lod, v=v: make_vine_row(650 + v, lod))
         C[f"Lavande_Rang_{v}"] = (lambda lod, v=v: make_lavender_row(550 + v, lod))

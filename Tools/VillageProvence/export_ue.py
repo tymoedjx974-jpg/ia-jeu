@@ -177,7 +177,7 @@ for name, fn in ALL_MODULES.items():
     manifest["meshes"].append(dict(name=f"Mod_{name}", file=f"Meshes/Mod_{name}.pvm", nanite=True, collision=ctype,
                                    collision_dims=cdims, folder=folder, tintable=True, tags=TAGS.get(name, [])))
 C = catalog()
-VEG_CULL = {"Rocher_Eboulis": 15000, "Herbe": 9000, "Lavande_": 25000, "Buisson_Romarin": 18000, "Buisson_Garrigue": 30000, "Vigne_Rang": 40000, "Lavande_Rang": 50000, "Balle": 60000}
+VEG_CULL = {"Rocher_Eboulis": 15000, "Gravillons": 4000, "Motte_Terre": 6000, "Herbe_Haute": 9000, "Herbe": 7000, "Lavande_": 25000, "Buisson_Romarin": 18000, "Buisson_Garrigue": 30000, "Vigne_Rang": 40000, "Lavande_Rang": 50000, "Balle": 60000}
 for name, fn in C.items():
     lods = []
     for lod in range(3):
@@ -194,7 +194,7 @@ for name, fn in C.items():
     cull = next((v for k, v in VEG_CULL.items() if name.startswith(k)), 0)
     manifest["meshes"].append(dict(name=f"Veg_{name}", file=f"Meshes/Veg_{name}.pvm", nanite=False, collision=trunk[0] if trunk else "none",
                                    collision_dims=list(trunk[1:]) if trunk else [], folder="Vegetation", lods=3, lod_screen_sizes=[1.0, 0.25, 0.06],
-                                   cull_distance=cull, wind=not name.startswith("Rocher")))
+                                   cull_distance=cull, wind=not name.startswith(("Rocher", "Gravillons", "Motte"))))
 print("modules + végétation exportés %.0fs" % (time.time() - T0), flush=True)
 
 # ------------------------------------------------------------------ 3. instances

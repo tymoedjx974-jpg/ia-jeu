@@ -408,6 +408,12 @@ ravine = np.exp(-(rv / 0.14) ** 2) * smoothstep(-0.3, 0.8, _norm(fbm((NY, NX), 9
 relief = 2.6 * h_hill + 0.9 * h_mound + 0.28 * h_bump - 2.4 * ravine
 # les parcelles cultivées restent plus douces (terrasses), les bois et la garrigue plus accidentés
 ground = ground + (relief * NAT * (1.0 - 0.6 * fields_b)).astype(np.float32)
+# micro-relief partout hors des bâtiments et des gorges (les routes, rues et places sont aplanies ensuite) :
+# petites bosses et creux de 10 à 30 cm, pour que le sol ne soit jamais lisse
+m1 = _norm(fbm((NY, NX), 2, 2, seed=41))            # ~4 m
+m2 = _norm(fbm((NY, NX), 5, 2, seed=42))            # ~10 m
+micro = 0.09 * m1 + 0.12 * m2
+ground = ground + (micro * smoothstep(2.0, 6.0, b_dist) * (1.0 - riv_m)).astype(np.float32)
 # affleurements calcaires : sommets des bosses en garrigue et en forêt
 OUTCROP = (smoothstep(1.1, 2.2, h_mound + 0.5 * h_bump) * NAT * (1.0 - fields_b)).astype(np.float32)
 
@@ -564,6 +570,27 @@ W[L["rock"]] += 0.3 * sh
 # cours de ferme, abords des bâtiments hors village
 farmyard = blur(rasterize(V["farmyard"] + [b["poly"].buffer(4.0) for b in blds if not core.contains(b["poly"].centroid)]), 1.5)
 W[L["dirt"]] += 0.7 * farmyard
+# sol en mosaïque hors des surfaces aménagées (routes, rues, places, bâtis, eau) : plaques de terre, de petits graviers,
+# d'herbe et de hautes herbes, dosées selon le milieu (champs, bois, prés, garrigue, cours du village)
+paved = rasterize([r["line"].buffer(r["width"] / 2 + 0.8) for r in roads if r["surface"] not in ("path", "dirt")]
+                  + V["plaza"] + V["parking"] + [b["poly"].buffer(0.5) for b in blds] + V["pools"] + V["ponds"]
+                  + [river_rim(riv, 1.0)]) > 0
+open_ = (~paved) & (ochre < 0.3) & (rockm < 0.5) & (dirt < 0.5)
+coreb = blur(rasterize([core]), 2.0)
+_nz = [np.clip(_norm(fbm((NY, NX), 3, 2, seed=s_)) * 0.9, -2.5, 2.5) for s_ in (51, 52, 53, 54)]
+w_cov = np.stack([
+    (0.5 + 1.2 * cult + 0.6 * forest + 0.8 * coreb + 0.4 * farm) * np.exp(_nz[0]),                          # terre
+    (0.35 + 0.7 * cult + 0.9 * coreb + 0.5 * sh + 0.6 * smoothstep(12.0, 25.0, slope)) * np.exp(_nz[1]),    # petits graviers
+    (0.5 + 1.2 * lawn + 0.7 * mead + 0.4 * resid + 0.3 * forest) * np.exp(_nz[2]),                          # herbe
+    (0.4 + 1.1 * mead + 1.0 * scrub + 0.3 * farm) * np.exp(_nz[3]) * (1.0 - 0.7 * coreb),                  # hautes herbes
+])
+cover = (np.argmax(w_cov, axis=0) + 1).astype(np.uint8)
+cover[~open_] = 0
+_a = 1.6 * (1.0 - 0.6 * forest)
+for _cls, _lay in ((1, "earth"), (2, "dirt"), (3, "grass"), (4, "dry")):
+    W[L[_lay]] += _a * ndimage.gaussian_filter((cover == _cls).astype(np.float32), 0.8)
+print("sol en mosaïque : terre %.0f %%, graviers %.0f %%, herbe %.0f %%, hautes herbes %.0f %%" %
+      tuple(100.0 * (cover == c_).sum() / max(1, (cover > 0).sum()) for c_ in (1, 2, 3, 4)))
 # variation naturelle
 var = fbm((NY, NX), 18, 3, seed=9)
 W[L["dry"]] *= 1.0 + 0.5 * var
@@ -582,7 +609,7 @@ splat = np.round(W.transpose(1, 2, 0) * 255).astype(np.uint8)
 print("couches %.0f s" % (time.time() - t0))
 
 np.savez_compressed("terrain.npz", ground=ground.astype(np.float32), splat=splat, slope=slope.astype(np.float16),
-                    outcrop=OUTCROP.astype(np.float16), nat=NAT.astype(np.float16))
+                    outcrop=OUTCROP.astype(np.float16), nat=NAT.astype(np.float16), cover=cover)
 V = dict(V)
 V["roads"] = roads
 V["buildings"] = blds

@@ -526,6 +526,49 @@ if V.get("river_poly") is not None:
     put_variants("Buisson_Garrigue", 4, Rs, scale=(0.8, 1.4))
     print("berges : %d arbres, %d lauriers-roses  %.0fs" % (len(T_), len(Lr), time.time() - T0), flush=True)
 
+# ------------------------------------------------------------------ sol en couches (hors routes, rues, places, bâtis, eau) : touffes d'herbe,
+# hautes herbes, petits graviers et mottes de terre, selon la mosaïque du sol ; denses autour des villages, clairsemés au loin
+if "cover" in G.files:
+    COV = G["cover"]
+    RESG = ZONE["res"]
+    hubs = [np.array([-10.0, 0.0])] + ([np.array(V["quartier"].centroid.coords[0])] if V.get("quartier") is not None else [])
+
+    def cover_pts(cls, spacing, keep):
+        xs_ = np.arange(ZONE["xmin"] + 1, ZONE["xmax"] - 1, spacing)
+        ys_ = np.arange(ZONE["ymin"] + 1, ZONE["ymax"] - 1, spacing)
+        out = []
+        for y0 in ys_:                                   # par bandes : mémoire modeste
+            X_ = xs_ + rng.uniform(-0.45, 0.45, len(xs_)) * spacing
+            Y_ = y0 + rng.uniform(-0.45, 0.45, len(xs_)) * spacing
+            i_ = np.clip(((X_ - ZONE["xmin"]) / RESG).astype(int), 0, COV.shape[1] - 1)
+            j_ = np.clip(((Y_ - ZONE["ymin"]) / RESG).astype(int), 0, COV.shape[0] - 1)
+            m = COV[j_, i_] == cls
+            if not m.any():
+                continue
+            X_, Y_ = X_[m], Y_[m]
+            d = np.min([np.hypot(X_ - h[0], Y_ - h[1]) for h in hubs], axis=0)
+            dens = np.clip(1.0 - (d - 700.0) / 600.0, 0.12, 1.0)     # plein jusqu'à 700 m des villages, 12 % au-delà de 1,3 km
+            m = rng.random(len(X_)) < keep * dens
+            X_, Y_ = X_[m], Y_[m]
+            f = free(X_, Y_)
+            out.append(np.column_stack([X_[f], Y_[f]]))
+        return np.concatenate(out) if out else np.zeros((0, 2))
+
+    g_ = cover_pts(3, 1.3, 0.65)
+    put_variants("Herbe_Verte", 3, g_, scale=(0.8, 1.5))
+    t_ = cover_pts(4, 1.5, 0.7)
+    put_variants("Herbe_Haute", 3, t_, scale=(0.8, 1.3))
+    t2 = cover_pts(4, 2.6, 0.5)
+    put_variants("Herbe_Verte", 3, t2, scale=(0.9, 1.4))
+    gr = cover_pts(2, 1.7, 0.55)
+    put_variants("Gravillons", 3, gr, scale=(0.8, 1.4), sink=0.0)
+    e_ = cover_pts(1, 3.2, 0.35)
+    put_variants("Motte_Terre", 3, e_, scale=(0.8, 1.3), sink=0.0)
+    e2 = cover_pts(1, 4.0, 0.25)
+    put_variants("Gravillons", 3, e2, scale=(0.6, 1.0), sink=0.0)
+    print("sol en couches : %d touffes d'herbe, %d hautes herbes, %d tas de graviers, %d mottes de terre  %.0fs"
+          % (len(g_) + len(t2), len(t_), len(gr) + len(e2), len(e_), time.time() - T0), flush=True)
+
 INST = {k: np.concatenate(v).astype(np.float32) for k, v in INST.items()}
 # aucune plante sur les falaises ni dans l'eau des gorges
 if V.get("river_rim") is not None:

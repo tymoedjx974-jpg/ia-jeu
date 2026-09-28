@@ -610,9 +610,10 @@ rivw = blur(rasterize([river_rim(riv, 1.0)]), 1.0) * (1 - blur(rasterize([river_
 _ledge = 1.0 - smoothstep(30.0, 50.0, slope)
 W *= (1.0 - 0.85 * rivw * _ledge)[None]
 _mott = np.clip(0.5 + 0.5 * _norm(fbm((NY, NX), 5, 2, seed=64)), 0, 1)        # taches de végétation et de roche sombre
-W[L["rock"]] += 1.1 * rivb * (1 - och_near) * (1 - _ledge) * (1.1 - 0.7 * _mott)
+W[L["rock"]] += 0.7 * rivb * (1 - och_near) * (1 - _ledge) * (1.1 - 0.8 * _mott)
 W[L["forest"]] += 2.2 * rivw * (1 - och_near) * np.maximum(_ledge, 0.9 * _mott)
-W[L["dry"]] += 1.0 * rivw * (1 - och_near) * (1 - _mott)
+W[L["grass"]] += 2.0 * rivw * (1 - och_near) * (0.4 + 0.6 * _mott)
+W[L["dry"]] += 0.6 * rivw * (1 - och_near) * (1 - _mott)
 W[L["dirt"]] += 0.6 * rivw * (1 - och_near) * _ledge
 W[L["dirt"]] += 0.3 * rivb
 W = np.clip(W, 0, None)

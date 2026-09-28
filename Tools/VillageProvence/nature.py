@@ -568,8 +568,13 @@ if V.get("river_rim") is not None:
     tv_ = rng.random(len(wt))
     put_variants("Arbre_Chene", 4, wt[tv_ < 0.7], scale=(0.45, 0.85), sink=0.3)
     put_variants("Arbre_Pin", 4, wt[tv_ >= 0.7], scale=(0.45, 0.8), sink=0.3)
-    wh = patchy(wall_pts(2.0, 0.5, steep=False), 0.1)
+    wh = patchy(wall_pts(1.8, 0.7, steep=None), 0.2)
     put_variants("Herbe_Haute", 3, wh, scale=(0.8, 1.2))
+    wv = patchy(wall_pts(1.6, 0.7, steep=None), 0.3)             # touffes d'herbe verte sur toute la paroi
+    put_variants("Herbe_Touffe", 3, wv, scale=(1.0, 1.5))
+    wg2 = patchy(wall_pts(2.2, 0.5, steep=None), 0.0)
+    put_variants("Buisson_Garrigue", 4, wg2, scale=(1.0, 1.8), sink=0.2)
+    wg = np.vstack([wg, wg2])
     print("parois des gorges : %d blocs, %d éboulis, %d buissons, %d arbres accrochés" % (len(wb), len(we), len(wg) + len(wr), len(wt)), flush=True)
 
 # ------------------------------------------------------------------ sol en couches (hors routes, rues, places, bâtis, eau) : touffes d'herbe,

@@ -605,10 +605,13 @@ och_near = blur(rasterize([g_.buffer(45.0) for g_ in ochre_geoms]), 4.0)
 W[L["ochre"]] += 3.0 * rivb * och_near
 # parois calcaires en strates (bancs clairs et bancs plus sombres, comme dans les gorges du Verdon), un peu de terre
 # et de végétation sur les vires
-_strata = 0.5 + 0.5 * np.sin(2 * np.pi * ground / 4.5 + 1.5 * fbm((NY, NX), 20, 2, seed=61))
-W[L["rock"]] += 1.6 * rivb * (1 - och_near) * _strata
-W[L["dirt"]] += 1.1 * rivb * (1 - och_near) * (1 - _strata)
-W[L["forest"]] += 0.6 * rivb * (1 - och_near) * np.clip(fbm((NY, NX), 6, 2, seed=62), 0, 1)
+# ressauts (pente forte) en roche nue, vires (pente faible) en terre et litière : les gradins se lisent de loin
+rivw = blur(rasterize([river_rim(riv, 1.0)]), 1.0) * (1 - blur(rasterize([river_polygon(riv, 1.0)]), 1.0))
+_ledge = 1.0 - smoothstep(30.0, 50.0, slope)
+W *= (1.0 - 0.85 * rivw * _ledge)[None]
+W[L["rock"]] += 1.8 * rivb * (1 - och_near) * (1 - _ledge)
+W[L["forest"]] += 1.4 * rivw * (1 - och_near) * _ledge
+W[L["dirt"]] += 0.6 * rivw * (1 - och_near) * _ledge
 W[L["dirt"]] += 0.3 * rivb
 W = np.clip(W, 0, None)
 W /= W.sum(axis=0, keepdims=True) + 1e-6

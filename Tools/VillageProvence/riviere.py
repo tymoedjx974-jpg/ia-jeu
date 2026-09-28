@@ -204,7 +204,16 @@ def carve(ground, Xg, Yg, line, rng):
     rough = ndimage.gaussian_filter(np.random.default_rng(5).normal(0, 1, r.shape), 2.0)
     rough *= 1.2 / (rough.std() + 1e-6)
     rr = np.clip(r - hw + rough, 0, None)
-    bank = lv + 0.35 + rr * BANK * (1.0 - 0.25 * np.clip(rr / 40.0, 0, 1))
+    # parois en gradins : ressauts presque verticaux (~8 m) séparés par des vires de 1 à 2,5 m où s'accroche la végétation
+    STEP = 8.0
+    lw = 1.5 + 0.8 * np.clip(ndimage.gaussian_filter(np.random.default_rng(6).normal(0, 1, r.shape), 4.0) * 4.0, -1, 1)
+    rise_w = STEP / 5.0
+    P_ = rise_w + lw
+    q = rr / P_
+    k = np.floor(q)
+    fr = (q - k) * P_
+    zz = STEP * k + np.where(fr < lw, 0.25 * fr, 0.25 * lw + (fr - lw) * (STEP - 0.25 * lw) / rise_w)
+    bank = lv + 0.35 + zz
     new = np.where(r < hw, bed, bank)
     g = ground[sub]
     carved = np.minimum(g, new)

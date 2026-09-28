@@ -536,22 +536,27 @@ if V.get("river_poly") is not None:
 if V.get("river_rim") is not None:
     wall = V["river_rim"].buffer(-1.5).difference(V["river_poly"].buffer(3.0))
     SLOPE_W = G["slope"].astype(np.float32)
-    def wall_pts(spacing, keep):
+    def wall_pts(spacing, keep, steep=True):
         x0, y0, x1, y1 = wall.bounds
         X_, Y_ = np.meshgrid(np.arange(x0, x1, spacing), np.arange(y0, y1, spacing))
         X_ = X_.ravel() + rng.uniform(-0.45, 0.45, X_.size) * spacing
         Y_ = Y_.ravel() + rng.uniform(-0.45, 0.45, Y_.size) * spacing
         m = shapely.contains_xy(wall, X_, Y_) & (rng.random(X_.size) < keep)
-        m &= grid_sample(SLOPE_W, X_, Y_) > 30.0                     # seulement sur les parois raides
+        sl_ = grid_sample(SLOPE_W, X_, Y_)
+        m &= (sl_ > 45.0) if steep else ((sl_ > 12.0) & (sl_ < 45.0))   # ressauts ou vires
         return np.column_stack([X_[m], Y_[m]])
-    wb = wall_pts(7.0, 0.55)
+    wb = wall_pts(5.0, 0.5, steep=True)
     put_variants("Rocher_Bloc", 4, wb, scale=(1.2, 3.0), zscale=(0.6, 1.1), sink=0.4)
-    we = wall_pts(4.5, 0.5)
+    we = wall_pts(3.5, 0.5, steep=False)
     put_variants("Rocher_Eboulis", 3, we, scale=(1.0, 2.2), sink=0.1)
-    wg = wall_pts(6.0, 0.45)
-    put_variants("Buisson_Garrigue", 4, wg, scale=(0.8, 1.5), sink=0.1)
-    wt = wall_pts(16.0, 0.35)
-    put_variants("Arbre_Chene", 4, wt, scale=(0.45, 0.8), sink=0.2)
+    wg = wall_pts(2.6, 0.6, steep=False)                          # buissons sur les vires
+    put_variants("Buisson_Garrigue", 4, wg, scale=(0.9, 1.6), sink=0.1)
+    wr = wall_pts(3.5, 0.4, steep=False)
+    put_variants("Buisson_Romarin", 2, wr, scale=(0.9, 1.4), sink=0.1)
+    wt = wall_pts(7.0, 0.45, steep=False)                         # chênes verts accrochés
+    put_variants("Arbre_Chene", 4, wt, scale=(0.4, 0.75), sink=0.2)
+    wh = wall_pts(2.0, 0.5, steep=False)
+    put_variants("Herbe_Haute", 3, wh, scale=(0.8, 1.2))
     print("parois des gorges : %d blocs, %d éboulis, %d buissons, %d chênes verts" % (len(wb), len(we), len(wg), len(wt)), flush=True)
     _GORGE_KEEP = True
 

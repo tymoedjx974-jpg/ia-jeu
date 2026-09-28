@@ -527,6 +527,14 @@ if V.get("river_poly") is not None:
     print("berges : %d arbres, %d lauriers-roses  %.0fs" % (len(T_), len(Lr), time.time() - T0), flush=True)
 
 INST = {k: np.concatenate(v).astype(np.float32) for k, v in INST.items()}
+# aucune plante sur les falaises ni dans l'eau des gorges
+if V.get("river_rim") is not None:
+    _rim = V["river_rim"].buffer(-0.5)
+    for k in list(INST):
+        a = INST[k]
+        m = shapely.contains_xy(_rim, a[:, 0], a[:, 1])
+        if m.any():
+            INST[k] = a[~m]
 with open("nature_out.pkl", "wb") as f:
     pickle.dump(INST, f)
 tot = sum(len(v) for v in INST.values())

@@ -50,6 +50,20 @@ for i in range(int(T * 28)):
     idx = (t0 + np.arange(L)) % n
     water[idx] += drop
 save("Fontaine.wav", water)
+# rivière au fond des gorges : grondement grave et large, clapotis et éclaboussures (boucle parfaite)
+T = 16.0
+n = int(T * SR)
+t = np.arange(n) / SR
+river = band_noise(n, 80, 900) * 0.8 + band_noise(n, 400, 3000) * 0.45 + band_noise(n, 2000, 8000) * 0.12
+river *= 1.0 + 0.25 * np.sin(2 * np.pi * t * 3 / T) + 0.12 * np.sin(2 * np.pi * t * 7 / T + 1.3)
+for i in range(int(T * 40)):
+    t0 = rng.integers(0, n)
+    L = int(SR * rng.uniform(0.02, 0.09))
+    tt = np.arange(L) / SR
+    spl = band_noise(L, 600, 4000)[:L] * np.exp(-tt * rng.uniform(25, 70)) * rng.uniform(0.1, 0.35)
+    idx = (t0 + np.arange(L)) % n
+    river[idx] += spl
+save("Riviere.wav", river)
 # vent : souffle grave qui enfle et retombe, sifflement léger dans les rafales (boucle parfaite : tout est périodique sur T)
 T = 24.0
 n = int(T * SR)

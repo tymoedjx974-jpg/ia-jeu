@@ -234,7 +234,9 @@ if V.get("river"):
     for br in V.get("bridges", []):
         m = br["line"].interpolate(0.5, normalized=True)
         k = int(np.argmin(np.hypot(rv["xy"][:, 0] - m.x, rv["xy"][:, 1] - m.y)))
-        z0, z1 = br.get("z0"), br.get("z1")
+        # culées au niveau du sol définitif (après l'aplanissement des routes) : pas de marche à l'entrée du pont
+        z0, z1 = zat(*br["line"].coords[0]), zat(*br["line"].coords[-1])
+        br = dict(br, z0=z0, z1=z1)
         A = np.array(br["line"].coords[0]); L_ = br["line"].length
         zfun = (lambda x, y, A=A, L_=L_, z0=z0, z1=z1, br=br: zat(x, y)) if z0 is None else None
         if z0 is not None:
@@ -250,6 +252,19 @@ if V.get("river"):
         for (x, y, z, yaw) in lamps or []:
             inst["Lampadaire"].append((x, y, z, yaw, 1, 1, 1, 255, 255, 255))
     print("rivière et %d ponts  %.0fs" % (len(V.get("bridges", [])), time.time() - T0))
+
+# rien au fond des gorges (bancs, bornes...) ; les réverbères du pont, eux, sont sur le tablier
+if V.get("river_rim") is not None:
+    _rim = V["river_rim"].buffer(1.0)
+    for k in list(inst):
+        a = np.array(inst[k], np.float64)
+        if not len(a):
+            continue
+        gz_ = grid_sample(GROUND, a[:, 0], a[:, 1])
+        bad = shapely.contains_xy(_rim, a[:, 0], a[:, 1]) & (a[:, 2] < gz_ + 2.0)
+        if bad.any():
+            print("gorges : %d %s retirés" % (int(bad.sum()), k))
+            inst[k] = [tuple(x) for x in a[~bad]]
 
 with open("mobilier_out.pkl", "wb") as f:
     pickle.dump(dict(chunks={k: v.arrays() for k, v in chunks.items()}, inst={k: np.array(v, np.float32) for k, v in inst.items()},

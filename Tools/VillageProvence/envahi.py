@@ -11,6 +11,7 @@ Sortie : envahi_out.pkl (instances au même format que les autres étapes + poin
 import sys, pickle, math, time, json, collections
 sys.path.insert(0, ".")
 import numpy as np
+import shapely
 from shapely.geometry import Point, LineString, Polygon
 from shapely.strtree import STRtree
 from shapely import affinity
@@ -539,6 +540,15 @@ for _ in range(80):
     if not near_building(Point(x, y), 3.0):
         spawns.append((x, y, gz(x, y)))
 spawns = [(float(x), float(y), float(z) + 0.1) for x, y, z in spawns]
+# pas de zombies ni d'objets au fond des gorges de la rivière
+if V.get("river_rim") is not None:
+    _rim = V["river_rim"].buffer(2.0)
+    spawns = [s_ for s_ in spawns if not _rim.contains(Point(s_[0], s_[1]))]
+    for k in list(inst):
+        a = np.array(inst[k], np.float64)
+        if len(a):
+            keep = ~shapely.contains_xy(_rim, a[:, 0], a[:, 1])
+            inst[k] = [tuple(x) for x in a[keep]]
 print("points d'apparition des zombies :", len(spawns), flush=True)
 
 out = dict(inst={k: np.array(v, np.float32) for k, v in inst.items()}, spawns=spawns, route=route)

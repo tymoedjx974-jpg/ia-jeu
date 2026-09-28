@@ -270,7 +270,7 @@ from quartier import make_hill, shape_ground, new_quarter
 hill = make_hill(V, CENTER, rng)
 ground, hill_base = shape_ground(ground, Xg, Yg, hill, ochre_keep, village)
 # rivière des Ocres : source en haut du ravin d'ocre, canyon dans l'ocre, passage entre les deux villages, plaine au nord
-from riviere import trace, carve, river_polygon, river_rim, cut_roads
+from riviere import trace_ok as trace, carve, river_polygon, river_rim, cut_roads
 _keep_b = [b for b in blds if village.buffer(5.0).contains(b["poly"].centroid) or not village.buffer(LAV_W).contains(b["poly"].centroid)]
 riv_line, riv_info = trace(V, ground, village, hill, _keep_b, rng)
 ground_pre = ground.copy()
@@ -279,7 +279,19 @@ riv_wet = river_polygon(riv, 0.0)
 riv_rim = river_rim(riv, 0.0)                # gorges : jusqu'au bord des falaises
 riv_corr = river_rim(riv, 8.0)
 _n0 = len(blds)
-blds = [b for b in blds if not b["poly"].intersects(river_rim(riv, 3.0))]
+_rim8 = river_rim(riv, 8.0)
+
+
+def _au_bord(b):
+    """Maison posée sur le bord de la falaise (sol qui plonge sous son emprise)."""
+    if not b["poly"].intersects(_rim8):
+        return False
+    cs = np.array(b["poly"].exterior.coords)
+    zz = grid_sample(ground, cs[:, 0], cs[:, 1])
+    return float(zz.max() - zz.min()) > 3.0
+
+
+blds = [b for b in blds if not b["poly"].intersects(river_rim(riv, 3.0)) and not _au_bord(b)]
 print("gorges : %d bâtiments retirés au bord des falaises (dont %d du vieux village)" % (_n0 - len(blds),
       sum(1 for b in _keep_b if village.buffer(5.0).contains(b["poly"].centroid) and b["poly"].intersects(river_rim(riv, 3.0)))))
 _gy, _gx = np.gradient(ground, RES)
@@ -311,6 +323,7 @@ V["river_rim"] = riv_rim
 _rp = river_rim(riv, 3.0)
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest", "lawn", "residential"):
     V[key] = [q for p_ in V[key] for q in polys_of(p_.difference(_rp)) if q.area > 20]
+print("méandres : amplitude x%.2f" % riv_info["amp"])
 print("rivière : %.0f m, %d ponts (grand pont %.0f m)" % (riv_line.length, len(V["bridges"]),
       max([b_["line"].length for b_ in V["bridges"] if b_["grand"]] or [0])))
 V["plaza"] += q_plaza

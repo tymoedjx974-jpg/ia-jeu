@@ -15,7 +15,7 @@ def water(mb_at, prof, step=2):
     d = np.gradient(xy, axis=0)
     d /= np.linalg.norm(d, axis=1, keepdims=True) + 1e-9
     n = np.column_stack([-d[:, 1], d[:, 0]])
-    hw = w / 2 + 0.6
+    hw = w / 2 + 3.0              # le plan d'eau passe sous le pied des falaises : pas de jour entre l'eau et la paroi
     Lp = xy + n * hw[:, None]
     Rp = xy - n * hw[:, None]
     z = lv + 0.12

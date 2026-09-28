@@ -9,6 +9,7 @@ from shapely.geometry import LineString, Point, Polygon
 from shapely.ops import unary_union, nearest_points, substring
 from common import ZONE, RES, polys_of, lines_of, grid_sample, rasterize
 
+AMP = 1.0                      # amplitude des méandres (réduite si deux bras se rapprochent trop)
 W_SRC, W_MAX = 20.0, 30.0      # largeur de l'eau en amont et en aval (m)
 DEPTH = 6.0                    # profondeur d'eau au milieu du lit
 DROP = 10.0                    # l'eau coule au moins 10 m sous les rives
@@ -115,7 +116,7 @@ def trace(V, ground, village, quarter_hill, blds, rng):
         p0 = np.array(ul.interpolate(t).coords[0])
         p1 = np.array(ul.interpolate(min(ul.length, t + 5.0)).coords[0])
         tg = (p1 - p0) / (np.linalg.norm(p1 - p0) + 1e-9)
-        amp = 45.0 * np.clip((ul.length - t - 250.0) / 600.0, 0, 1)
+        amp = AMP * 45.0 * np.clip((ul.length - t - 250.0) / 600.0, 0, 1)
         off = amp * math.sin(2 * math.pi * t / 310.0 + ph2)
         uu.append(p0 + np.array([-tg[1], tg[0]]) * off)
     # en aval du passage : méandres de plus en plus amples à mesure que la vallée s'ouvre
@@ -126,7 +127,7 @@ def trace(V, ground, village, quarter_hill, blds, rng):
         p0 = np.array(dl.interpolate(t).coords[0])
         p1 = np.array(dl.interpolate(min(dl.length, t + 5.0)).coords[0])
         tg = (p1 - p0) / (np.linalg.norm(p1 - p0) + 1e-9)
-        amp = 55.0 * np.clip((t - 250.0) / 600.0, 0, 1)
+        amp = AMP * 55.0 * np.clip((t - 250.0) / 600.0, 0, 1)
         off = amp * math.sin(2 * math.pi * t / 330.0 + ph) + 0.35 * amp * math.sin(2 * math.pi * t / 131.0 + 2 * ph)
         dd.append(p0 + np.array([-tg[1], tg[0]]) * off)
     # points du ravin situés avant le passage seulement (sinon le lit ferait un aller-retour)
@@ -134,8 +135,42 @@ def trace(V, ground, village, quarter_hill, blds, rng):
     rav_ok = [p for p in rav[1:] if np.linalg.norm(p - src) < dg - 40.0]
     ctrl = [uu[0]] + uu[2:-2:2] + [src] + rav_ok + dd[::2] + [dd[-1]]
     P = _chaikin(ctrl, 4)
-    line = LineString(P).simplify(0.8)
+    # virages adoucis : rayon de courbure réaliste pour une rivière de 20 à 30 m (pas de coude en épingle)
+    l0 = LineString(P)
+    ss = np.arange(0.0, l0.length, 8.0)
+    Q = np.array([l0.interpolate(t).coords[0] for t in ss])
+    for _ in range(3):
+        Qs = ndimage.gaussian_filter1d(Q, 5.0, axis=0, mode="nearest")
+        Qs[:3], Qs[-3:] = Q[:3], Q[-3:]
+        Q = Qs
+    # les deux bouts sortent franchement de la carte (pas de gorge en cul-de-sac au bord)
+    e0 = Q[0] + (Q[0] - Q[6]) / np.linalg.norm(Q[0] - Q[6]) * 90.0
+    e1 = Q[-1] + (Q[-1] - Q[-7]) / np.linalg.norm(Q[-1] - Q[-7]) * 90.0
+    line = LineString(np.vstack([e0, Q, e1])).simplify(0.8)
     return line, dict(src=src, gap=gap)
+
+
+def _too_close(line, gap_m=190.0, arc_m=500.0):
+    """Vrai si la rivière repasse près d'elle-même (méandre trop serré : deux bras à des niveaux différents)."""
+    ss = np.arange(0.0, line.length, 10.0)
+    P = np.array([line.interpolate(t).coords[0] for t in ss])
+    D = np.hypot(P[:, None, 0] - P[None, :, 0], P[:, None, 1] - P[None, :, 1])
+    arc = np.abs(ss[:, None] - ss[None, :])
+    hairpin = (D < gap_m) & (arc > 1.8 * D + 100.0)      # épingle à cheveux : on fait un long détour pour revenir tout près
+    return bool(hairpin.any())
+
+
+def trace_ok(*args, **kw):
+    """Tracé dont les méandres restent assez amples pour que deux bras ne se touchent pas."""
+    global AMP
+    for AMP in (1.0, 0.6, 0.35, 0.15, 0.0):
+        rng_state = args[-1].bit_generator.state
+        line, info = trace(*args, **kw)
+        if not _too_close(line):
+            break
+        args[-1].bit_generator.state = rng_state
+    info["amp"] = AMP
+    return line, info
 
 
 def carve(ground, Xg, Yg, line, rng):
@@ -148,11 +183,12 @@ def carve(ground, Xg, Yg, line, rng):
     gz = ndimage.minimum_filter1d(gz, 5)
     lvl = np.minimum.accumulate(gz - DROP)
     lvl = lvl - np.linspace(0, 0.002 * L, len(lvl))          # pente minimale : l'eau coule
-    lvl = np.minimum.accumulate(ndimage.uniform_filter1d(lvl, 9))
+    # rapides adoucis : pente lissée sur ~100 m (l'eau reste sous les rives et descend toujours)
+    lvl = np.minimum.accumulate(ndimage.uniform_filter1d(lvl, 25, mode="nearest"))
     width = W_SRC + (W_MAX - W_SRC) * np.clip(ss / L, 0, 1) + 3.0 * np.sin(ss / 97.0 + rng.uniform(0, 6))
     prof = dict(s=ss, level=lvl.astype(np.float32), width=width.astype(np.float32), xy=cen.astype(np.float32))
     # cellules proches du tracé
-    corridor = line.buffer(W_MAX / 2 + 110.0)
+    corridor = line.buffer(W_MAX / 2 + 180.0)          # assez large pour les gorges les plus profondes
     x0, y0, x1, y1 = corridor.bounds
     jx = (Xg[0] >= x0) & (Xg[0] <= x1)
     jy = (Yg[:, 0] >= y0) & (Yg[:, 0] <= y1)
@@ -180,7 +216,7 @@ def carve(ground, Xg, Yg, line, rng):
     d = np.gradient(cen, axis=0)
     d /= np.linalg.norm(d, axis=1, keepdims=True) + 1e-9
     n = np.column_stack([-d[:, 1], d[:, 0]])
-    offs = np.arange(0.0, 125.0, 1.5)
+    offs = np.arange(0.0, 195.0, 1.5)
     for key, sg in (("rim_l", 1.0), ("rim_r", -1.0)):
         rim = np.zeros(len(cen))
         for i in range(len(cen)):

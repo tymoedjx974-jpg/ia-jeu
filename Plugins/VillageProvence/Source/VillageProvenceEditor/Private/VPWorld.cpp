@@ -33,6 +33,7 @@
 #include "VPVent.h"
 #include "VPPointsApparition.h"
 #include "VPPorte.h"
+#include "VPRiviere.h"
 #include "Builders/CubeBuilder.h"
 #include "BSPOps.h"
 #include "NavigationSystem.h"
@@ -640,6 +641,32 @@ void FVPBuilder::SetupStairRamps()
 		Owner->AddInstanceComponent(Box);
 		Box->RegisterComponent();
 	}
+}
+
+void FVPBuilder::SetupRiver()
+{
+	// eau de la rivière des Ocres : tronçons de détection le long du lit ; on y nage (le plan d'eau n'a pas de collision)
+	const TArray<TSharedPtr<FJsonValue>>* Vols = nullptr;
+	if (!Manifest->TryGetArrayField(TEXT("river_volumes"), Vols) || Vols->Num() == 0)
+	{
+		return;
+	}
+	const FVector First = JsonVector((*Vols)[0]->AsObject()->GetField<EJson::Array>(TEXT("center")));
+	AVPRiviere* Riviere = World->SpawnActor<AVPRiviere>(AVPRiviere::StaticClass(), FTransform(First));
+	if (!Riviere)
+	{
+		++Warnings;
+		return;
+	}
+	int32 Index = 0;
+	for (const TSharedPtr<FJsonValue>& V : *Vols)
+	{
+		const TSharedPtr<FJsonObject> R = V->AsObject();
+		const FVector Centre = JsonVector(R->GetField<EJson::Array>(TEXT("center")));
+		const FVector Taille = JsonVector(R->GetField<EJson::Array>(TEXT("size")));
+		Riviere->AjouterTroncon(Centre, (float)R->GetNumberField(TEXT("yaw")), Taille, Index++);
+	}
+	Tag(Riviere, TEXT("VP_Riviere"), TEXT("VillageProvence/Riviere"), true);
 }
 
 #undef LOCTEXT_NAMESPACE

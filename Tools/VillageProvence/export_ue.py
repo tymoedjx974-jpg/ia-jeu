@@ -93,7 +93,14 @@ M = pickle.load(open("mobilier_out.pkl", "rb"))
 G = np.load("terrain.npz")["ground"]
 
 groups = collections.defaultdict(dict)
-for src, cat in ((B["chunks"], "Bati"), (R, "Voirie"), (M["chunks"], "Mobilier")):
+# le plan d'eau de la rivière est à part : sans collision (on y tombe et on nage, on ne marche pas dessus)
+water_chunks = {}
+for k, arr in M["chunks"].items():
+    if arr and "Eau" in arr:
+        water_chunks[k] = {"Eau": arr["Eau"]}
+        arr = {m: d for m, d in arr.items() if m != "Eau"}
+        M["chunks"][k] = arr
+for src, cat in ((B["chunks"], "Bati"), (R, "Voirie"), (M["chunks"], "Mobilier"), (water_chunks, "Riviere")):
     for k, arr in src.items():
         if not arr:
             continue
@@ -107,7 +114,8 @@ for (cat, ck), acc in sorted(groups.items()):
     name = f"{cat}_{ck[0] + 20}_{ck[1] + 20}"
     tris, size = write_pvm(os.path.join(OUT, "Meshes", name + ".pvm"), [arr], piv)
     mesh_stats[cat] += tris
-    manifest["meshes"].append(dict(name=name, file=f"Meshes/{name}.pvm", nanite=True, collision="complex", folder=cat))
+    manifest["meshes"].append(dict(name=name, file=f"Meshes/{name}.pvm", nanite=cat != "Riviere",
+                                   collision="none" if cat == "Riviere" else "complex", folder=cat))
     manifest["actors"].append(dict(mesh=name, loc=to_ue_points([piv])[0].round(1).tolist(), yaw=0.0, folder=f"VillageProvence/{cat}", always_loaded=True))
 for key, (arr, c) in B["specials"].items():
     allP = np.concatenate([d["P"] for d in arr.values()])
@@ -316,6 +324,23 @@ zp = float(grid_sample(G, [-4.0], [12.0])[0]) + 1.0
 manifest["ambiance"] = dict(sun_elevation=34.0, sun_azimuth=235.0, sun_lux=10.0, sun_temperature=5600.0, fog_density=0.006, fog_falloff=0.08,
                             volumetric_fog=True, exposure_bias=0.0, saturation=1.06, white_temp=6150.0, bloom=0.55,
                             player_start=to_ue_points([(-4.0, 12.0, zp)])[0].round(1).tolist())
+# rivière : volumes de nage le long du lit (tronçons de 20 m) et sources sonores tous les 120 m
+_V = pickle.load(open("vec.pkl", "rb"))
+_rv = _V.get("river")
+river_snd, river_vol = [], []
+if _rv is not None:
+    xy, lv, wd = _rv["xy"].astype(np.float64), _rv["level"].astype(np.float64), _rv["width"].astype(np.float64)
+    for i in range(0, len(xy) - 5, 5):
+        a, b = xy[i], xy[i + 5]
+        c = (a + b) / 2
+        z_top = float(max(lv[i], lv[i + 5])) + 0.15
+        depth = 6.8
+        river_vol.append(dict(center=to_ue_points([(c[0], c[1], z_top - depth / 2)])[0].round(1).tolist(),
+                              yaw=round(float(-np.degrees(math.atan2(b[1] - a[1], b[0] - a[0]))), 2),
+                              size=[round(float(np.linalg.norm(b - a) + 2.0) * 100, 1), round(float(max(wd[i], wd[i + 5]) + 4.0) * 100, 1), depth * 100]))
+    for i in range(0, len(xy), 30):
+        river_snd.append(to_ue_points([(xy[i][0], xy[i][1], float(lv[i]) + 2.0)])[0].round(1).tolist())
+manifest["river_volumes"] = river_vol
 # sons : fontaines (spatialisés), cigales (ambiance générale + quelques foyers dans les arbres autour du village)
 fountains = [to_ue_points([(x, y, z + 1.0)])[0].round(1).tolist() for n, x, y, z in M.get("places", []) if n == "fontaine"]
 trees = [a for k, a in N.items() if k.startswith("Arbre_")]
@@ -329,6 +354,8 @@ manifest["sounds"] = [
     dict(name="S_Cigales", file="Sons/Cigales.wav", volume=0.35, spatial=False, locations=[to_ue_points([(-10.0, 0.0, 40.0)])[0].round(1).tolist()]),
     dict(name="S_Cigales", file="Sons/Cigales.wav", volume=0.9, spatial=True, radius_cm=6000.0, locations=cicadas),
     dict(name="S_Fontaine", file="Sons/Fontaine.wav", volume=0.7, spatial=True, radius_cm=1800.0, locations=fountains),
+    # grondement de la rivière au fond des gorges, qui monte jusqu'au bord des falaises et sur le pont
+    dict(name="S_Riviere", file="Sons/Riviere.wav", volume=1.0, spatial=True, radius_cm=16000.0, locations=river_snd),
     # joués par le jeu (UVPVegetationSubsystem) : souffle du vent, froissements au passage dans la végétation
     dict(name="S_Vent", file="Sons/Vent.wav", volume=1.0, spatial=False, loop=True, locations=[]),
 ] + [dict(name=f"S_Froissement_{k}", file=f"Sons/Froissement_{k}.wav", volume=1.0, spatial=False, loop=False, locations=[]) for k in range(4)] + [

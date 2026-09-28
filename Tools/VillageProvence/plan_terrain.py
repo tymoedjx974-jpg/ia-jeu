@@ -265,12 +265,16 @@ village = village.buffer(10.0).buffer(-10.0).simplify(2.0)
 village = unary_union([Polygon(p_.exterior) for p_ in polys_of(village)])     # cours et jardins intérieurs : dans le village
 ochre_keep = unary_union([ln.buffer(30.0) for ln in V["cliffs"]] + [p_.buffer(8.0) for p_ in V["sand"] + V["quarry"] + V["rock"]])
 water = unary_union(V["ponds"] + V["pools"])
-# quartier neuf le long de la coulée d'ocre (côté nord-est) : il prolonge le vieux village et en prend le style
-from quartier import new_quarter
+# quartier des Ocres : village perché sur une colline modelée au nord-est de la coulée d'ocre
+from quartier import make_hill, shape_ground, new_quarter
+hill = make_hill(V, CENTER, rng)
+ground, hill_base = shape_ground(ground, Xg, Yg, hill, ochre_keep, village)
 _gy, _gx = np.gradient(ground, RES)
 _slope = np.degrees(np.arctan(np.hypot(_gx, _gy))).astype(np.float32)
-quarter, q_blds, q_roads, q_plaza = new_quarter(V, roads, ochre_keep, village,
-                                                lambda x, y: float(grid_sample(_slope, [x], [y])[0]), rng, CENTER)
+quarter, q_blds, q_roads, q_plaza, q_drop = new_quarter(V, roads, ochre_keep, village,
+                                                        lambda x, y: float(grid_sample(_slope, [x], [y])[0]), rng, hill)
+_drop = {id(r) for r in q_drop}
+roads = [r for r in roads if id(r) not in _drop]
 blds = [b for b in blds if not quarter.contains(b["poly"].centroid)] + q_blds
 roads += q_roads
 V["plaza"] += q_plaza
@@ -280,7 +284,8 @@ core = unary_union([core, quarter])
 V["core"] = core
 village = unary_union([village, quarter.buffer(10.0)])
 V["quartier"] = quarter
-print("quartier des Ocres : %d maisons, %d rues, %.1f ha" % (len(q_blds), len(q_roads), quarter.area / 1e4))
+print("quartier des Ocres : colline de %.0f x %.0f m (pied à %.1f m), %d maisons, %d rues, %.1f ha" %
+      (2 * hill.Ra, 2 * hill.Rb, hill_base, len(q_blds), len(q_roads), quarter.area / 1e4))
 ring_all = village.buffer(LAV_W).difference(village).intersection(ZB)
 band_all = village.buffer(LAV_W + FOREST_W).difference(village.buffer(LAV_W)).intersection(ZB)
 

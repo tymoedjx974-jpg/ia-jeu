@@ -13517,6 +13517,27 @@
    "alpha": false
   },
   {
+   "name": "T_PierreGard_BC",
+   "file": "Textures/T_PierreGard_BC.jpg",
+   "srgb": true,
+   "kind": "color",
+   "alpha": false
+  },
+  {
+   "name": "T_PierreGard_N",
+   "file": "Textures/T_PierreGard_N.jpg",
+   "srgb": false,
+   "kind": "normal",
+   "alpha": false
+  },
+  {
+   "name": "T_PierreGard_ORM",
+   "file": "Textures/T_PierreGard_ORM.jpg",
+   "srgb": false,
+   "kind": "masks",
+   "alpha": false
+  },
+  {
    "name": "T_PierreMoellons_BC",
    "file": "Textures/T_PierreMoellons_BC.jpg",
    "srgb": true,
@@ -13775,6 +13796,15 @@
    "BC": "T_PierreTaille_BC",
    "N": "T_PierreTaille_N",
    "ORM": "T_PierreTaille_ORM"
+  },
+  {
+   "name": "PierreGard",
+   "master": "Base",
+   "params": {},
+   "tile_m": 3.0,
+   "BC": "T_PierreGard_BC",
+   "N": "T_PierreGard_N",
+   "ORM": "T_PierreGard_ORM"
   },
   {
    "name": "TuilesCanal",

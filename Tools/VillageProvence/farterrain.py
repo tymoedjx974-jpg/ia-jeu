@@ -26,7 +26,7 @@ if _rv is not None:
     import shapely
     from shapely.geometry import LineString as _LS
     xy, lv = _rv["xy"].astype(np.float64), _rv["level"].astype(np.float64)
-    ext = 9000.0
+    ext = 2500.0
     d0 = xy[0] - xy[min(40, len(xy) - 1)]
     d0 /= np.linalg.norm(d0)
     d1 = xy[-1] - xy[max(-41, -len(xy))]
@@ -39,10 +39,13 @@ if _rv is not None:
     dist = shapely.distance(line, P_).reshape(X.shape)
     sat = shapely.line_locate_point(line, P_).reshape(X.shape)
     lz = np.interp(sat, s_, lvl)
-    valley = lz + np.clip(dist - 70.0, 0, None) * 0.9
+    valley = lz + np.clip(dist - 70.0, 0, None) * 0.6
+    # au-delà de la zone détaillée, la vallée s'estompe sur 2 km (pas de tranchée rectiligne à travers les collines)
+    beyond = np.maximum(s_[1] - sat, sat - s_[-2])
+    fade = np.clip(1.0 - beyond / 2000.0, 0.0, 1.0)
     m = dist < 900
-    Z[m] = np.minimum(Z[m], valley[m])
-    river_mask = dist < 110
+    Z[m] = Z[m] + fade[m] * (np.minimum(Z[m], valley[m]) - Z[m])
+    river_mask = (dist < 110) & (fade > 0.3)
     print("horizon : gorges prolongées de %.0f km de part et d'autre" % (ext / 1000))
 # couleur : forêts sur les pentes, cultures en plaine, sommet calcaire du Ventoux
 gy, gx = np.gradient(Z, STEP)

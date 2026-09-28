@@ -2,7 +2,7 @@
 
 # taille réelle (m) couverte par une répétition de texture : les UV des maillages sont en mètres / TILE
 TILE = {
-    "Enduit": 3.0, "PierreMoellons": 3.0, "PierreTaille": 3.0, "TuilesCanal": 2.0, "Genoise": 1.12,
+    "Enduit": 3.0, "PierreMoellons": 3.0, "PierreTaille": 3.0, "PierreGard": 3.0, "TuilesCanal": 2.0, "Genoise": 1.12,
     "Calade": 2.0, "Dallage": 3.0, "Asphalte": 4.0, "Gravier": 2.0, "BoisPeint": 1.0, "BoisBrut": 1.0,
     "Fer": 1.0, "Bronze": 1.0, "TerreCuite": 1.0, "Toile": 1.0, "Eau": 2.0, "Verre": 1.0,
     "EcorcePlatane": 1.0, "EcorceOlivier": 1.0, "EcorcePin": 1.0, "EcorceChene": 1.0,
@@ -15,6 +15,7 @@ MATS = {
     "Enduit": dict(kind="opaque", tex="Enduit"),
     "PierreMoellons": dict(kind="opaque", tex="PierreMoellons"),
     "PierreTaille": dict(kind="opaque", tex="PierreTaille"),
+    "PierreGard": dict(kind="opaque", tex="PierreGard"),
     "TuilesCanal": dict(kind="opaque", tex="TuilesCanal"),
     "Genoise": dict(kind="opaque", tex="Genoise"),
     "Calade": dict(kind="opaque", tex="Calade"),

@@ -73,7 +73,7 @@ def _arch(t0, t1, zbase, spring, n=24):
 def bridge(mb, br, zat, water_level=None):
     """Grand viaduc de pierre à étages d'arcades (à la manière du pont du Gard) ou pont à arches plus simple.
     Murs en moellons, claveaux, corniches, avant-becs et couronnement des parapets en pierre de taille."""
-    RUB, ASH = "PierreMoellons", "PierreTaille"
+    RUB, ASH = "PierreGard", "PierreGard"          # grand appareil de calcaire doré, comme le pont du Gard
     ln = br["line"]
     A = np.array(ln.coords[0], float)
     B = np.array(ln.coords[-1], float)
@@ -121,12 +121,12 @@ def bridge(mb, br, zat, water_level=None):
         # ouvertures
         opens, rings = [], []
         if last and ntier > 1:
-            sub = 3                                      # petite arcade : trois arches par grande travée
+            sub = 4                                      # petite arcade : quatre arches par grande travée
             spans = [(j * S / sub, (j + 1) * S / sub) for j in range(nsp * sub)]
-            pw = 0.9
+            pw = 1.2
         else:
             spans = [(j * S, (j + 1) * S) for j in range(nsp)]
-            pw = (0.22 if k == 0 else 0.18) * S
+            pw = (0.24 if k == 0 else 0.2) * S
         for (a_, b_) in spans:
             t0, t1 = a_ + pw / 2, b_ - pw / 2
             if t0 < 1.0 or t1 > L - 1.0:
@@ -134,7 +134,8 @@ def bridge(mb, br, zat, water_level=None):
             if t1 - t0 < 1.5:
                 continue
             r = (t1 - t0) / 2
-            ceil_ = (min(deck(t0), deck(t1)) - 0.9) if last else ztop[k] - (1.4 if k == 0 else 1.1)
+            # au-dessus de la petite arcade, un bandeau plein (le canal couvert du pont du Gard) ; sous les corniches, 1 à 1,4 m
+            ceil_ = (min(deck(t0), deck(t1)) - 2.2) if last else ztop[k] - (1.4 if k == 0 else 1.1)
             spring = ceil_ - r
             zb = bottom - 1 if k == 0 else zlo + (0.0 if last else 0.0)
             if k > 0:
@@ -158,7 +159,26 @@ def bridge(mb, br, zat, water_level=None):
             inner = [(m + r * math.cos(a), sp + r * math.sin(a)) for a in th[::-1]]
             vou = Polygon(outer + inner).buffer(0)
             for side in (1, -1):
-                _face(mb, ASH, vou, A, u, v, hw + 0.06, side)
+                _face(mb, ASH, vou, A, u, v, hw + 0.035, side)
+            # imposte : bandeau saillant à la naissance de l'arc, sur les deux piédroits
+            if r > 2.5:
+                for tt in (m - r, m + r):
+                    for side in (1, -1):
+                        for dt in (-1, 1):
+                            C = A + u * (tt + dt * 0.55) + v * side * (hw + 0.09)
+                            box(mb, ASH, (C[0], C[1], sp - 0.2), (1.1, 0.18, 0.4), yaw=yaw, uv_scale=3.0)
+        # boutisses : pierres saillantes laissées sur les piles (supports d'échafaudage), comme au pont du Gard
+        if not last:
+            zc_ = ztop[k]
+            for j in range(1, nsp):
+                tp = j * S
+                if max(gat(tp - 2), gat(tp + 2)) > zc_ - 6:
+                    continue
+                for zb_ in np.arange(zc_ - 3.0, max(zlo, wl + 4.0), -5.5)[:6]:
+                    for side in (1, -1):
+                        for dt in (-0.25 * pw, 0.25 * pw):
+                            C = A + u * (tp + dt) + v * side * (hw + 0.2)
+                            box(mb, ASH, (C[0], C[1], zb_), (0.6, 0.4, 0.45), yaw=yaw, uv_scale=3.0)
         # corniche / retrait en haut de l'étage : bandeau de pierre de taille
         if not last:
             zc = ztop[k]

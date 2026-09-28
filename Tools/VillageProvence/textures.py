@@ -145,6 +145,68 @@ def t_ashlar(n, size):
     return dict(albedo=alb, height=h, rough=rough)
 
 
+@register("PierreGard", 3.0, 2048)
+def t_gard(n, size):
+    """Grand appareil romain en calcaire coquillier doré (pont du Gard) : gros blocs en assises régulières, joints vifs sans
+    mortier, arêtes émoussées, alvéoles d'érosion, coulures sombres, patine orangée et lichens."""
+    px = size / n
+    rng = np.random.default_rng(301)
+    yy, xx = np.mgrid[0:n, 0:n].astype(F32) * px
+    hs, t = [], 0.0
+    while t < size:
+        h = rng.uniform(0.5, 0.68)
+        hs.append(h)
+        t += h
+    hs = np.array(hs) * size / t
+    starts = np.concatenate([[0], np.cumsum(hs)[:-1]])
+    row = np.clip(np.searchsorted(starts, yy, side="right") - 1, 0, len(hs) - 1)
+    ID = np.zeros((n, n), np.int64)
+    for r in range(len(hs)):
+        ws, t = [], 0.0
+        while t < size:
+            w = rng.uniform(0.9, 1.7)
+            ws.append(w)
+            t += w
+        ws = np.array(ws) * size / t
+        bs = np.concatenate([[0], np.cumsum(ws)[:-1]])
+        off = rng.uniform(0, size)
+        m = row == r
+        col = np.searchsorted(bs, (xx[m] + off) % size, side="right") - 1
+        ID[m] = r * 1000 + col
+    _, ID = np.unique(ID, return_inverse=True)
+    ID = ID.reshape(n, n)
+    d = edt_wrap(~edges_of(ID)) * px
+    j = 0.003 + 0.002 * band(n, n / 20, 303)
+    stone = (d > j).astype(F32)
+    # arêtes émoussées et épaufrures
+    chip = smooth(1.6, 2.2, noise(n, n / 50, 304)) * (d < 0.05)
+    edge = smooth(j, j + 0.035, d) * (1 - chip * 0.8)
+    # alvéoles d'érosion (calcaire coquillier) et bosselage de la face
+    F1, F2, _, _ = voronoi(n, 70, 305, jitter=1.0)
+    pits = smooth(0.35, 0.0, F1 / (F2 + 1e-6)) * smooth(0.9, 1.6, noise(n, n / 12, 306) + band(n, 8, 307))
+    bulge = (rand_per_id(ID, 308) - 0.5) * 0.008 + band(n, n / 6, 309) * 0.003
+    h = stone * (0.01 * edge + bulge - pits * 0.004 + noise(n, 5, 310) * 0.0006) - (1 - stone) * 0.006
+    base = [hex2rgb(c) for c in ("#d6b27a", "#cfa96f", "#dcba84", "#c9a068", "#d9b67f", "#c69c63", "#dfbf8b")]
+    col = palette_pick(ID, base, 311)
+    var = 1 + 0.07 * noise(n, n / 8, 312) + 0.04 * band(n, 10, 313)
+    alb = col * ((0.94 + 0.09 * rand_per_id(ID, 314)) * var)[..., None]
+    # coulures de pluie verticales et patine sombre sous les arêtes
+    streak = smooth(0.4, 1.8, blur_y(noise(n, n / 40, 315), 90)) * 0.34
+    alb *= (1 - streak)[..., None]
+    alb = lerp(alb, hex2rgb("#8a6a40"), (pits * 0.7)[..., None])
+    alb = lerp(alb, alb * 0.78, (1 - edge)[..., None] * 0.55)
+    alb = lerp(hex2rgb("#8f7654"), alb, stone)
+    # quelques blocs plus gris (remplois, restaurations) et lichens orangés / gris
+    grey = (rand_per_id(ID, 316) > 0.95).astype(F32)
+    alb = lerp(alb, alb.mean(axis=-1, keepdims=True) * np.array([1.04, 1.0, 0.92]), grey[..., None] * 0.3)
+    lich = smooth(2.1, 2.5, noise(n, n / 18, 317) + 0.6 * band(n, 9, 318)) * stone
+    alb = lerp(alb, hex2rgb("#c98a3e"), lich * 0.35)
+    lich2 = smooth(2.3, 2.7, noise(n, n / 22, 319)) * stone
+    alb = lerp(alb, hex2rgb("#9d9a86"), lich2 * 0.5)
+    rough = np.clip(0.82 + 0.1 * noise(n, n / 30, 320) + pits * 0.1, 0.5, 1)
+    return dict(albedo=alb, height=h, rough=rough)
+
+
 # ------------------------------------------------------------------ enduit à la chaux (teintable)
 @register("Enduit", 3.0, 2048)
 def t_plaster(n, size):

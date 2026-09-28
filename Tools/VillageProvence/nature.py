@@ -564,10 +564,10 @@ if V.get("river_rim") is not None:
     put_variants("Buisson_Garrigue", 4, wg, scale=(1.0, 1.8), sink=0.2)
     wr = patchy(wall_pts(3.2, 0.6, steep=None), 0.0)
     put_variants("Buisson_Romarin", 2, wr, scale=(1.0, 1.5), sink=0.1)
-    wt = patchy(wall_pts(6.0, 0.6, steep=None), -0.1)             # chênes verts accrochés
+    wt = patchy(wall_pts(4.2, 0.85, steep=None), 0.3)             # flancs boisés : chênes verts et pins accrochés
     tv_ = rng.random(len(wt))
-    put_variants("Arbre_Chene", 4, wt[tv_ < 0.7], scale=(0.45, 0.85), sink=0.3)
-    put_variants("Arbre_Pin", 4, wt[tv_ >= 0.7], scale=(0.45, 0.8), sink=0.3)
+    put_variants("Arbre_Chene", 4, wt[tv_ < 0.65], scale=(0.6, 1.0), sink=0.3)
+    put_variants("Arbre_Pin", 4, wt[tv_ >= 0.65], scale=(0.6, 1.0), sink=0.3)
     wh = patchy(wall_pts(1.8, 0.7, steep=None), 0.2)
     put_variants("Herbe_Haute", 3, wh, scale=(0.8, 1.2))
     wv = patchy(wall_pts(1.6, 0.7, steep=None), 0.3)             # touffes d'herbe verte sur toute la paroi

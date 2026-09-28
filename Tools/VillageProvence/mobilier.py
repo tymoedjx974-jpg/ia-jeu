@@ -88,6 +88,42 @@ def fountain(x, y, r=1.4):
         tube(mb, "Eau", pts, 0.012, segs=5)
 
 
+# ------------------------------------------------------------------ petit patrimoine rural
+def borie(x, y, yaw):
+    """Borie : cabane ronde en pierre sèche (encorbellement), porte basse à linteau, seuil de pierre."""
+    z = min(zat(x + 2.2 * math.cos(a), y + 2.2 * math.sin(a)) for a in np.linspace(0, 2 * math.pi, 8, endpoint=False)) - 0.1
+    mb = mb_at(x, y)
+    prof = [(2.35, -0.4), (2.3, 0.0), (2.2, 1.4), (2.0, 2.1), (1.65, 2.8), (1.2, 3.4), (0.7, 3.85), (0.3, 4.1), (0.0, 4.2)]
+    revolve(mb, "PierreMoellons", prof, (x, y, z), segs=18, u_tile=3.0, v_tile=3.0)
+    # porte : ouverture sombre et linteau de pierre, côté yaw
+    d = np.array([math.cos(yaw), math.sin(yaw)])
+    n_ = np.array([-d[1], d[0]])
+    c = np.array([x, y]) + d * 2.22
+    box(mb, "BoisBrut", (c[0], c[1], z + 0.75), (0.12, 0.85, 1.5), yaw=yaw, col=(70, 55, 40, 255))
+    box(mb, "PierreTaille", (c[0] + d[0] * 0.08, c[1] + d[1] * 0.08, z + 1.62), (0.35, 1.3, 0.25), yaw=yaw, uv_scale=3.0)
+    box(mb, "PierreTaille", (c[0] + d[0] * 0.35, c[1] + d[1] * 0.35, z + 0.04), (0.6, 1.0, 0.12), yaw=yaw, uv_scale=3.0)
+
+
+def puits(x, y):
+    """Puits de pierre : margelle ronde, deux montants, traverse et poulie, seau."""
+    z = zat(x, y)
+    mb = mb_at(x, y)
+    revolve(mb, "PierreTaille", [(0.8, -0.3), (0.8, 0.8), (0.6, 0.8), (0.6, -0.1)], (x, y, z), segs=16, u_tile=3.0, v_tile=3.0)
+    revolve(mb, "Eau", [(0.6, 0.0), (0.0, 0.0)], (x, y, z - 0.6), segs=12)
+    for s_ in (-1, 1):
+        box(mb, "PierreTaille", (x + s_ * 0.72, y, z + 1.45), (0.22, 0.22, 1.3), uv_scale=3.0)
+    tube(mb, "BoisBrut", [(x - 0.75, y, z + 2.05), (x + 0.75, y, z + 2.05)], 0.06, segs=8)
+    revolve(mb, "Fer", [(0.0, -0.1), (0.14, -0.08), (0.14, 0.08), (0.0, 0.1)], (x, y, z + 1.95), segs=10)
+    revolve(mb, "BoisBrut", [(0.12, 0.0), (0.16, 0.3), (0.0, 0.3)], (x + 0.3, y + 0.35, z + 0.8), segs=10)
+
+
+for (x_, y_, yw_) in V.get("bories", []):
+    borie(x_, y_, yw_)
+for (x_, y_) in V.get("puits", []):
+    puits(x_, y_)
+print("bories: %d, puits: %d" % (len(V.get("bories", [])), len(V.get("puits", []))))
+
+
 # ------------------------------------------------------------------ monument aux morts
 def war_memorial(x, y, yaw):
     z = zat(x, y)

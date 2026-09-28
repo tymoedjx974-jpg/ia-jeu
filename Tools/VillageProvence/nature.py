@@ -32,6 +32,8 @@ for r in V["roads"]:
     extra = 0.9 if r["surface"] in ("asphalt", "stone", "gravel") else 0.4
     blocked_geoms.append(r["line"].buffer(r["width"] / 2 + extra))
 blocked_geoms += [p.buffer(1.0) for p in V["pools"]] + V["plaza"] + [p.buffer(0.5) for p in V["parking"]]
+blocked_geoms += [m_.buffer(0.9) for m_ in V.get("murets", [])]
+blocked_geoms += [Point(b_[0], b_[1]).buffer(3.4) for b_ in V.get("bories", [])] + [Point(*p_).buffer(1.2) for p_ in V.get("puits", [])]
 if V.get("river_poly") is not None:
     blocked_geoms.append(V["river_poly"].buffer(2.5))
     blocked_geoms += [b["line"].buffer(b["width"] / 2 + 2.0) for b in V.get("bridges", [])]
@@ -632,6 +634,48 @@ if V.get("river_rim") is not None:
         m = shapely.contains_xy(_rim, a[:, 0], a[:, 1])
         if m.any():
             INST[k] = a[~m]
+# cohérence : aucun arbre, buisson ni rang dans une maison, sur une route ou une place
+_hard = unary_union([b["poly"].buffer(0.4) for b in V["buildings"]]
+                    + [r["line"].buffer(r["width"] / 2 - 0.2) for r in V["roads"] if r["surface"] in ("asphalt", "stone", "gravel") and r["width"] > 0.8]
+                    + list(V["plaza"]) + list(V["pools"])
+                    + [m_.buffer(0.6) for m_ in V.get("murets", [])]
+                    + [Point(b_[0], b_[1]).buffer(3.2) for b_ in V.get("bories", [])] + [Point(*p_).buffer(1.0) for p_ in V.get("puits", [])])
+_n_bad = 0
+for k in list(INST):
+    if not k.startswith(("Arbre_", "Buisson_", "Lavande", "Vigne", "Balle")):
+        continue
+    a = INST[k]
+    m = shapely.contains_xy(_hard, a[:, 0], a[:, 1])
+    _n_bad += int(m.sum())
+    INST[k] = a[~m]
+# arbres empilés : deux troncs à moins de 2,2 m -> on n'en garde qu'un (le premier posé)
+_big = [k for k in INST if k.startswith("Arbre_") and not k.startswith("Arbre_Cypres")]
+_occ = {}
+_n_close = 0
+for k in _big:
+    a = INST[k]
+    keep = np.ones(len(a), bool)
+    cells = np.floor(a[:, :2] / 2.2).astype(np.int64)
+    for i in range(len(a)):
+        cx, cy = cells[i]
+        hit = False
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for (px, py) in _occ.get((cx + dx, cy + dy), ()):
+                    if (px - a[i, 0]) ** 2 + (py - a[i, 1]) ** 2 < 2.2 ** 2:
+                        hit = True
+                        break
+                if hit:
+                    break
+            if hit:
+                break
+        if hit:
+            keep[i] = False
+            _n_close += 1
+        else:
+            _occ.setdefault((cx, cy), []).append((a[i, 0], a[i, 1]))
+    INST[k] = a[keep]
+print("cohérence : %d plantes retirées des maisons/routes/places, %d arbres empilés retirés" % (_n_bad, _n_close), flush=True)
 with open("nature_out.pkl", "wb") as f:
     pickle.dump(INST, f)
 tot = sum(len(v) for v in INST.values())

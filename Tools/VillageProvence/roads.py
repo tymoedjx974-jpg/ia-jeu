@@ -288,6 +288,11 @@ def build():
         stone_wall(mb_of, ln, 1.1)
     for ln in V["retaining"]:
         stone_wall(mb_of, ln, 1.6, thick=0.6)
+    # murets de pierre sèche des champs (hauteur variable, sans chaperon taillé)
+    _rm = np.random.default_rng(78)
+    for ln in V.get("murets", []):
+        stone_wall(mb_of, ln, float(_rm.uniform(0.6, 1.05)), thick=float(_rm.uniform(0.45, 0.6)))
+    print("murets de pierre sèche:", len(V.get("murets", [])))
     print("routes terminées %.0fs" % (time.time() - T0))
     return chunks
 

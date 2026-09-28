@@ -5,7 +5,8 @@ from common import *
 from geo import load
 from dem import sample_xy
 from scipy import ndimage
-from shapely.ops import linemerge, nearest_points
+from shapely.ops import linemerge, nearest_points, substring
+from shapely.strtree import STRtree
 
 t0 = time.time()
 rng = np.random.default_rng(42)
@@ -445,7 +446,111 @@ for ln in V["cliffs"]:
     off = 0.5 * drop * side * smoothstep(0.0, 1.6, d) * (1 - smoothstep(4.0, D, d)) * along
     ground[j0:j1, i0:i1] += off.reshape(sx.shape).astype(np.float32)
 
-# routes : profil en long lissé + aplanissement transversal
+# ---------------------------------------------------------------- nettoyage des incohérences avant l'aplanissement
+_bl_u = unary_union([b["poly"] for b in blds])
+_n_r0 = len(roads)
+# ruelles du vieux village et du quartier : largeur ajustée à l'espace entre les façades (elles ne passent plus dans les murs)
+_narrowed = 0
+for r in roads:
+    ln = r["line"]
+    if r["surface"] not in ("asphalt", "stone") or not core.buffer(15).contains(ln.interpolate(0.5, normalized=True)):
+        continue
+    ts = np.linspace(0, ln.length, max(3, int(ln.length / 3)))
+    clr = np.array([_bl_u.distance(ln.interpolate(t)) for t in ts])
+    fit = float(np.percentile(clr, 20)) * 2.0 - 0.3
+    if fit < r["width"]:
+        r["width"] = max(2.2, fit)
+        _narrowed += 1
+# bouts de route isolés (reliés à rien) et tronçons minuscules
+_lt = STRtree([r["line"] for r in roads])
+_keep = []
+for k, r in enumerate(roads):
+    ln = r["line"]
+    touch = [j for j in _lt.query(ln.buffer(1.5)) if j != k]
+    if (not touch and ln.length < 150 and r.get("name") not in ("Pont des Ocres", "Grand-Rue")) or (ln.length < 4 and not touch):
+        continue
+    _keep.append(r)
+roads = _keep
+# piscines, parkings et terrains de sport sans maison autour (restes des constructions retirées)
+_near60 = _bl_u.buffer(60.0)
+_np0 = len(V["pools"]) + len(V["parking"]) + len(V["pitch"])
+V["pools"] = [p for p in V["pools"] if p.intersects(_bl_u.buffer(40.0))]
+V["parking"] = [p for p in V["parking"] if p.intersects(_bl_u.buffer(120.0))]
+V["pitch"] = [(ps, sp_) for ps, sp_ in V["pitch"] if any(p.intersects(_near60) for p in ps)]
+print("nettoyage : %d ruelles ajustées aux façades, %d bouts de route isolés retirés, %d piscines/parkings/terrains orphelins retirés"
+      % (_narrowed, _n_r0 - len(roads), _np0 - len(V["pools"]) - len(V["parking"]) - len(V["pitch"])))
+
+# ---------------------------------------------------------------- petit patrimoine rural : murets de pierre sèche le long des chemins et
+# entre certaines parcelles, bories (cabanes de berger en pierre sèche) dans les champs, puits près des mas
+_rngp = np.random.default_rng(77)
+_fields_u = unary_union(V["lavender"] + V["vineyard"] + V["orchard"] + V["olive"])
+_roads_u = unary_union([r["line"].buffer(r["width"] / 2 + 1.0) for r in roads])
+_avoid = unary_union([_roads_u, _bl_u.buffer(2.5), river_rim(riv, 4.0), core.buffer(30.0), ochre_keep])
+murets = []
+for r in roads:
+    if r["surface"] not in ("asphalt", "gravel", "dirt") or r["cls"] in ("primary", "secondary") or r["line"].length < 30:
+        continue
+    for side in (1.0, -1.0):
+        try:
+            off = r["line"].offset_curve(side * (r["width"] / 2 + 1.7), join_style=2)
+        except Exception:
+            continue
+        for ol in lines_of(off):
+            t = _rngp.uniform(0, 20)
+            while t < ol.length - 6:
+                seg_len = _rngp.uniform(25, 70)
+                seg = substring(ol, t, min(ol.length, t + seg_len))
+                t += seg_len + _rngp.uniform(6, 25)
+                if seg is None or seg.length < 6:
+                    continue
+                if _rngp.random() > 0.5 or not _fields_u.contains(seg.interpolate(0.5, normalized=True)):
+                    continue
+                for piece in lines_of(seg.difference(_avoid)):
+                    if piece.length > 6:
+                        murets.append(piece)
+# quelques murets entre parcelles de lavande (limites de propriété)
+for pg in polys_of(unary_union(V["lavender"])):
+    if _rngp.random() > 0.06 or pg.area < 1500:
+        continue
+    ring_ = pg.exterior
+    t0 = _rngp.uniform(0, ring_.length)
+    seg = substring(ring_, t0, min(ring_.length, t0 + _rngp.uniform(30, 80)))
+    for piece in lines_of(seg.difference(_avoid)):
+        if piece.length > 8:
+            murets.append(piece)
+V["murets"] = murets
+# bories : cabanes rondes en pierre sèche, isolées dans les champs et la garrigue
+_cand = unary_union([unary_union(V.get("lavender_ring") or [Polygon()]), unary_union(V["scrub"] + V["lc_shrub"])]).difference(
+    unary_union([_avoid.buffer(20.0), unary_union(murets).buffer(6.0) if murets else Polygon()]))
+bories = []
+x0_, y0_, x1_, y1_ = _cand.bounds if not _cand.is_empty else (0, 0, 0, 0)
+for _ in range(4000):
+    if len(bories) >= 12 or _cand.is_empty:
+        break
+    p_ = Point(_rngp.uniform(x0_, x1_), _rngp.uniform(y0_, y1_))
+    if p_.distance(CENTER) > 1400 or not _cand.contains(p_) or any(p_.distance(Point(b_[0], b_[1])) < 180 for b_ in bories):
+        continue
+    bories.append((p_.x, p_.y, float(_rngp.uniform(0, 2 * math.pi))))
+V["bories"] = bories
+# puits : un sur deux près des mas, dans le jardin
+puits = []
+for m_ in V.get("mas", []):
+    if _rngp.random() > 0.6:
+        continue
+    for _ in range(30):
+        a_ = _rngp.uniform(0, 2 * math.pi)
+        q_ = m_.centroid
+        dd_ = math.sqrt(m_.area) / 2 + _rngp.uniform(6, 10)
+        p_ = Point(q_.x + math.cos(a_) * dd_, q_.y + math.sin(a_) * dd_)
+        if p_.distance(m_) > 4 and not _roads_u.contains(p_):
+            puits.append((p_.x, p_.y))
+            break
+V["puits"] = puits
+print("petit patrimoine : %d murets de pierre sèche (%.1f km), %d bories, %d puits"
+      % (len(murets), sum(m_.length for m_ in murets) / 1000, len(bories), len(puits)))
+
+# routes : profil en long lissé + pente maximale (déblais / remblais) + aplanissement transversal
+GRADE = {"asphalt": 0.14, "stone": 0.20, "gravel": 0.16, "dirt": 0.20, "path": 0.30, "steps": 1.0}
 roads.sort(key=lambda r: r["prio"])
 SHOULDER = {"asphalt": 3.5, "stone": 1.2, "gravel": 2.5, "dirt": 2.5, "path": 1.5, "steps": 1.0}
 SIG = {"asphalt": 9.0, "stone": 3.0, "gravel": 6.0, "dirt": 5.0, "path": 3.0, "steps": 1.5}
@@ -458,6 +563,15 @@ for rd in roads:
     sig = SIG[rd["surface"]] / 2.0
     if n > 3:
         zz = ndimage.gaussian_filter1d(zz, sig, mode="nearest")
+        # pente maximale : on répartit l'excès entre les deux points (déblai en haut, remblai en bas)
+        gmax = GRADE[rd["surface"]] * (ss[1] - ss[0])
+        for _ in range(120):
+            dz = np.diff(zz)
+            ex = np.clip(np.abs(dz) - gmax, 0, None) * np.sign(dz)
+            if not np.any(ex):
+                break
+            zz[:-1] += 0.5 * ex
+            zz[1:] -= 0.5 * ex
     rd["prof_s"], rd["prof_z"] = ss.astype(np.float32), zz.astype(np.float32)
     half = rd["width"] / 2.0
     D = half + SHOULDER[rd["surface"]]

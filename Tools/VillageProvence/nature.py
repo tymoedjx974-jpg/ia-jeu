@@ -33,9 +33,14 @@ for r in V["roads"]:
     blocked_geoms.append(r["line"].buffer(r["width"] / 2 + extra))
 blocked_geoms += [p.buffer(1.0) for p in V["pools"]] + V["plaza"] + [p.buffer(0.5) for p in V["parking"]]
 if V.get("river_poly") is not None:
-    blocked_geoms.append((V.get("river_rim") or V["river_poly"]).buffer(1.0))
+    blocked_geoms.append(V["river_poly"].buffer(2.5))
     blocked_geoms += [b["line"].buffer(b["width"] / 2 + 2.0) for b in V.get("bridges", [])]
 BLOCK = raster1(blocked_geoms)
+if V.get("river_rim") is not None:
+    # parois raides des gorges : pas de culture ni d'herbe (seulement les rochers et buissons accrochés, plus bas)
+    _sl = np.repeat(np.repeat(G["slope"].astype(np.float32), 2, axis=0), 2, axis=1)[:NY1, :NX1]
+    _rz = raster1([V["river_rim"].buffer(2.0)])
+    BLOCK |= _rz & (_sl > 36.0)
 print("masque %.0fs" % (time.time() - T0), flush=True)
 
 
@@ -526,6 +531,30 @@ if V.get("river_poly") is not None:
     put_variants("Buisson_Garrigue", 4, Rs, scale=(0.8, 1.4))
     print("berges : %d arbres, %d lauriers-roses  %.0fs" % (len(T_), len(Lr), time.time() - T0), flush=True)
 
+# ------------------------------------------------------------------ parois des gorges : blocs de calcaire en saillie, éboulis, buissons et
+# chênes verts accrochés aux vires (la paroi n'est plus une surface lisse)
+if V.get("river_rim") is not None:
+    wall = V["river_rim"].buffer(-1.5).difference(V["river_poly"].buffer(3.0))
+    SLOPE_W = G["slope"].astype(np.float32)
+    def wall_pts(spacing, keep):
+        x0, y0, x1, y1 = wall.bounds
+        X_, Y_ = np.meshgrid(np.arange(x0, x1, spacing), np.arange(y0, y1, spacing))
+        X_ = X_.ravel() + rng.uniform(-0.45, 0.45, X_.size) * spacing
+        Y_ = Y_.ravel() + rng.uniform(-0.45, 0.45, Y_.size) * spacing
+        m = shapely.contains_xy(wall, X_, Y_) & (rng.random(X_.size) < keep)
+        m &= grid_sample(SLOPE_W, X_, Y_) > 30.0                     # seulement sur les parois raides
+        return np.column_stack([X_[m], Y_[m]])
+    wb = wall_pts(7.0, 0.55)
+    put_variants("Rocher_Bloc", 4, wb, scale=(1.2, 3.0), zscale=(0.6, 1.1), sink=0.4)
+    we = wall_pts(4.5, 0.5)
+    put_variants("Rocher_Eboulis", 3, we, scale=(1.0, 2.2), sink=0.1)
+    wg = wall_pts(6.0, 0.45)
+    put_variants("Buisson_Garrigue", 4, wg, scale=(0.8, 1.5), sink=0.1)
+    wt = wall_pts(16.0, 0.35)
+    put_variants("Arbre_Chene", 4, wt, scale=(0.45, 0.8), sink=0.2)
+    print("parois des gorges : %d blocs, %d éboulis, %d buissons, %d chênes verts" % (len(wb), len(we), len(wg), len(wt)), flush=True)
+    _GORGE_KEEP = True
+
 # ------------------------------------------------------------------ sol en couches (hors routes, rues, places, bâtis, eau) : touffes d'herbe,
 # hautes herbes, petits graviers et mottes de terre, selon la mosaïque du sol ; denses autour des villages, clairsemés au loin
 if "cover" in G.files:
@@ -573,9 +602,9 @@ if "cover" in G.files:
           % (len(g_) + len(t2), len(t_), len(gr) + len(e2), len(e_), time.time() - T0), flush=True)
 
 INST = {k: np.concatenate(v).astype(np.float32) for k, v in INST.items()}
-# aucune plante sur les falaises ni dans l'eau des gorges
+# rien dans l'eau des gorges (les parois gardent leurs rochers et leurs buissons accrochés)
 if V.get("river_rim") is not None:
-    _rim = V["river_rim"].buffer(-0.5)
+    _rim = V["river_poly"].buffer(2.5)
     for k in list(INST):
         a = INST[k]
         m = shapely.contains_xy(_rim, a[:, 0], a[:, 1])

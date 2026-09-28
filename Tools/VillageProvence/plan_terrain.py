@@ -375,7 +375,7 @@ for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "s
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "lawn"):
     _cut(key, band_all)
 gardens = unary_union(V["lawn"] + [p_ for ps, _ in V["pitch"] for p_ in ps] + V["cemetery"] + V["farmyard"])
-ring = ring_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(gardens.buffer(2.0)).difference(riv_corr)
+ring = ring_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(gardens.buffer(2.0)).difference(river_polygon(riv, 8.0))
 # parcelles de lavande irrégulières (Voronoï, ~45 m) : chacune a ses rangs dans sa propre direction
 _seeds = []
 _bx0, _by0, _bx1, _by1 = ring.bounds
@@ -386,7 +386,7 @@ _cells = shapely.voronoi_polygons(shapely.MultiPoint(_seeds), extend_to=ring.env
 lav = [q for c_ in polys_of(_cells) for q in polys_of(c_.intersection(ring)) if q.area > 60]
 V["lavender"] += lav
 V["lavender_ring"] = polys_of(ring)
-dense = band_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(river_rim(riv, 4.0))
+dense = band_all.difference(ochre_keep).difference(water.buffer(3.0)).difference(river_polygon(riv, 8.0))
 V["forest_dense"] = polys_of(dense)
 V["forest"] += V["forest_dense"]
 forest_all = V["forest"] + V["lc_forest"]
@@ -574,7 +574,7 @@ W[L["dirt"]] += 0.7 * farmyard
 # d'herbe et de hautes herbes, dosées selon le milieu (champs, bois, prés, garrigue, cours du village)
 paved = rasterize([r["line"].buffer(r["width"] / 2 + 0.8) for r in roads if r["surface"] not in ("path", "dirt")]
                   + V["plaza"] + V["parking"] + [b["poly"].buffer(0.5) for b in blds] + V["pools"] + V["ponds"]
-                  + [river_rim(riv, 1.0)]) > 0
+                  + [river_polygon(riv, 3.0)]) > 0
 open_ = (~paved) & (ochre < 0.3) & (rockm < 0.5) & (dirt < 0.5)
 coreb = blur(rasterize([core]), 2.0)
 _nz = [np.clip(_norm(fbm((NY, NX), 3, 2, seed=s_)) * 0.9, -2.5, 2.5) for s_ in (51, 52, 53, 54)]
@@ -596,12 +596,19 @@ var = fbm((NY, NX), 18, 3, seed=9)
 W[L["dry"]] *= 1.0 + 0.5 * var
 W[L["grass"]] *= 1.0 - 0.4 * var
 # lit et berges de la rivière : galets et terre nue
-rivb = blur(rasterize([river_rim(riv, 1.0)]), 1.0)
+# seules les vraies parois (pente forte) sont traitées en falaise ; les rives en pente douce gardent leur sol et leurs cultures
+rivb = blur(rasterize([river_rim(riv, 1.0)]), 1.0) * smoothstep(24.0, 38.0, slope)
+rivb = np.maximum(rivb, blur(rasterize([river_polygon(riv, 2.0)]), 1.0))
 W *= (1.0 - 0.85 * rivb)[None]
 # dans le ravin d'ocre, les parois des gorges restent ocre (canyon), ailleurs roche calcaire
 och_near = blur(rasterize([g_.buffer(45.0) for g_ in ochre_geoms]), 4.0)
 W[L["ochre"]] += 3.0 * rivb * och_near
-W[L["rock"]] += 1.4 * rivb * (1 - och_near)
+# parois calcaires en strates (bancs clairs et bancs plus sombres, comme dans les gorges du Verdon), un peu de terre
+# et de végétation sur les vires
+_strata = 0.5 + 0.5 * np.sin(2 * np.pi * ground / 4.5 + 1.5 * fbm((NY, NX), 20, 2, seed=61))
+W[L["rock"]] += 1.6 * rivb * (1 - och_near) * _strata
+W[L["dirt"]] += 1.1 * rivb * (1 - och_near) * (1 - _strata)
+W[L["forest"]] += 0.6 * rivb * (1 - och_near) * np.clip(fbm((NY, NX), 6, 2, seed=62), 0, 1)
 W[L["dirt"]] += 0.3 * rivb
 W = np.clip(W, 0, None)
 W /= W.sum(axis=0, keepdims=True) + 1e-6

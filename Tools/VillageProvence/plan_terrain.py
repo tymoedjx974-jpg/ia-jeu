@@ -384,27 +384,28 @@ water = unary_union(V["ponds"] + V["pools"])
 # on vide la ceinture de ses anciennes cultures, et la bande de forêt de ses champs et garrigues
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest"):
     _cut(key, ring_lav)
-_cut("lavender", ring_nat)
-# campagne sans lavande : on garde les cultures d'origine et on comble les vides (anciennes maisons, dessertes) de prés,
-# champs, garrigue et oliveraies en parcelles irrégulières
-_cult = unary_union([p_ for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "scrub", "lc_shrub", "grass_nat", "forest",
-                                    "lc_forest", "lawn", "residential") for p_ in V[key] if p_.intersects(ring_nat)])
-_gap = ring_nat.difference(_cult).difference(ochre_keep).difference(river_polygon(riv, 8.0)).buffer(-0.5).buffer(0.5)
+# ancienne lavande à l'ouest et au nord-ouest du vieux village : que des vignes et des champs, en parcelles irrégulières
+# (bois, garrigue, prés et vergers d'origine retirés ; les jardins des mas restent)
+for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "forest", "lc_forest"):
+    _cut(key, ring_nat)
+_gap = ring_nat.difference(unary_union(V["lawn"] + V["residential"] + list(water.geoms if hasattr(water, "geoms") else [water])))
+_gap = _gap.difference(ochre_keep).difference(river_polygon(riv, 8.0)).buffer(-1.5).buffer(0.5)
 _sd = []
 _bx0, _by0, _bx1, _by1 = _gap.bounds if not _gap.is_empty else (0, 0, 0, 0)
-for _x in np.arange(_bx0, _bx1, 60.0):
-    for _y in np.arange(_by0, _by1, 60.0):
-        _sd.append((_x + rng.uniform(-24, 24), _y + rng.uniform(-24, 24)))
+for _x in np.arange(_bx0, _bx1, 55.0):
+    for _y in np.arange(_by0, _by1, 55.0):
+        _sd.append((_x + rng.uniform(-22, 22), _y + rng.uniform(-22, 22)))
 _nfill = collections.Counter()
 if len(_sd) > 3:
     for c_ in polys_of(shapely.voronoi_polygons(shapely.MultiPoint(_sd), extend_to=_gap.envelope.buffer(60))):
-        for q in polys_of(c_.intersection(_gap)):
+        # chemins de 2 m entre les parcelles
+        for q in polys_of(c_.buffer(-1.0).intersection(_gap)):
             if q.area < 80:
                 continue
-            key = str(rng.choice(["meadow", "farmland", "scrub", "olive", "grass_nat"], p=[0.3, 0.22, 0.22, 0.14, 0.12]))
+            key = "vineyard" if rng.random() < 0.6 else "farmland"
             V[key].append(q)
             _nfill[key] += 1
-print("campagne sans lavande : %.0f ha, parcelles ajoutées %s" % (ring_nat.area / 1e4, dict(_nfill)))
+print("vignes et champs (ancienne lavande) : %.0f ha, parcelles %s" % (ring_nat.area / 1e4, dict(_nfill)))
 for key in ("vineyard", "olive", "orchard", "farmland", "meadow", "lavender", "scrub", "lc_shrub", "grass_nat", "lawn"):
     _cut(key, band_all)
 gardens = unary_union(V["lawn"] + [p_ for ps, _ in V["pitch"] for p_ in ps] + V["cemetery"] + V["farmyard"])

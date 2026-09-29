@@ -92,12 +92,17 @@ def draw_leaf(dc, dh, x, y, ang, shape_pts, col, vein_col, hval=200, veins=None,
     return p
 
 
-def vine_leaf(L, rng, lobe_depth=0.45, serr=0.06, sharp=1.0):
-    """Feuille de vigne : cinq lobes, sinus profonds, bord denté, sinus pétiolaire à la base (orientée +x)."""
+def vine_leaf(L, rng, lobe_depth=0.45, serr=0.06, sharp=1.0, aspect=1.0, fan=1.0, n_lobes=5):
+    """Feuille de vigne : trois ou cinq lobes, sinus plus ou moins profonds, bord denté, sinus pétiolaire à la base
+    (orientée +x). aspect : largeur relative (< 1 feuille étroite, > 1 feuille large) ; fan : écartement des lobes."""
     pts = []
     N = 240
-    lobes = [(0.0, 1.0), (0.85, 0.82), (-0.85, 0.82), (1.75, 0.55), (-1.75, 0.55)]
-    lobes = [(a + rng.normal(0, 0.06), l * rng.uniform(0.92, 1.05)) for a, l in lobes]
+    lobes = [(0.0, 1.0), (0.85 * fan, 0.82), (-0.85 * fan, 0.82)]
+    if n_lobes >= 5:
+        lobes += [(1.75 * fan, 0.55), (-1.75 * fan, 0.55)]
+    else:
+        lobes += [(1.65 * fan, 0.42), (-1.65 * fan, 0.42)]      # lobes de base à peine marqués
+    lobes = [(a + rng.normal(0, 0.08), l * rng.uniform(0.85, 1.08)) for a, l in lobes]
     for i in range(N):
         a = -math.pi * 0.92 + 1.84 * math.pi * i / N
         rr = 0.0
@@ -106,7 +111,7 @@ def vine_leaf(L, rng, lobe_depth=0.45, serr=0.06, sharp=1.0):
             rr = max(rr, ll * math.exp(-d * d * sharp))
         rr = (1 - lobe_depth) * 0.72 + lobe_depth * rr + (1 - lobe_depth) * 0.28 * rr
         rr *= 1 + serr * (1 if (i % 4) < 2 else -1)
-        pts.append((L * rr * math.cos(a), L * rr * math.sin(a)))
+        pts.append((L * rr * math.cos(a), L * rr * math.sin(a) * aspect))
     return pts
 
 
@@ -192,9 +197,19 @@ def twig_cluster(at, q, rng, kind, leaf_len, leaf_w, n_leaves, cols, under_col=N
                 a = a_st + sd * rng.uniform(0.5, 1.1) * spread
                 ll = leaf_len * rng.uniform(0.75, 1.2) * SS
                 ww = leaf_w * rng.uniform(0.8, 1.2) * SS
-                if kind in ("palm", "vine"):
-                    shp = vine_leaf(ll * 0.5, rng, lobe_depth=0.5 if kind == "vine" else 0.62, serr=0.05 if kind == "vine" else 0.03,
-                                    sharp=1.0 if kind == "vine" else 1.6)
+                if kind == "vine":
+                    # chaque feuille a sa forme : large ou étroite, lobes profonds ou à peine marqués, pointus ou arrondis,
+                    # petite ou grande, dents fines ou grossières
+                    ll *= rng.uniform(0.62, 1.3)
+                    asp = rng.uniform(0.72, 1.3)
+                    vein_f = 0.72 * min(1.0, asp)
+                    shp = vine_leaf(ll * 0.5, rng, lobe_depth=rng.uniform(0.2, 0.75), serr=rng.uniform(0.02, 0.055),
+                                    sharp=rng.uniform(0.6, 1.8), aspect=asp, fan=rng.uniform(0.82, 1.15),
+                                    n_lobes=5 if rng.random() < 0.7 else 3)
+                    ang = a
+                    px_, py_ = x0 + math.cos(a) * ll * 0.12, y0 + math.sin(a) * ll * 0.12
+                elif kind == "palm":
+                    shp = vine_leaf(ll * 0.5, rng, lobe_depth=0.62, serr=0.03, sharp=1.6)
                     ang = a
                     px_, py_ = x0 + math.cos(a) * ll * 0.12, y0 + math.sin(a) * ll * 0.12
                 else:
@@ -204,7 +219,8 @@ def twig_cluster(at, q, rng, kind, leaf_len, leaf_w, n_leaves, cols, under_col=N
                 show_under = under_col is not None and rng.random() < under_frac
                 c = jitter_col(rng, under_col, 0.06) if show_under else jitter_col(rng, cols[rng.integers(len(cols))])
                 draw_leaf(at.dc, at.dh, px_, py_, ang, shp, c + (255,), None, hval=int(rng.uniform(150, 255)),
-                          veins="palm" if kind in ("palm", "vine") else "mid", L=ll * (0.45 if kind in ("palm", "vine") else 1.0))
+                          veins="palm" if kind in ("palm", "vine") else "mid",
+                          L=ll * (0.45 * vein_f if kind == "vine" else 0.45 if kind == "palm" else 1.0))
     return stems
 
 

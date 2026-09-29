@@ -383,7 +383,7 @@ def make_vine(seed, lod=0):
         c = np.array([x, y, z])
         tilt = 0.05 + (0.55 if u > 0.88 else 0.12 * u)        # composante verticale de la normale
         cc = c - np.array([rng.normal(0, 0.15), side * 1.0, tilt - 0.3])
-        leaf_card(mb, "FeuillesVigne", c, cc, rng, size * rng.uniform(0.85, 1.15), 0.4,
+        leaf_card(mb, "FeuillesVigne", c, cc, rng, size * rng.uniform(0.7, 1.3), 0.4,
                   sway=int(70 + 160 * u), spherical=0.45)
     return mb, th + 1.2, 0.35
 

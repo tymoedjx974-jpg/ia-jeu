@@ -110,9 +110,11 @@ class Sim:
 
     def emit(self, p, z=None, label="", key="", show_v=None, pivot=None):
         """z : hauteur du bassin imposée (en l'air) ; sinon posé au sol. pivot : (x, z, angle) pour la roulade."""
+        g = z is None
         if z is None:
             z = self.lvl - foot_min(p)
-        self.frames.append(dict(x=self.x, z=z, p=p, label=label, key=key, v=self.v if show_v is None else show_v, pivot=pivot))
+        self.frames.append(dict(x=self.x, z=z, p=p, label=label, key=key, v=self.v if show_v is None else show_v, pivot=pivot,
+                                phi=self.phi, ground=g))
         self.last = p
 
     def run(self, dur, v0, v1, label, key, crouch=False, blend_from=None, blend_t=0.2):
@@ -470,9 +472,9 @@ def main():
     bl.reset()
     bl.setup_world(sun_elev=34.0, sun_azim=215.0, exposure=-0.2)
     test = "test" in sys.argv[1:]
-    bl.setup_render(960, 540, samples=8)
+    bl.setup_render(640, 360, samples=4)
     sc = bpy.context.scene
-    sc.cycles.max_bounces = 3
+    sc.cycles.max_bounces = 2
     sc.cycles.transparent_max_bounces = 8
     sc.cycles.use_adaptive_sampling = True
     sc.cycles.adaptive_threshold = 0.05
@@ -506,21 +508,48 @@ def main():
     if test:
         arg = sys.argv[sys.argv.index("test") + 1] if len(sys.argv) > sys.argv.index("test") + 1 else "60"
         frames = [int(a) for a in arg.split(",")]
-    # caméra lissée (calculée sur toute la séquence)
+    # caméra subjective, comme TM Movement : yeux à 1,62 m (moins 57 cm accroupi, 84 cm en glissade), balancement de tête
+    # au rythme des pas, champ de vision qui s'élargit en sprint (90 -> 98 degrés), tour complet de la caméra pendant la roulade
+    cam.data.lens_unit = "FOV"
+    cam.data.sensor_fit = "HORIZONTAL"
+    cam.data.clip_start = 0.06
+    P["head"].hide_render = True
+    P["spine"].hide_render = True          # comme dans un jeu à la première personne : on voit ses bras et ses jambes
     cams = []
-    cp = None
-    for f in F:
-        tgt = np.array([f["x"] + 0.9, 0.0, f["z"] + 0.05])
-        want = np.array([f["x"] - 1.2, -5.2 - 0.3 * f["z"], f["z"] + 0.9 + 0.1 * f["z"]])
-        if M["passage"] - 3.0 < f["x"] < M["passage"] + 7.0:      # sous le passage bas : caméra à hauteur d'homme accroupi
-            want[2] = 0.95
-        cp = want if cp is None else cp + (want - cp) * 0.1
-        cams.append((cp.copy(), tgt))
-    lt = cams[0][1]
-    looks = []
-    for c, t in cams:
-        lt = lt + (t - lt) * 0.14
-        looks.append(lt.copy())
+    pitch_s, fov_s = -4.0, 90.0
+    for k, f in enumerate(F):
+        p, lab = f["p"], f["label"]
+        lean = p["lean"] * D2R
+        ex = f["x"] + 0.5 * math.sin(lean) + 0.06
+        ez = f["z"] + 0.62 * math.cos(lean) + 0.05
+        if f["ground"]:
+            amp = 0.012 + 0.035 * min(1.0, f["v"] / SPRINT)
+            ez += amp * (abs(math.sin(f["phi"])) - 0.5)
+        tgt = -4.0
+        if lab.startswith("Escalade : attraper"):
+            tgt = 28.0
+        elif lab.startswith("Escalade"):
+            tgt = 12.0
+        elif lab.startswith("Échelle"):
+            tgt = 22.0 if "hisse" not in lab else 5.0
+        elif lab.startswith("Chute"):
+            tgt = -35.0
+        elif lab.startswith("Glissade"):
+            tgt = 2.0
+        elif lab.startswith("Coup de pied"):
+            tgt = -8.0
+        elif lab.startswith("Saut"):
+            tgt = -8.0
+        pitch_s += (tgt - pitch_s) * 0.18
+        fov_t = 90.0 + 8.0 * min(1.0, max(0.0, (f["v"] - WALK) / (SPRINT - WALK))) if f["ground"] else fov_s
+        fov_s += (fov_t - fov_s) * 0.1
+        pitch, roll = pitch_s, (4.0 if lab.startswith("Glissade") and "relève" not in lab else 0.0)
+        if f["pivot"] is not None:
+            px, pz, ang = f["pivot"]
+            a = ang * D2R
+            ex, ez = px + 0.35 * math.sin(a), pz + 0.35 * math.cos(a)
+            pitch = pitch_s - ang
+        cams.append(((ex, 0.0, ez), pitch, roll, fov_s))
     info = []
     for i in frames:
         f = F[i]
@@ -551,9 +580,13 @@ def main():
             apply_pose(Z, zp)
             Z["root"].location = (zx, 0, 0.0)
             Z["pelvis"].location = (0, 0, STAND_Z - 0.04)
-        c, t = cams[i][0], looks[i]
-        cam.location = tuple(c)
-        cam.rotation_euler = (mathutils.Vector(tuple(t)) - mathutils.Vector(tuple(c))).to_track_quat("-Z", "Y").to_euler()
+        c, pitch, roll, fov = cams[i]
+        cam.location = c
+        cam.rotation_euler = ((90.0 + pitch) * D2R, roll * D2R, -90.0 * D2R)
+        cam.data.angle = fov * D2R
+        # pendant la roulade, le corps ne doit pas boucher l'objectif
+        for k_ in ("shL", "shR", "elbL", "elbR"):
+            P[k_].hide_render = f["pivot"] is not None
         out = "video/f_%04d.png" % i
         if not test and os.path.exists(out):          # reprise après interruption
             continue
@@ -571,7 +604,7 @@ def montage():
     leg = json.load(open("video/legendes.json"))
     fonts = ["/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"]
     try:
-        fb, fr = ImageFont.truetype(fonts[0], 30), ImageFont.truetype(fonts[1], 22)
+        fb, fr = ImageFont.truetype(fonts[0], 22), ImageFont.truetype(fonts[1], 16)
     except OSError:
         fb = fr = ImageFont.load_default()
     os.makedirs("video/leg", exist_ok=True)
@@ -583,19 +616,19 @@ def montage():
         im = Image.open(src).convert("RGB")
         d = ImageDraw.Draw(im, "RGBA")
         W, H = im.size
-        d.rounded_rectangle([18, 16, 18 + max(300, 20 + int(d.textlength(l["label"], font=fb))), 16 + (86 if l["key"] else 52)], 10,
+        d.rounded_rectangle([12, 10, 12 + max(200, 22 + int(d.textlength(l["label"], font=fb))), 10 + (62 if l["key"] else 38)], 8,
                             fill=(20, 18, 16, 150))
-        d.text((32, 24), l["label"], font=fb, fill=(255, 244, 222))
+        d.text((22, 15), l["label"], font=fb, fill=(255, 244, 222))
         if l["key"]:
-            d.text((32, 62), l["key"], font=fr, fill=(250, 200, 120))
+            d.text((22, 44), l["key"], font=fr, fill=(250, 200, 120))
         if l["label"] not in ("TM Mouvements",):
             t = "%.1f m/s" % l["v"]
             t = t.replace(".", ",")
             tw = d.textlength(t, font=fb)
-            d.rounded_rectangle([W - tw - 46, H - 64, W - 18, H - 18], 10, fill=(20, 18, 16, 150))
-            d.text((W - tw - 32, H - 58), t, font=fb, fill=(255, 244, 222))
+            d.rounded_rectangle([W - tw - 34, H - 46, W - 12, H - 12], 8, fill=(20, 18, 16, 150))
+            d.text((W - tw - 23, H - 42), t, font=fb, fill=(255, 244, 222))
         if l["label"] == "TM Mouvements":
-            d.text((32, H - 56), "Plugin TMMouvements — Toits Morts", font=fr, fill=(255, 244, 222))
+            d.text((22, H - 36), "Plugin TMMouvements — Toits Morts (vue du joueur)", font=fr, fill=(255, 244, 222))
         im.save("video/leg/l_%04d.png" % i)
         n += 1
     exe = imageio_ffmpeg.get_ffmpeg_exe()

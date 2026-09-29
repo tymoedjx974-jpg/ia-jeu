@@ -406,6 +406,23 @@ def flowers(at, q, rng, leaf_cols, flower_cols, n_clusters=14, petal_r=(4, 7), l
             at.dh.ellipse([px_ - rr, py_ - rr, px_ + rr, py_ + rr], fill=255)
 
 
+def build_vine(seed=4242):
+    """Vigne (grenache, en été) : rameaux denses de feuilles d'un vert profond et mat, quelques jaunissantes,
+    revers plus clairs sur un peu de feuilles, grappes noires pendantes (tirage aléatoire propre à la vigne)."""
+    rng = np.random.default_rng(seed)
+    at = Atlas(1024)
+    greens = [(58, 92, 34), (66, 102, 38), (52, 84, 30), (74, 110, 42), (82, 116, 46), (62, 96, 40), (90, 118, 44)]
+    for q in range(4):
+        if q in (1, 3):
+            grapes(at, q, rng, n=2)
+        cols = greens + ([(128, 132, 52)] if q == 2 else [])
+        twig_cluster(at, q, rng, "vine", 118, 0, 26, cols, under_col=(112, 134, 80), stem_col=(96, 84, 56), spread=1.15,
+                     opposite=False, stem_w=4, under_frac=0.14)
+        if q in (0, 2):
+            grapes(at, q, rng, n=1)
+    at.save("FeuillesVigne", (62, 96, 38))
+
+
 def build():
     os.makedirs("texprev", exist_ok=True)
     rng = np.random.default_rng(7)
@@ -437,16 +454,7 @@ def build():
     for q in range(4):
         twig_cluster(at, q, rng, "oval", 80, 34, 30, [(80, 120, 50), (92, 130, 56), (72, 108, 46), (100, 136, 60)], under_col=(130, 160, 90), stem_col=(100, 70, 55), spread=0.8, opposite=False)
     at.save("FeuillesFruitier", (85, 120, 55))
-    # Vigne : feuilles palmées
-    at = Atlas(1024)
-    for q in range(4):
-        if q in (1, 3):
-            grapes(at, q, rng, n=2)
-        twig_cluster(at, q, rng, "vine", 135, 0, 16, [(86, 124, 52), (100, 136, 56), (78, 112, 46), (118, 144, 60), (150, 152, 66), (170, 150, 60)],
-                     under_col=(150, 170, 110), stem_col=(110, 90, 60), spread=1.1, opposite=False, stem_w=4)
-        if q in (0, 2):
-            grapes(at, q, rng, n=1)
-    at.save("FeuillesVigne", (100, 130, 60))
+    build_vine()
     # Pin : aiguilles
     at = Atlas(1024)
     for q in range(4):

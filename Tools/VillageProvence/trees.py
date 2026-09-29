@@ -339,21 +339,53 @@ def make_grass(seed, mat="HerbeSeche", lod=0, size=(0.35, 0.7)):
 
 
 def make_vine(seed, lod=0):
-    """Cep de vigne palissé : tronc tortueux + rideau de feuilles le long du rang (axe X)."""
+    """Cep de vigne palissé (cordon de Royat, comme en Provence) : tronc tortueux de 55 cm, deux bras horizontaux le long
+    du fil porteur (axe X), sarments dressés entre les fils, et un rideau de feuillage dense de 40 cm d'épaisseur
+    entre 0,7 et 1,7 m."""
     rng = np.random.default_rng(seed)
     mb = MB()
-    th = rng.uniform(0.45, 0.65)
-    pts = [(0, 0, 0)]
-    for i in range(4):
-        pts.append((rng.normal(0, 0.04), rng.normal(0, 0.04), th * (i + 1) / 4))
-    tube(mb, "EcorceOlivier", pts, np.linspace(0.05, 0.035, 5), segs=5)
+    th = rng.uniform(0.5, 0.6)
+    bark = (int(rng.uniform(112, 132)), int(rng.uniform(92, 106)), int(rng.uniform(72, 84)), 255)   # écorce brune qui s'effiloche
+    pts = [(0, 0, -0.05)]
+    lean = rng.normal(0, 0.05, 2)
+    for i in range(5):
+        t = (i + 1) / 5
+        pts.append((lean[0] * t + rng.normal(0, 0.018), lean[1] * t + rng.normal(0, 0.018), th * t))
+    tube(mb, "EcorceChene", pts, np.linspace(0.05, 0.034, 6), segs=6, col=bark)
+    top = np.array(pts[-1])
+    arms = []
     for sgn in (-1, 1):
-        tube(mb, "EcorceOlivier", [pts[-1], (sgn * 0.45, rng.normal(0, 0.03), th + 0.05)], 0.02, segs=4)
-    n = {0: 22, 1: 12, 2: 6}[lod]
+        a = [top, top + np.array([sgn * 0.12, rng.normal(0, 0.015), 0.05])]
+        x = sgn * 0.12
+        while abs(x) < 0.6:
+            x += sgn * 0.1
+            a.append(np.array([x, rng.normal(0, 0.012), th + 0.06 + rng.normal(0, 0.01)]))
+        tube(mb, "EcorceChene", a, np.linspace(0.03, 0.018, len(a)), segs=5, col=bark)
+        arms.append(a)
+    # sarments de l'année : dressés, palissés entre les fils
+    if lod < 2:
+        for a in arms:
+            for p in a[2::2]:
+                b = p + np.array([0, 0, 0.02])
+                h = rng.uniform(0.8, 1.05)
+                s_ = [b, b + np.array([rng.normal(0, 0.03), rng.normal(0, 0.025), h * 0.5]),
+                      b + np.array([rng.normal(0, 0.06), rng.normal(0, 0.04), h])]
+                tube(mb, "BoisBrut", s_, [0.009, 0.007, 0.004], segs=3, col=(150, 135, 90, 255))
+    # rideau de feuilles : cartes presque verticales tournées vers l'extérieur du rang (±y), le haut s'ouvre vers le ciel
+    n = {0: 64, 1: 26, 2: 10}[lod]
+    size = {0: 0.42, 1: 0.62, 2: 0.95}[lod]
     for i in range(n):
-        c = np.array([rng.uniform(-0.55, 0.55), rng.normal(0, 0.12), th + rng.uniform(0.1, 0.8)])
-        leaf_card(mb, "FeuillesVigne", c, np.array([0, 0, th + 0.4]), rng, rng.uniform(0.35, 0.55) * (1.4 if lod else 1.0), 0.6, sway=int(80 + 150 * (c[2] - th)))
-    return mb, th + 0.9, 0.6
+        x = rng.uniform(-0.64, 0.64)
+        u = rng.uniform(0, 1) ** 0.8
+        z = th + 0.16 + u * 1.0
+        side = rng.choice([-1, 1])
+        y = side * rng.uniform(0.0, 0.17) * (0.75 + 0.45 * u)
+        c = np.array([x, y, z])
+        tilt = 0.05 + (0.55 if u > 0.88 else 0.12 * u)        # composante verticale de la normale
+        cc = c - np.array([rng.normal(0, 0.15), side * 1.0, tilt - 0.3])
+        leaf_card(mb, "FeuillesVigne", c, cc, rng, size * rng.uniform(0.85, 1.15), 0.4,
+                  sway=int(70 + 160 * u), spherical=0.45)
+    return mb, th + 1.2, 0.35
 
 
 def make_bale(seed):
@@ -526,17 +558,21 @@ def make_clod(seed, lod=0):
 
 
 def make_vine_row(seed, lod=0):
-    """Segment de rang de vigne (4 ceps sur 4,8 m, le long de l'axe X) + piquet."""
+    """Segment de rang de vigne (4 ceps sur 4,8 m, le long de l'axe X) : piquet de bois, fil porteur et deux paires de
+    fils de palissage de part et d'autre du feuillage."""
     mb = MB()
     rng = np.random.default_rng(seed)
     for k, x in enumerate((-1.8, -0.6, 0.6, 1.8)):
         v, _, _ = make_vine(seed * 10 + k, lod)
-        mb.extend(v, offset=(x + rng.normal(0, 0.05), rng.normal(0, 0.04), 0.0))
-    tube(mb, "BoisBrut", [(2.4, 0, -0.2), (2.4, 0, 1.35)], 0.035, segs=5)
-    # fils de palissage tendus d'un piquet à l'autre (les segments se suivent le long du rang)
-    for z in (0.62, 0.95, 1.25):
-        tube(mb, "Fer", [(-2.4, 0, z), (2.4, 0, z - 0.01)], 0.0035, segs=3, col=(150, 150, 150, 0))
-    return mb, 1.5, 2.4
+        mb.extend(v, offset=(x + rng.normal(0, 0.04), rng.normal(0, 0.02), 0.0))
+    tube(mb, "BoisBrut", [(2.4, 0, -0.3), (2.4, rng.normal(0, 0.02), 1.8)], [0.045, 0.04], segs=6, col=(170, 150, 120, 255))
+    if lod < 2:
+        wire = (150, 150, 150, 0)
+        tube(mb, "Fer", [(-2.4, 0, 0.62), (2.4, 0, 0.62)], 0.0035, segs=3, col=wire)
+        for z in (1.05, 1.5):
+            for yy in (-0.13, 0.13):
+                tube(mb, "Fer", [(-2.4, yy, z), (2.4, yy, z - 0.01)], 0.003, segs=3, col=wire)
+    return mb, 1.8, 2.4
 
 
 def make_lavender_row(seed, lod=0):

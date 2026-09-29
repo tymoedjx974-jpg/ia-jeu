@@ -199,7 +199,7 @@ def rows(parcel, spacing, seg_len, name_prefix, nvar, margin=1.5, jitter=0.03):
     return len(P)
 
 
-nv = rows(U("vineyard"), 2.5, 4.8, "Vigne_Rang", 3)
+nv = rows(U("vineyard"), 2.3, 4.8, "Vigne_Rang", 3)
 nl = rows(U("lavender"), 1.7, 4.0, "Lavande_Rang", 3, margin=1.2)
 print("vignes: %d segments, lavande: %d segments  %.0fs" % (nv, nl, time.time() - T0), flush=True)
 

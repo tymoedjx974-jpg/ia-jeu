@@ -68,7 +68,7 @@ Tout se règle dans le panneau Détails des composants : vitesses (cm/s), endura
 | Marche | 3,1 m/s |
 | Sprint | 5,6 m/s (10 s d'endurance) |
 | Accroupi | 1,7 m/s |
-| Glissade | minimum 4,6 m/s au départ, environ 1 s |
+| Glissade | minimum 4,6 m/s au départ, environ 1 s, yeux à 55 cm du sol |
 | Réception lourde | au-delà de 8,5 m/s de chute |
 | Dégâts de chute | au-delà de 14 m/s de chute |
 

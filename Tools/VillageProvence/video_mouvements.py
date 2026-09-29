@@ -24,6 +24,7 @@ D2R = math.pi / 180.0
 # ------------------------------------------------------------------ valeurs du plugin (TMMovementComponent.h, TMParkourComponent.h)
 WALK, SPRINT, CROUCH = 3.1, 5.6, 1.7
 SLIDE_BOOST, SLIDE_FRICTION, SLIDE_END = 1.0, 3.6, 2.0
+SLIDE_EYE_DROP = 1.07
 JUMP_V = 4.2
 ROLL_DUR = 0.6
 CLIMB = 1.7
@@ -84,7 +85,7 @@ def foot_min(p):
 
 
 STAND = pose()
-SLIDE = pose(lean=-38, hipR=78, kneeR=8, hipL=35, kneeL=105, shR=-35, elbR=10, abdR=30, shL=55, elbL=40, head=30)
+SLIDE = pose(lean=-38, hipR=80, kneeR=5, hipL=60, kneeL=150, hipAbdL=12, shR=-35, elbR=10, abdR=30, shL=55, elbL=40, head=30)
 TUCK = pose(lean=48, hipR=115, hipL=115, kneeR=135, kneeL=135, shR=60, shL=60, elbR=110, elbL=110, head=-35)
 CROUCH_IDLE = pose(lean=22, hipR=62, hipL=62, kneeR=105, kneeL=105, shR=25, shL=25, elbR=60, elbL=60, head=-15)
 AIR = pose(lean=8, hipR=55, kneeR=55, hipL=-18, kneeL=75, shR=-30, shL=70, elbR=40, elbL=30, head=-5)
@@ -508,7 +509,7 @@ def main():
     if test:
         arg = sys.argv[sys.argv.index("test") + 1] if len(sys.argv) > sys.argv.index("test") + 1 else "60"
         frames = [int(a) for a in arg.split(",")]
-    # caméra subjective, comme TM Movement : yeux à 1,62 m (moins 57 cm accroupi, 84 cm en glissade), balancement de tête
+    # caméra subjective, comme TM Movement : yeux à 1,62 m (moins 57 cm accroupi, 1,07 m en glissade : yeux à 55 cm du sol), balancement de tête
     # au rythme des pas, champ de vision qui s'élargit en sprint (90 -> 98 degrés), tour complet de la caméra pendant la roulade
     cam.data.lens_unit = "FOV"
     cam.data.sensor_fit = "HORIZONTAL"
@@ -517,6 +518,7 @@ def main():
     P["spine"].hide_render = True          # comme dans un jeu à la première personne : on voit ses bras et ses jambes
     cams = []
     pitch_s, fov_s = -4.0, 90.0
+    ez_prev = None
     for k, f in enumerate(F):
         p, lab = f["p"], f["label"]
         lean = p["lean"] * D2R
@@ -525,6 +527,16 @@ def main():
         if f["ground"]:
             amp = 0.012 + 0.035 * min(1.0, f["v"] / SPRINT)
             ez += amp * (abs(math.sin(f["phi"])) - 0.5)
+        # glissade : yeux à 55 cm du sol (SlideEyeDrop = 107 cm), rejoints vite (taux 16/s comme dans le plugin)
+        slide_eye = lab == "Glissade"
+        if slide_eye or ez_prev is not None:
+            ez_t = 1.62 - SLIDE_EYE_DROP if slide_eye else ez
+            ez_prev = ez_t if ez_prev is None else ez_prev + (ez_t - ez_prev) * (1 - math.exp(-16.0 / FPS))
+            ez = ez_prev
+            if not slide_eye and abs(ez_prev - ez_t) < 0.01:
+                ez_prev = None
+        if slide_eye:
+            ex = f["x"] + 0.12                   # au-dessus des hanches, les jambes filent devant
         tgt = -4.0
         if lab.startswith("Escalade : attraper"):
             tgt = 28.0
@@ -587,6 +599,7 @@ def main():
         # pendant la roulade, le corps ne doit pas boucher l'objectif
         for k_ in ("shL", "shR", "elbL", "elbR"):
             P[k_].hide_render = f["pivot"] is not None
+        P["pelvis"].hide_render = f["label"].startswith("Glissade")
         out = "video/f_%04d.png" % i
         if not test and os.path.exists(out):          # reprise après interruption
             continue

@@ -61,7 +61,7 @@ public:
 	// la caméra suit le regard + balancement, inclinaisons, secousses (désactive bUsePawnControlRotation)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouvements|Camera") bool bDriveCamera = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouvements|Camera") float CrouchEyeDrop = 57.f;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouvements|Camera") float SlideEyeDrop = 84.f;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouvements|Camera") float SlideEyeDrop = 107.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouvements|Camera") float HeadBobScale = 1.f;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouvements|Camera") bool bSpeedFov = true;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mouvements|Camera") bool bShowLegs = true;
